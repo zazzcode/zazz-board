@@ -1,0 +1,60 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: task_blaster_postgres_prod
+    environment:
+      POSTGRES_DB: task_blaster_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - task_blaster_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d task_blaster_db" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Fastify API Server (Production)
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: task_blaster_api_prod
+    ports:
+      - "3030:3030"
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/task_blaster_db
+      NODE_ENV: production
+      PORT: 3030
+    networks:
+      - task_blaster_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # React Client (Production - Nginx)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: task_blaster_client_prod
+    ports:
+      - "80:80"
+    networks:
+      - task_blaster_network
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_prod_data:
+
+networks:
+  task_blaster_network:
+    driver: bridge

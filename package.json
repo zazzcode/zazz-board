@@ -1,0 +1,42 @@
+{
+  "name": "task-blaster-monorepo",
+  "version": "0.1.0",
+  "description": "A Kanban style orchestration app monorepo with Fastify API and React client",
+  "private": true,
+  "workspaces": [
+    "api"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=api",
+    "dev:client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:client\"",
+    "build": "cd client && npm run build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:up:db": "docker-compose up -d postgres",
+    "docker:logs": "docker-compose logs -f",
+    "docker:prod:up": "docker-compose -f docker-compose.prod.yml up -d",
+    "docker:prod:down": "docker-compose -f docker-compose.prod.yml down",
+    "docker:prod:build": "docker-compose -f docker-compose.prod.yml build",
+    "db:migrate": "npm run db:migrate --workspace=api",
+    "db:seed": "npm run db:seed --workspace=api",
+    "db:reset": "npm run db:reset --workspace=api",
+    "test": "npm run test --workspace=api",
+    "test:watch": "npm run test:watch --workspace=api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "pactum-supertest": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michaelwitz/task-blaster-oss.git"
+  },
+  "keywords": [
+    "agentic",
+    "kanban",
+    "monorepo"
+  ],
+  "author": "Michael Woytowitz",
+  "license": "ISC"
+}
