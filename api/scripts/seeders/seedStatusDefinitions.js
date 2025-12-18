@@ -37,6 +37,22 @@ export async function seedStatusDefinitions() {
       { 
         code: 'ICEBOX',
         description: 'Tasks that are deprioritized or on hold'
+      },
+      { 
+        code: 'READY',
+        description: 'Tasks that are ready to be started'
+      },
+      { 
+        code: 'BACKLOG',
+        description: 'Tasks in the backlog awaiting prioritization'
+      },
+      { 
+        code: 'TESTING_DEV',
+        description: 'Tasks being tested in development environment'
+      },
+      { 
+        code: 'TESTING_STAGE',
+        description: 'Tasks being tested in staging environment'
       }
     ]);
     

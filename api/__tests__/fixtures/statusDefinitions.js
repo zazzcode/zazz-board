@@ -10,7 +10,11 @@ export const expectedStatusCodes = [
   'TESTING',
   'AWAITING_APPROVAL',
   'READY_FOR_DEPLOY',
-  'ICEBOX'
+  'ICEBOX',
+  'READY',
+  'BACKLOG',
+  'TESTING_DEV',
+  'TESTING_STAGE'
 ];
 
 export const statusDefinitionSchema = {

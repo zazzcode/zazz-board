@@ -175,15 +175,15 @@ describe('PATCH /tasks/:id/status', () => {
         .expectStatus(200)
         .expectJsonSchema({
           type: 'object',
-          required: ['id', 'task_id', 'title', 'status', 'priority', 'position', 'project_id'],
+          required: ['id', 'taskId', 'title', 'status', 'priority', 'position', 'projectId'],
           properties: {
             id: { type: 'number' },
-            task_id: { type: 'string' },
+            taskId: { type: 'string' },
             title: { type: 'string' },
             status: { type: 'string' },
             priority: { type: 'string' },
             position: { type: 'number' },
-            project_id: { type: 'number' }
+            projectId: { type: 'number' }
           }
         });
     });
