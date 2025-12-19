@@ -123,6 +123,12 @@ export function ProjectModal({
 
         <Tabs.Panel value="details" pt="md">
           <Stack gap="md">
+            {isEditMode && !isLeader && (
+              <Alert color="blue">
+                <span style={{ color: '#228be6', fontWeight: 600 }}>Read Only:</span> Only the project leader can edit these details.
+              </Alert>
+            )}
+            
             <TextInput
               label={t('projects.projectCode')}
               placeholder="WEBRED"
@@ -164,20 +170,14 @@ export function ProjectModal({
                 searchable
               />
             )}
-            
-            {isEditMode && !isLeader && (
-              <Alert color="blue" title="Read Only">
-                Only the project leader can edit these details.
-              </Alert>
-            )}
           </Stack>
         </Tabs.Panel>
 
         <Tabs.Panel value="workflow" pt="md">
           <Stack gap="md">
             {isEditMode && !isLeader && (
-              <Alert color="blue" title="Read Only">
-                Only the project leader can edit the status workflow.
+              <Alert color="blue">
+                <span style={{ color: '#228be6', fontWeight: 600 }}>Read Only:</span> Only the project leader can edit the status workflow.
               </Alert>
             )}
             

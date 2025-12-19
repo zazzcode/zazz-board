@@ -53,6 +53,10 @@ export async function seedStatusDefinitions() {
       { 
         code: 'TESTING_STAGE',
         description: 'Tasks being tested in staging environment'
+      },
+      { 
+        code: 'PLANNING',
+        description: 'Tasks in planning phase'
       }
     ]);
     

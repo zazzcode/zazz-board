@@ -33,7 +33,8 @@ export async function seedTranslations() {
       READY: 'Tasks that are ready to be started',
       BACKLOG: 'Tasks in the backlog awaiting prioritization',
       TESTING_DEV: 'Tasks being tested in development environment',
-      TESTING_STAGE: 'Tasks being tested in staging environment'
+      TESTING_STAGE: 'Tasks being tested in staging environment',
+      PLANNING: 'Tasks in planning phase'
     };
     
     // Ensure statuses object exists
@@ -48,10 +49,11 @@ export async function seedTranslations() {
     enTranslations.tasks.statuses.AWAITING_APPROVAL = 'Awaiting Approval';
     enTranslations.tasks.statuses.READY_FOR_DEPLOY = 'Ready for Deploy';
     enTranslations.tasks.statuses.ICEBOX = 'Icebox';
-    enTranslations.tasks.statuses.READY = 'Ready';
+    enTranslations.tasks.statuses.READY = 'Ready To Start';
     enTranslations.tasks.statuses.BACKLOG = 'Backlog';
     enTranslations.tasks.statuses.TESTING_DEV = 'Testing (Dev)';
     enTranslations.tasks.statuses.TESTING_STAGE = 'Testing (Stage)';
+    enTranslations.tasks.statuses.PLANNING = 'Planning';
     
     esTranslations.tasks.statusDescriptions = {
       TO_DO: 'Tareas planificadas pero no iniciadas',
@@ -65,7 +67,8 @@ export async function seedTranslations() {
       READY: 'Tareas listas para comenzar',
       BACKLOG: 'Tareas en backlog esperando priorización',
       TESTING_DEV: 'Tareas siendo probadas en entorno de desarrollo',
-      TESTING_STAGE: 'Tareas siendo probadas en entorno de staging'
+      TESTING_STAGE: 'Tareas siendo probadas en entorno de staging',
+      PLANNING: 'Tareas en fase de planificación'
     };
     
     // Ensure statuses object exists
@@ -80,10 +83,11 @@ export async function seedTranslations() {
     esTranslations.tasks.statuses.AWAITING_APPROVAL = 'En Espera de Aprobación';
     esTranslations.tasks.statuses.READY_FOR_DEPLOY = 'Listo para Desplegar';
     esTranslations.tasks.statuses.ICEBOX = 'Congelador';
-    esTranslations.tasks.statuses.READY = 'Listo';
+    esTranslations.tasks.statuses.READY = 'Listo Para Comenzar';
     esTranslations.tasks.statuses.BACKLOG = 'Backlog';
     esTranslations.tasks.statuses.TESTING_DEV = 'Pruebas (Dev)';
     esTranslations.tasks.statuses.TESTING_STAGE = 'Pruebas (Stage)';
+    esTranslations.tasks.statuses.PLANNING = 'Planificación';
     
     frTranslations.tasks.statusDescriptions = {
       TO_DO: 'Tâches planifiées mais pas encore commencées',
@@ -97,7 +101,8 @@ export async function seedTranslations() {
       READY: 'Tâches prêtes à être commencées',
       BACKLOG: 'Tâches dans le backlog en attente de priorisation',
       TESTING_DEV: 'Tâches testées dans l\'environnement de développement',
-      TESTING_STAGE: 'Tâches testées dans l\'environnement de staging'
+      TESTING_STAGE: 'Tâches testées dans l\'environnement de staging',
+      PLANNING: 'Tâches en phase de planification'
     };
     
     // Ensure statuses object exists
@@ -112,10 +117,11 @@ export async function seedTranslations() {
     frTranslations.tasks.statuses.AWAITING_APPROVAL = 'En Attente d\'Approbation';
     frTranslations.tasks.statuses.READY_FOR_DEPLOY = 'Prêt pour le Déploiement';
     frTranslations.tasks.statuses.ICEBOX = 'Frigo';
-    frTranslations.tasks.statuses.READY = 'Prêt';
+    frTranslations.tasks.statuses.READY = 'Prêt à Commencer';
     frTranslations.tasks.statuses.BACKLOG = 'Backlog';
     frTranslations.tasks.statuses.TESTING_DEV = 'Tests (Dev)';
     frTranslations.tasks.statuses.TESTING_STAGE = 'Tests (Stage)';
+    frTranslations.tasks.statuses.PLANNING = 'Planification';
     
     deTranslations.tasks.statusDescriptions = {
       TO_DO: 'Geplante, aber noch nicht begonnene Aufgaben',
@@ -129,7 +135,8 @@ export async function seedTranslations() {
       READY: 'Aufgaben, die bereit sind zu starten',
       BACKLOG: 'Aufgaben im Backlog, die auf Priorisierung warten',
       TESTING_DEV: 'Aufgaben, die in der Entwicklungsumgebung getestet werden',
-      TESTING_STAGE: 'Aufgaben, die in der Staging-Umgebung getestet werden'
+      TESTING_STAGE: 'Aufgaben, die in der Staging-Umgebung getestet werden',
+      PLANNING: 'Aufgaben in der Planungsphase'
     };
     
     // Ensure statuses object exists
@@ -144,10 +151,11 @@ export async function seedTranslations() {
     deTranslations.tasks.statuses.AWAITING_APPROVAL = 'Wartet auf Genehmigung';
     deTranslations.tasks.statuses.READY_FOR_DEPLOY = 'Bereit für Bereitstellung';
     deTranslations.tasks.statuses.ICEBOX = 'Eiskiste';
-    deTranslations.tasks.statuses.READY = 'Bereit';
+    deTranslations.tasks.statuses.READY = 'Bereit zu Starten';
     deTranslations.tasks.statuses.BACKLOG = 'Backlog';
     deTranslations.tasks.statuses.TESTING_DEV = 'Testen (Dev)';
     deTranslations.tasks.statuses.TESTING_STAGE = 'Testen (Stage)';
+    deTranslations.tasks.statuses.PLANNING = 'Planung';
     
     // Insert translations into database
     await db.insert(TRANSLATIONS).values([
