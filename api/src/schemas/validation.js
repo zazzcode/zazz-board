@@ -219,41 +219,41 @@ export const taskGraphSchemas = {
     params: codeParam
   },
 
-  // GET /tasks/:taskId/relations
+  // GET /tasks/:id/relations
   getTaskRelations: {
-    params: taskIdParam
+    params: idParam
   },
 
-  // POST /tasks/:taskId/relations
+  // POST /tasks/:id/relations
   createTaskRelation: {
-    params: taskIdParam,
+    params: idParam,
     body: {
       type: 'object',
       required: ['relatedTaskId', 'relationType'],
       properties: {
-        relatedTaskId: { type: 'string', minLength: 1 },
+        relatedTaskId: { type: 'integer', minimum: 1 },
         relationType: { type: 'string', enum: ['DEPENDS_ON', 'COORDINATES_WITH'] }
       },
       additionalProperties: false
     }
   },
 
-  // DELETE /tasks/:taskId/relations/:relatedTaskId/:relationType
+  // DELETE /tasks/:id/relations/:relatedTaskId/:relationType
   deleteTaskRelation: {
     params: {
       type: 'object',
-      required: ['taskId', 'relatedTaskId', 'relationType'],
+      required: ['id', 'relatedTaskId', 'relationType'],
       properties: {
-        taskId: { type: 'string', minLength: 1 },
-        relatedTaskId: { type: 'string', minLength: 1 },
+        id: { type: 'string', pattern: '^\\d+$' },
+        relatedTaskId: { type: 'string', pattern: '^\\d+$' },
         relationType: { type: 'string', enum: ['DEPENDS_ON', 'COORDINATES_WITH'] }
       }
     }
   },
 
-  // GET /tasks/:taskId/readiness
+  // GET /tasks/:id/readiness
   checkTaskReadiness: {
-    params: taskIdParam
+    params: idParam
   },
 
   // GET /coordination-requirements

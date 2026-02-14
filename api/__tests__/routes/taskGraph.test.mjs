@@ -21,13 +21,13 @@ describe('Task Graph API', () => {
 
   // ==================== TASK RELATIONS CRUD ====================
 
-  describe('POST /tasks/:taskId/relations', () => {
+  describe('POST /tasks/:id/relations', () => {
     it('should return 401 without authentication token', async () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${taskA.task_id}/relations`)
-        .withJson({ relatedTaskId: taskB.task_id, relationType: 'DEPENDS_ON' })
+        .post(`/tasks/${taskA.id}/relations`)
+        .withJson({ relatedTaskId: taskB.id, relationType: 'DEPENDS_ON' })
         .expectStatus(401);
     });
 
@@ -35,9 +35,9 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${taskA.task_id}/relations`)
+        .post(`/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ relatedTaskId: taskB.task_id, relationType: 'DEPENDS_ON' })
+        .withJson({ relatedTaskId: taskB.id, relationType: 'DEPENDS_ON' })
         .expectStatus(201)
         .expectJsonLength(1);
     });
@@ -46,9 +46,9 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${taskA.task_id}/relations`)
+        .post(`/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ relatedTaskId: taskB.task_id, relationType: 'COORDINATES_WITH' })
+        .withJson({ relatedTaskId: taskB.id, relationType: 'COORDINATES_WITH' })
         .expectStatus(201)
         .expectJsonLength(2); // Primary + mirror
 
@@ -64,9 +64,9 @@ describe('Task Graph API', () => {
     it('should return 400 for self-referencing relation', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${task.task_id}/relations`)
+        .post(`/tasks/${task.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ relatedTaskId: task.task_id, relationType: 'DEPENDS_ON' })
+        .withJson({ relatedTaskId: task.id, relationType: 'DEPENDS_ON' })
         .expectStatus(400)
         .expectJsonLike({ error: 'A task cannot relate to itself' });
     });
@@ -75,9 +75,9 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY); // Project 1
       const taskB = await createTestTask(2); // Project 2 (MOBDEV)
       await spec()
-        .post(`/tasks/${taskA.task_id}/relations`)
+        .post(`/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ relatedTaskId: taskB.task_id, relationType: 'DEPENDS_ON' })
+        .withJson({ relatedTaskId: taskB.id, relationType: 'DEPENDS_ON' })
         .expectStatus(400)
         .expectJsonLike({ error: 'Tasks must belong to the same project' });
     });
@@ -94,9 +94,9 @@ describe('Task Graph API', () => {
 
       // C depends on A would create a cycle: A→B→C→A
       await spec()
-        .post(`/tasks/${taskC.task_id}/relations`)
+        .post(`/tasks/${taskC.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ relatedTaskId: taskA.task_id, relationType: 'DEPENDS_ON' })
+        .withJson({ relatedTaskId: taskA.id, relationType: 'DEPENDS_ON' })
         .expectStatus(400)
         .expectJsonLike({ error: 'This dependency would create a circular reference' });
     });
@@ -107,18 +107,18 @@ describe('Task Graph API', () => {
       await createTestRelation(taskA.id, taskB.id, 'DEPENDS_ON');
 
       await spec()
-        .post(`/tasks/${taskA.task_id}/relations`)
+        .post(`/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ relatedTaskId: taskB.task_id, relationType: 'DEPENDS_ON' })
+        .withJson({ relatedTaskId: taskB.id, relationType: 'DEPENDS_ON' })
         .expectStatus(409);
     });
 
-    it('should return 400 for non-existent related task', async () => {
+    it('should return 400 for non-existent task', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${task.task_id}/relations`)
+        .post(`/tasks/${task.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ relatedTaskId: 'WEBRED-99999', relationType: 'DEPENDS_ON' })
+        .withJson({ relatedTaskId: 99999, relationType: 'DEPENDS_ON' })
         .expectStatus(400);
     });
 
@@ -126,25 +126,25 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${taskA.task_id}/relations`)
+        .post(`/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ relatedTaskId: taskB.task_id, relationType: 'INVALID_TYPE' })
+        .withJson({ relatedTaskId: taskB.id, relationType: 'INVALID_TYPE' })
         .expectStatus(400);
     });
   });
 
-  describe('GET /tasks/:taskId/relations', () => {
+  describe('GET /tasks/:id/relations', () => {
     it('should return 401 without token', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .get(`/tasks/${task.task_id}/relations`)
+        .get(`/tasks/${task.id}/relations`)
         .expectStatus(401);
     });
 
     it('should return empty array for task with no relations', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .get(`/tasks/${task.task_id}/relations`)
+        .get(`/tasks/${task.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLength(0);
@@ -158,7 +158,7 @@ describe('Task Graph API', () => {
       await createTestRelation(taskA.id, taskC.id, 'DEPENDS_ON');
 
       await spec()
-        .get(`/tasks/${taskA.task_id}/relations`)
+        .get(`/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLength(2);
@@ -166,20 +166,20 @@ describe('Task Graph API', () => {
 
     it('should return 404 for non-existent task', async () => {
       await spec()
-        .get('/tasks/WEBRED-99999/relations')
+        .get('/tasks/99999/relations')
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(404);
     });
   });
 
-  describe('DELETE /tasks/:taskId/relations/:relatedTaskId/:relationType', () => {
+  describe('DELETE /tasks/:id/relations/:relatedTaskId/:relationType', () => {
     it('should delete a DEPENDS_ON relation', async () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await createTestRelation(taskA.id, taskB.id, 'DEPENDS_ON');
 
       await spec()
-        .delete(`/tasks/${taskA.task_id}/relations/${taskB.task_id}/DEPENDS_ON`)
+        .delete(`/tasks/${taskA.id}/relations/${taskB.id}/DEPENDS_ON`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLike({ message: 'Relation deleted successfully' });
@@ -196,7 +196,7 @@ describe('Task Graph API', () => {
       await createTestRelation(taskB.id, taskA.id, 'COORDINATES_WITH'); // mirror
 
       await spec()
-        .delete(`/tasks/${taskA.task_id}/relations/${taskB.task_id}/COORDINATES_WITH`)
+        .delete(`/tasks/${taskA.id}/relations/${taskB.id}/COORDINATES_WITH`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200);
 
@@ -211,7 +211,7 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .delete(`/tasks/${taskA.task_id}/relations/${taskB.task_id}/DEPENDS_ON`)
+        .delete(`/tasks/${taskA.id}/relations/${taskB.id}/DEPENDS_ON`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(404);
     });
@@ -265,11 +265,11 @@ describe('Task Graph API', () => {
 
   // ==================== TASK READINESS ====================
 
-  describe('GET /tasks/:taskId/readiness', () => {
+  describe('GET /tasks/:id/readiness', () => {
     it('should return ready=true for task with no dependencies', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .get(`/tasks/${task.task_id}/readiness`)
+        .get(`/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLike({ ready: true, blockedBy: [] });
@@ -281,7 +281,7 @@ describe('Task Graph API', () => {
       await createTestRelation(task.id, dep.id, 'DEPENDS_ON');
 
       const response = await spec()
-        .get(`/tasks/${task.task_id}/readiness`)
+        .get(`/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .returns('res.body');
@@ -297,7 +297,7 @@ describe('Task Graph API', () => {
       await createTestRelation(task.id, dep.id, 'DEPENDS_ON');
 
       await spec()
-        .get(`/tasks/${task.task_id}/readiness`)
+        .get(`/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLike({ ready: true, blockedBy: [] });
@@ -312,7 +312,7 @@ describe('Task Graph API', () => {
 
       // IN_REVIEW meets the criteria (>= IN_REVIEW position)
       await spec()
-        .get(`/tasks/${task.task_id}/readiness`)
+        .get(`/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLike({ ready: true, blockedBy: [] });
@@ -320,7 +320,7 @@ describe('Task Graph API', () => {
 
     it('should return 404 for non-existent task', async () => {
       await spec()
-        .get('/tasks/WEBRED-99999/readiness')
+        .get('/tasks/99999/readiness')
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(404);
     });
