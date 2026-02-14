@@ -1,6 +1,6 @@
-import { eq, and, sql, desc, asc, like, or, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, asc, like, or, inArray, ne } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_REQUIREMENT_DEFINITIONS } from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
 import { keysToCamelCase } from '../utils/propertyMapper.js';
 import { randomUUID } from 'crypto';
@@ -113,6 +113,8 @@ class DatabaseService {
       leaderName: USERS.full_name,
       leaderEmail: USERS.email,
       statusWorkflow: PROJECTS.status_workflow,
+      completionCriteriaStatus: PROJECTS.completion_criteria_status,
+      taskGraphLayoutDirection: PROJECTS.task_graph_layout_direction,
       createdAt: PROJECTS.created_at,
       updatedAt: PROJECTS.updated_at,
       taskCount: sql`COUNT(${TASKS.id})`.as('taskCount')
@@ -127,6 +129,8 @@ class DatabaseService {
       PROJECTS.description, 
       PROJECTS.leader_id,
       PROJECTS.status_workflow,
+      PROJECTS.completion_criteria_status,
+      PROJECTS.task_graph_layout_direction,
       PROJECTS.created_at,
       PROJECTS.updated_at,
       USERS.full_name,
@@ -150,6 +154,8 @@ class DatabaseService {
       leaderName: USERS.full_name,
       leaderEmail: USERS.email,
       statusWorkflow: PROJECTS.status_workflow,
+      completionCriteriaStatus: PROJECTS.completion_criteria_status,
+      taskGraphLayoutDirection: PROJECTS.task_graph_layout_direction,
       createdAt: PROJECTS.created_at,
       updatedAt: PROJECTS.updated_at
     })
@@ -174,6 +180,8 @@ class DatabaseService {
       leaderName: USERS.full_name,
       leaderEmail: USERS.email,
       statusWorkflow: PROJECTS.status_workflow,
+      completionCriteriaStatus: PROJECTS.completion_criteria_status,
+      taskGraphLayoutDirection: PROJECTS.task_graph_layout_direction,
       createdAt: PROJECTS.created_at,
       updatedAt: PROJECTS.updated_at
     })
@@ -211,11 +219,15 @@ class DatabaseService {
     // Project codes are immutable - cannot be updated after creation
     if (projectData.description !== undefined) updateData.description = projectData.description;
     if (projectData.leaderId !== undefined) updateData.leader_id = projectData.leaderId;
+    if (projectData.completionCriteriaStatus !== undefined) updateData.completion_criteria_status = projectData.completionCriteriaStatus;
+    if (projectData.taskGraphLayoutDirection !== undefined) updateData.task_graph_layout_direction = projectData.taskGraphLayoutDirection;
     
     // Check if there are any values to update
     if (Object.keys(updateData).length === 0) {
       throw new Error('No values to update');
     }
+    
+    updateData.updated_at = new Date();
     
     const [project] = await db.update(PROJECTS)
       .set(updateData)
@@ -326,6 +338,7 @@ class DatabaseService {
       gitPullRequestUrl: TASKS.git_pull_request_url,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
+      coordinationCode: TASKS.coordination_code,
       createdAt: TASKS.created_at,
       updatedAt: TASKS.updated_at
     })
@@ -369,6 +382,7 @@ class DatabaseService {
       gitPullRequestUrl: TASKS.git_pull_request_url,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
+      coordinationCode: TASKS.coordination_code,
       createdAt: TASKS.created_at,
       updatedAt: TASKS.updated_at
     })
@@ -437,6 +451,7 @@ class DatabaseService {
       gitPullRequestUrl: TASKS.git_pull_request_url,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
+      coordinationCode: TASKS.coordination_code,
       createdAt: TASKS.created_at,
       updatedAt: TASKS.updated_at
     })
@@ -476,6 +491,7 @@ class DatabaseService {
       gitPullRequestUrl: TASKS.git_pull_request_url,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
+      coordinationCode: TASKS.coordination_code,
       createdAt: TASKS.created_at,
       updatedAt: TASKS.updated_at
     })
@@ -548,7 +564,8 @@ class DatabaseService {
           git_feature_branch: taskData.gitFeatureBranch,
           git_pull_request_url: taskData.gitPullRequestUrl,
           started_at: taskData.startedAt,
-          completed_at: taskData.completedAt
+          completed_at: taskData.completedAt,
+          coordination_code: taskData.coordinationCode || null
         })
         .returning();
 
@@ -584,6 +601,7 @@ class DatabaseService {
     if (taskData.gitPullRequestUrl !== undefined) updateData.git_pull_request_url = taskData.gitPullRequestUrl;
     if (taskData.startedAt !== undefined) updateData.started_at = taskData.startedAt;
     if (taskData.completedAt !== undefined) updateData.completed_at = taskData.completedAt;
+    if (taskData.coordinationCode !== undefined) updateData.coordination_code = taskData.coordinationCode;
     
     const [task] = await db.update(TASKS)
       .set(updateData)
@@ -1120,6 +1138,364 @@ class DatabaseService {
     }
 
     return { positions, needsRedistribution };
+  }
+
+  // ==================== TASK RELATION OPERATIONS ====================
+
+  /**
+   * Get all relations for a task (both directions)
+   */
+  async getTaskRelations(taskId) {
+    const relations = await db.select({
+      taskId: TASK_RELATIONS.task_id,
+      relatedTaskId: TASK_RELATIONS.related_task_id,
+      relationType: TASK_RELATIONS.relation_type,
+      updatedAt: TASK_RELATIONS.updated_at
+    })
+    .from(TASK_RELATIONS)
+    .where(
+      or(
+        eq(TASK_RELATIONS.task_id, taskId),
+        eq(TASK_RELATIONS.related_task_id, taskId)
+      )
+    );
+
+    return relations;
+  }
+
+  /**
+   * Create a task relation
+   * For COORDINATES_WITH, automatically creates the mirror row
+   */
+  async createTaskRelation(taskId, relatedTaskId, relationType, updatedBy = null) {
+    // Prevent self-referencing
+    if (taskId === relatedTaskId) {
+      throw new Error('A task cannot relate to itself');
+    }
+
+    // Verify both tasks exist and belong to the same project
+    const [task] = await db.select({ id: TASKS.id, projectId: TASKS.project_id }).from(TASKS).where(eq(TASKS.id, taskId));
+    const [relatedTask] = await db.select({ id: TASKS.id, projectId: TASKS.project_id }).from(TASKS).where(eq(TASKS.id, relatedTaskId));
+
+    if (!task) throw new Error(`Task ${taskId} not found`);
+    if (!relatedTask) throw new Error(`Task ${relatedTaskId} not found`);
+    if (task.projectId !== relatedTask.projectId) {
+      throw new Error('Tasks must belong to the same project');
+    }
+
+    if (relationType === 'DEPENDS_ON') {
+      // Check for circular dependency before inserting
+      const wouldCycle = await this.wouldCreateCycle(taskId, relatedTaskId);
+      if (wouldCycle) {
+        throw new Error('This dependency would create a circular reference');
+      }
+    }
+
+    // Check for duplicate relation before inserting
+    const [existing] = await db.select({ taskId: TASK_RELATIONS.task_id })
+      .from(TASK_RELATIONS)
+      .where(
+        and(
+          eq(TASK_RELATIONS.task_id, taskId),
+          eq(TASK_RELATIONS.related_task_id, relatedTaskId),
+          eq(TASK_RELATIONS.relation_type, relationType)
+        )
+      )
+      .limit(1);
+    if (existing) {
+      const err = new Error('This relation already exists');
+      err.isDuplicate = true;
+      throw err;
+    }
+
+    const results = [];
+
+    // Insert the primary relation
+    const [relation] = await db.insert(TASK_RELATIONS)
+      .values({
+        task_id: taskId,
+        related_task_id: relatedTaskId,
+        relation_type: relationType,
+        updated_by: updatedBy
+      })
+      .returning();
+    results.push(relation);
+
+    // For COORDINATES_WITH, create the mirror relation
+    if (relationType === 'COORDINATES_WITH') {
+      const [mirror] = await db.insert(TASK_RELATIONS)
+        .values({
+          task_id: relatedTaskId,
+          related_task_id: taskId,
+          relation_type: relationType,
+          updated_by: updatedBy
+        })
+        .returning();
+      results.push(mirror);
+    }
+
+    return results;
+  }
+
+  /**
+   * Delete a task relation
+   * For COORDINATES_WITH, automatically deletes the mirror row
+   */
+  async deleteTaskRelation(taskId, relatedTaskId, relationType) {
+    // Delete the primary relation
+    const [deleted] = await db.delete(TASK_RELATIONS)
+      .where(
+        and(
+          eq(TASK_RELATIONS.task_id, taskId),
+          eq(TASK_RELATIONS.related_task_id, relatedTaskId),
+          eq(TASK_RELATIONS.relation_type, relationType)
+        )
+      )
+      .returning();
+
+    // For COORDINATES_WITH, also delete the mirror
+    if (relationType === 'COORDINATES_WITH') {
+      await db.delete(TASK_RELATIONS)
+        .where(
+          and(
+            eq(TASK_RELATIONS.task_id, relatedTaskId),
+            eq(TASK_RELATIONS.related_task_id, taskId),
+            eq(TASK_RELATIONS.relation_type, relationType)
+          )
+        );
+    }
+
+    return deleted || null;
+  }
+
+  /**
+   * Get the full task graph for a project: all tasks + all relations
+   */
+  async getProjectTaskGraph(projectId) {
+    // Get all tasks for the project (lightweight — id, taskId, title, status, coordinationCode)
+    const tasks = await db.select({
+      id: TASKS.id,
+      taskId: TASKS.task_id,
+      title: TASKS.title,
+      status: TASKS.status,
+      priority: TASKS.priority,
+      assigneeId: TASKS.assignee_id,
+      assigneeName: USERS.full_name,
+      coordinationCode: TASKS.coordination_code
+    })
+    .from(TASKS)
+    .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
+    .where(eq(TASKS.project_id, projectId))
+    .orderBy(asc(TASKS.task_id));
+
+    if (tasks.length === 0) return { tasks: [], relations: [] };
+
+    const taskIds = tasks.map(t => t.id);
+
+    // Get all relations where both sides are in this project
+    const relations = await db.select({
+      taskId: TASK_RELATIONS.task_id,
+      relatedTaskId: TASK_RELATIONS.related_task_id,
+      relationType: TASK_RELATIONS.relation_type
+    })
+    .from(TASK_RELATIONS)
+    .where(inArray(TASK_RELATIONS.task_id, taskIds));
+
+    return { tasks, relations };
+  }
+
+  /**
+   * Check if adding a DEPENDS_ON edge would create a cycle
+   * Uses iterative BFS from relatedTaskId following DEPENDS_ON edges
+   * Returns true if taskId is reachable from relatedTaskId (i.e. cycle)
+   */
+  async wouldCreateCycle(taskId, relatedTaskId) {
+    // If we add taskId -> relatedTaskId (taskId DEPENDS_ON relatedTaskId),
+    // there's a cycle if relatedTaskId already (transitively) depends on taskId.
+    // So: BFS from relatedTaskId following DEPENDS_ON, see if we reach taskId.
+    // Wait — reversed: "task_id DEPENDS_ON related_task_id" means task_id needs related_task_id.
+    // A cycle exists if relatedTaskId transitively DEPENDS_ON taskId.
+    // Follow: where task_id = current, relation_type = DEPENDS_ON → traverse to related_task_id
+    // Actually the dependency direction: task_id DEPENDS_ON related_task_id
+    // So relatedTaskId depends on X means rows where task_id=relatedTaskId, type=DEPENDS_ON
+    // We need to check: does relatedTaskId (or any task it depends on) eventually depend on taskId?
+    // No — we need to check if taskId is an ancestor of relatedTaskId.
+    // Ancestors of relatedTaskId = follow task_id=relatedTaskId → related_task_id, recursively.
+    // If any of those reach taskId, we have a cycle.
+
+    const visited = new Set();
+    const queue = [relatedTaskId];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (current === taskId) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+
+      // Get what `current` depends on
+      const deps = await db.select({ relatedTaskId: TASK_RELATIONS.related_task_id })
+        .from(TASK_RELATIONS)
+        .where(
+          and(
+            eq(TASK_RELATIONS.task_id, current),
+            eq(TASK_RELATIONS.relation_type, 'DEPENDS_ON')
+          )
+        );
+
+      for (const dep of deps) {
+        if (!visited.has(dep.relatedTaskId)) {
+          queue.push(dep.relatedTaskId);
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if a task is "ready" — all its DEPENDS_ON prerequisites have reached
+   * the project's completionCriteriaStatus (or DONE if not set)
+   * Returns { ready: boolean, blockedBy: [{id, taskId, status}] }
+   */
+  async checkTaskReadiness(taskId) {
+    // Get the task and its project
+    const [task] = await db.select({
+      id: TASKS.id,
+      projectId: TASKS.project_id,
+      status: TASKS.status
+    }).from(TASKS).where(eq(TASKS.id, taskId));
+
+    if (!task) throw new Error(`Task ${taskId} not found`);
+
+    // Get project to find completionCriteriaStatus and workflow
+    const [project] = await db.select({
+      completionCriteriaStatus: PROJECTS.completion_criteria_status,
+      statusWorkflow: PROJECTS.status_workflow
+    }).from(PROJECTS).where(eq(PROJECTS.id, task.projectId));
+
+    const criteriaStatus = project.completionCriteriaStatus || 'DONE';
+    const workflow = project.statusWorkflow;
+    const criteriaIndex = workflow.indexOf(criteriaStatus);
+
+    // Get all tasks this task DEPENDS_ON
+    const deps = await db.select({
+      relatedTaskId: TASK_RELATIONS.related_task_id
+    })
+    .from(TASK_RELATIONS)
+    .where(
+      and(
+        eq(TASK_RELATIONS.task_id, taskId),
+        eq(TASK_RELATIONS.relation_type, 'DEPENDS_ON')
+      )
+    );
+
+    if (deps.length === 0) {
+      return { ready: true, blockedBy: [] };
+    }
+
+    const depTaskIds = deps.map(d => d.relatedTaskId);
+    const depTasks = await db.select({
+      id: TASKS.id,
+      taskId: TASKS.task_id,
+      status: TASKS.status
+    })
+    .from(TASKS)
+    .where(inArray(TASKS.id, depTaskIds));
+
+    const blockedBy = depTasks.filter(t => {
+      const taskIndex = workflow.indexOf(t.status);
+      return taskIndex < criteriaIndex;
+    });
+
+    return {
+      ready: blockedBy.length === 0,
+      blockedBy: blockedBy.map(t => ({ id: t.id, taskId: t.taskId, status: t.status }))
+    };
+  }
+
+  /**
+   * After a task's status changes, check if any tasks that DEPEND on it
+   * can now be auto-promoted from TO_DO to READY.
+   * Returns array of promoted task IDs.
+   */
+  async checkAndPromoteDependents(completedTaskId) {
+    // Find tasks that depend on the completed task
+    const dependents = await db.select({
+      taskId: TASK_RELATIONS.task_id
+    })
+    .from(TASK_RELATIONS)
+    .where(
+      and(
+        eq(TASK_RELATIONS.related_task_id, completedTaskId),
+        eq(TASK_RELATIONS.relation_type, 'DEPENDS_ON')
+      )
+    );
+
+    const promoted = [];
+
+    for (const dep of dependents) {
+      // Only promote tasks currently in TO_DO
+      const [task] = await db.select({
+        id: TASKS.id,
+        status: TASKS.status,
+        projectId: TASKS.project_id
+      }).from(TASKS).where(eq(TASKS.id, dep.taskId));
+
+      if (!task || task.status !== 'TO_DO') continue;
+
+      // Check if project workflow includes READY
+      const [project] = await db.select({
+        statusWorkflow: PROJECTS.status_workflow
+      }).from(PROJECTS).where(eq(PROJECTS.id, task.projectId));
+
+      if (!project || !project.statusWorkflow.includes('READY')) continue;
+
+      // Check full readiness (all deps met)
+      const readiness = await this.checkTaskReadiness(task.id);
+      if (readiness.ready) {
+        await db.update(TASKS)
+          .set({ status: 'READY', updated_at: new Date() })
+          .where(eq(TASKS.id, task.id));
+        promoted.push(task.id);
+      }
+    }
+
+    return promoted;
+  }
+
+  // ==================== COORDINATION REQUIREMENT DEFINITIONS ====================
+
+  /**
+   * Get all coordination requirement definitions
+   */
+  async getCoordinationRequirementDefinitions() {
+    const defs = await db.select({
+      code: COORDINATION_REQUIREMENT_DEFINITIONS.code,
+      description: COORDINATION_REQUIREMENT_DEFINITIONS.description,
+      createdAt: COORDINATION_REQUIREMENT_DEFINITIONS.created_at,
+      updatedAt: COORDINATION_REQUIREMENT_DEFINITIONS.updated_at
+    })
+    .from(COORDINATION_REQUIREMENT_DEFINITIONS)
+    .orderBy(asc(COORDINATION_REQUIREMENT_DEFINITIONS.code));
+
+    return defs;
+  }
+
+  /**
+   * Get coordination requirement definition by code
+   */
+  async getCoordinationRequirementByCode(code) {
+    const [def] = await db.select({
+      code: COORDINATION_REQUIREMENT_DEFINITIONS.code,
+      description: COORDINATION_REQUIREMENT_DEFINITIONS.description,
+      createdAt: COORDINATION_REQUIREMENT_DEFINITIONS.created_at,
+      updatedAt: COORDINATION_REQUIREMENT_DEFINITIONS.updated_at
+    })
+    .from(COORDINATION_REQUIREMENT_DEFINITIONS)
+    .where(eq(COORDINATION_REQUIREMENT_DEFINITIONS.code, code))
+    .limit(1);
+
+    return def || null;
   }
 
   // ==================== STATUS DEFINITIONS OPERATIONS ====================

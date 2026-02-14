@@ -1,10 +1,12 @@
 import { seedUsers } from './seeders/seedUsers.js';
 import { seedStatusDefinitions } from './seeders/seedStatusDefinitions.js';
+import { seedCoordinationRequirementDefinitions } from './seeders/seedCoordinationRequirementDefinitions.js';
 import { seedTranslations } from './seeders/seedTranslations.js';
 import { seedProjects } from './seeders/seedProjects.js';
 import { seedTags } from './seeders/seedTags.js';
 import { seedTasks } from './seeders/seedTasks.js';
 import { seedTaskTags } from './seeders/seedTaskTags.js';
+import { seedTaskRelations } from './seeders/seedTaskRelations.js';
 import { client } from '../lib/db/index.js';
 
 // Safety check: Prevent seeding production
@@ -43,6 +45,7 @@ async function seedAll() {
     console.log('📋 Step 1: Seeding base entities...');
     await seedUsers();
     await seedStatusDefinitions();
+    await seedCoordinationRequirementDefinitions();
     await seedTranslations();
     await seedTags();
     console.log('');
@@ -60,6 +63,11 @@ async function seedAll() {
     // Step 4: Seed relationship tables
     console.log('📋 Step 4: Seeding relationships (depends on tasks and tags)...');
     await seedTaskTags();
+    console.log('');
+
+    // Step 5: Seed task relations (depends on tasks existing)
+    console.log('📋 Step 5: Seeding task relations (depends on tasks)...');
+    await seedTaskRelations();
     console.log('');
 
     console.log('✅ Database seeding completed successfully!');

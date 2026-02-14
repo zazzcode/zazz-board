@@ -263,6 +263,12 @@ export default async function projectRoutes(fastify, options) {
         updatedAt: new Date()
       });
       
+      // Auto-promote dependents from TO_DO → READY if their deps are now met
+      const promoted = await dbService.checkAndPromoteDependents(currentTask.id);
+      if (promoted.length > 0) {
+        request.log.info(`Auto-promoted tasks ${promoted.join(', ')} to READY`);
+      }
+
       request.log.info(`Task ${taskId} status changed from ${currentTask.status} to ${status}`);
       reply.send(updatedTask);
     } catch (error) {

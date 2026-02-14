@@ -212,6 +212,54 @@ export const taskSchemas = {
   }
 };
 
+// Task Graph / Relation schemas
+export const taskGraphSchemas = {
+  // GET /projects/:code/graph
+  getProjectGraph: {
+    params: codeParam
+  },
+
+  // GET /tasks/:taskId/relations
+  getTaskRelations: {
+    params: taskIdParam
+  },
+
+  // POST /tasks/:taskId/relations
+  createTaskRelation: {
+    params: taskIdParam,
+    body: {
+      type: 'object',
+      required: ['relatedTaskId', 'relationType'],
+      properties: {
+        relatedTaskId: { type: 'string', minLength: 1 },
+        relationType: { type: 'string', enum: ['DEPENDS_ON', 'COORDINATES_WITH'] }
+      },
+      additionalProperties: false
+    }
+  },
+
+  // DELETE /tasks/:taskId/relations/:relatedTaskId/:relationType
+  deleteTaskRelation: {
+    params: {
+      type: 'object',
+      required: ['taskId', 'relatedTaskId', 'relationType'],
+      properties: {
+        taskId: { type: 'string', minLength: 1 },
+        relatedTaskId: { type: 'string', minLength: 1 },
+        relationType: { type: 'string', enum: ['DEPENDS_ON', 'COORDINATES_WITH'] }
+      }
+    }
+  },
+
+  // GET /tasks/:taskId/readiness
+  checkTaskReadiness: {
+    params: taskIdParam
+  },
+
+  // GET /coordination-requirements
+  getCoordinationRequirements: {},
+};
+
 // Project schemas
 export const projectSchemas = {
   // GET /projects
@@ -251,7 +299,7 @@ export const projectSchemas = {
     }
   },
   
-  // PUT /projects/:id - Project codes are immutable, only title, description, and leaderId can be updated
+  // PUT /projects/:id - Project codes are immutable, only title, description, leaderId, and graph settings can be updated
   updateProject: {
     params: idParam,
     body: {
@@ -259,7 +307,9 @@ export const projectSchemas = {
       properties: {
         title: { type: 'string', minLength: 1, maxLength: 255 },
         description: { type: 'string', maxLength: 5000 },
-        leaderId: { type: 'integer', minimum: 1 }
+        leaderId: { type: 'integer', minimum: 1 },
+        completionCriteriaStatus: { type: 'string', maxLength: 25, nullable: true },
+        taskGraphLayoutDirection: { type: 'string', enum: ['LR', 'TB'] }
       },
       additionalProperties: false
     }

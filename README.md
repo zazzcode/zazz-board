@@ -2,26 +2,28 @@
 
 A Kanban-style orchestration management application for coordinating AI agents and human users in software projects.
 
+**Stack**: Fastify API (JavaScript) + React client (JavaScript) + PostgreSQL 15 + Drizzle ORM + Docker Compose
+
 ## Quick Start
 
 ### Prerequisites
-- Node.js 18+ and npm
-- Docker and Docker Compose
+- Node.js 22+ and npm
+- Docker Desktop running (PostgreSQL 15 runs in a container on port 5433)
 
 ### Initial Setup
 
 1. **Install dependencies**
    ```bash
+   # From project root
    npm install
-   cd api && npm install
-   cd ../client && npm install
-   cd ..
+   npm install --workspace=api
+   cd client && npm install && cd ..
    ```
 
 2. **Configure environment**
    ```bash
    cp api/.env.example api/.env
-   # Edit api/.env with your database credentials if needed
+   # Edit api/.env: replace 'your_secure_password' with 'password' in both DATABASE_URL lines
    ```
 
 3. **Start PostgreSQL**
@@ -29,10 +31,9 @@ A Kanban-style orchestration management application for coordinating AI agents a
    npm run docker:up:db
    ```
 
-4. **Run migrations and seed data**
+4. **Create and seed the database** (nuke-and-recreate workflow — no migrations in this phase)
    ```bash
-   npm run db:migrate
-   npm run db:seed
+   cd api && npm run db:reset && cd ..
    ```
 
 ### Running the Application
@@ -61,42 +62,42 @@ npm run dev:client
 ### Database Operations
 
 ```bash
-npm run db:migrate   # Run migrations
-npm run db:seed      # Seed database with test data
-npm run db:reset     # Reset and re-seed database
+# From the api/ directory:
+npm run db:reset     # Drop all tables, recreate from schema, seed fresh data
+npm run db:seed      # Seed data only (tables must already exist)
 ```
 
 ### Running Tests
 
 ```bash
-# From project root
-cd api
+# From the api/ directory — must source .env first
 set -a && source .env && set +a && NODE_ENV=test npm run test
 ```
+
+See [api/__tests__/README.md](./api/__tests__/README.md) for full test setup, writing tests, and troubleshooting.
 
 ## Common Issues
 
 **Port already in use:**
 ```bash
-# Kill process on port 3030 (API)
-lsof -ti:3030 | xargs kill -9
+lsof -ti:3030 | xargs kill -9   # API
+lsof -ti:3001 | xargs kill -9   # Client
+```
 
-# Kill process on port 3001 (client)
-lsof -ti:3001 | xargs kill -9
+**`drizzle-kit push` errors with "please install drizzle-orm":**
+```bash
+# npm workspace issue — create symlink from project root:
+ln -sf ./api/node_modules/drizzle-orm ./node_modules/drizzle-orm
 ```
 
 **Missing dependencies:**
 ```bash
 npm install                    # Root dependencies
-cd api && npm install          # API dependencies
-cd ../client && npm install    # Client dependencies
+npm install --workspace=api    # API dependencies
+cd client && npm install       # Client dependencies
 ```
 
 ## Documentation
 
-See [WARP.md](./WARP.md) for detailed project documentation including:
-- Architecture overview
-- Development guidelines
-- Database schema
-- API routes
-- Testing strategies
+- **[AGENTS.md](./AGENTS.md)** — Detailed step-by-step playbook for DB reset, running tests, running the app, and troubleshooting. **Start here if you're an agent or new developer.**
+- **[api/__tests__/README.md](./api/__tests__/README.md)** — Test framework guide: Vitest + PactumJS usage and API, helpers, writing tests, and CI/CD.

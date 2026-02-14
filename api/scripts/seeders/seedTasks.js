@@ -11,7 +11,7 @@ export async function seedTasks() {
         task_id: 'WEBRED-1', 
         title: 'Design mockups for homepage', 
         prompt: 'Create wireframes and high-fidelity designs for the new homepage',
-        status: 'TO_DO',
+        status: 'READY',
         priority: 'HIGH',
         assignee_id: 2,
         position: 10
@@ -41,7 +41,7 @@ export async function seedTasks() {
         task_id: 'MOBDEV-2', 
         title: 'Create authentication screens', 
         prompt: 'Build login and registration screens',
-        status: 'TO_DO',
+        status: 'READY',
         priority: 'MEDIUM',
         assignee_id: 2,
         position: 20
@@ -92,7 +92,7 @@ export async function seedTasks() {
         task_id: 'APIMOD-5', 
         title: 'Write API documentation', 
         prompt: 'Create comprehensive documentation with examples',
-        status: 'DONE',
+        status: 'READY',
         priority: 'LOW',
         assignee_id: 4,
         position: 10
@@ -105,7 +105,37 @@ export async function seedTasks() {
         status: 'TO_DO',
         priority: 'MEDIUM',
         assignee_id: 1,
-        position: 40
+        position: 50
+      },
+      { 
+        project_id: 3, 
+        task_id: 'APIMOD-7', 
+        title: 'Implement API versioning strategy', 
+        prompt: 'Add URL-based versioning (v1, v2) with backward compatibility layer',
+        status: 'TO_DO',
+        priority: 'HIGH',
+        assignee_id: 3,
+        position: 60
+      },
+      { 
+        project_id: 3, 
+        task_id: 'APIMOD-8', 
+        title: 'Add rate limiting middleware', 
+        prompt: 'Implement per-user and per-endpoint rate limiting with Redis backing',
+        status: 'TO_DO',
+        priority: 'MEDIUM',
+        assignee_id: 4,
+        position: 70
+      },
+      { 
+        project_id: 3, 
+        task_id: 'APIMOD-9', 
+        title: 'Standardize error handling responses', 
+        prompt: 'Create unified error response format with error codes and i18n messages',
+        status: 'TO_DO',
+        priority: 'MEDIUM',
+        assignee_id: 2,
+        position: 80
       }
     ]);
     

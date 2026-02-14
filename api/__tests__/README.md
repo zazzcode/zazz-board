@@ -5,10 +5,11 @@ This directory contains API integration tests for Task Blaster using **Vitest** 
 ## Quick Start
 
 ### Prerequisites
-- Node.js 22+
-- Docker (for PostgreSQL database)
+- Node.js 22+ and npm
+- Docker Desktop running (PostgreSQL 15 container on port 5433)
 - Database container running: `npm run docker:up:db` from project root
 - Test database created and seeded (see Environment Setup below)
+- `api/.env` configured with correct `DATABASE_URL_TEST` (see [AGENTS.md](../../AGENTS.md) for setup)
 
 ### Run Tests
 
@@ -47,15 +48,15 @@ Task Blaster uses **separate databases** for development and testing:
 # 1. Create test database
 docker exec task_blaster_postgres psql -U postgres -c "CREATE DATABASE task_blaster_test;"
 
-# 2. Run migrations on test database
-DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_test npm run db:migrate
+# 2. Nuke and recreate schema + seed data (from api/ directory)
+#    This uses drizzle-kit push --force to create tables from schema.js, then runs all seeders
+DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_test npm run db:reset
 
-# 3. Seed test database
-DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_test npm run db:seed
-
-# 4. Verify test database
+# 3. Verify test database
 docker exec task_blaster_postgres psql -U postgres -d task_blaster_test -c "\dt"
 ```
+
+> **Note**: During this development phase there are no incremental migrations. `db:reset` drops everything and recreates from the Drizzle schema. See [AGENTS.md](../../AGENTS.md) for full details.
 
 ### Resetting Test Database
 
@@ -63,12 +64,11 @@ If tests fail or data becomes corrupted:
 
 ```bash
 # Drop and recreate
-docker exec task_blaster_postgres psql -U postgres -c "DROP DATABASE task_blaster_test;"
+docker exec task_blaster_postgres psql -U postgres -c "DROP DATABASE IF EXISTS task_blaster_test;"
 docker exec task_blaster_postgres psql -U postgres -c "CREATE DATABASE task_blaster_test;"
 
-# Migrate and seed
-DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_test npm run db:migrate
-DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_test npm run db:seed
+# Recreate schema and seed (from api/ directory)
+DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_test npm run db:reset
 ```
 
 ### Safety Mechanisms
@@ -89,28 +89,29 @@ If any check fails, tests exit immediately with a clear error message.
 ### Architecture
 
 Tests use:
-- **Vitest**: ESM-native test runner with Jest-compatible API
-- **PactumJS**: API testing DSL with chainable request/response matchers
-- **Fastify**: API server running on loopback port 3031 during tests
-- **Docker PostgreSQL**: Real database for integration testing (port 5433)
-- **Separate test database**: `task_blaster_test` (isolated from dev)
+- **Vitest**: ESM-native test runner with Jest-compatible API (`describe`, `it`, `expect`, `beforeEach`, `afterAll`)
+- **PactumJS**: HTTP API testing library with a chainable fluent DSL for building requests and asserting responses (see "PactumJS Usage" below)
+- **pactum-supertest**: Bridge package that wires PactumJS to make real HTTP requests against a running server
+- **Fastify**: The actual API server, started on `127.0.0.1:3031` during tests (same code as production, just on a different port)
+- **Docker PostgreSQL**: Real Postgres 15 database for true integration testing (port 5433)
+- **Separate test database**: `task_blaster_test` (completely isolated from dev)
 
 ### Setup Flow
 
-1. **Vitest Setup** (`setup.pactum.mjs`)
-   - Runs before all tests (via `setupFiles` in `vitest.config.mjs`)
-   - Initializes Fastify app instance
-   - Starts app on `127.0.0.1:3031`
-   - Configures PactumJS base URL
-   - Initializes token service with seeded users
+1. **Vitest Setup** (`setup.pactum.mjs`) — runs once before all test files
+   - Validates environment (NODE_ENV, DATABASE_URL_TEST, runtime DB name check)
+   - Creates Fastify app instance via `createTestServer()`
+   - Starts HTTP listener on `127.0.0.1:3031`
+   - Sets PactumJS base URL to `http://127.0.0.1:3031`
+   - Initializes token service cache with seeded users
 
-2. **Per-Test Cleanup** (`beforeEach`)
-   - Clears `TASKS` and `TASK_TAGS` tables
-   - Ensures test isolation
-   - Uses existing seeded `PROJECTS` and `USERS`
+2. **Per-Test Cleanup** (`beforeEach` in each test file)
+   - Calls `clearTaskData()` which deletes all rows from `TASK_TAGS` and `TASKS`
+   - Ensures test isolation — each test starts with a clean task slate
+   - Seeded `PROJECTS`, `USERS`, `TAGS`, `STATUS_DEFINITIONS`, and `COORDINATION_REQUIREMENT_DEFINITIONS` remain for speed
 
-3. **Teardown** (`afterAll`)
-   - Closes Fastify app listener
+3. **Teardown** (`afterAll` in `setup.pactum.mjs`)
+   - Closes Fastify HTTP listener and DB connections
 
 ## Test Helpers
 
@@ -138,9 +139,125 @@ expect(task.status).toBe('TO_DO');
 expect(task.title).toBe('Fix bug');
 ```
 
+## PactumJS Usage
+
+PactumJS is the HTTP API testing library used in this project. It provides a chainable fluent DSL for constructing HTTP requests and asserting responses. Every test uses `spec()` as its entry point.
+
+**Docs**: https://pactumjs.github.io
+
+### How it works
+
+1. Import `spec` from pactum
+2. Chain an HTTP method (`.get()`, `.post()`, `.put()`, `.patch()`, `.delete()`)
+3. Chain request builders (`.withHeaders()`, `.withJson()`, `.withQueryParams()`, etc.)
+4. Chain response assertions (`.expectStatus()`, `.expectJsonLike()`, `.expectJsonSchema()`, etc.)
+5. `await` the entire chain — PactumJS sends the real HTTP request and validates the response
+
+```javascript
+import { spec } from 'pactum';
+
+// Every spec() call is a complete HTTP request → response → assertion cycle
+await spec()
+  .get('/projects')                          // HTTP method + path
+  .withHeaders('TB_TOKEN', VALID_TOKEN)      // Add request headers
+  .expectStatus(200)                         // Assert HTTP status
+  .expectJsonLike([{ code: 'WEBRED' }]);     // Assert response body (partial match)
+```
+
+### Request Builders
+
+```javascript
+// GET with query params
+await spec().get('/tasks').withQueryParams({ projectId: 1, status: 'TO_DO' })
+
+// POST with JSON body
+await spec().post('/tasks').withHeaders('TB_TOKEN', TOKEN).withJson({ title: 'New task', projectId: 1 })
+
+// PUT with JSON body
+await spec().put('/tasks/1').withHeaders('TB_TOKEN', TOKEN).withJson({ title: 'Updated title' })
+
+// PATCH with JSON body
+await spec().patch('/tasks/1/status').withHeaders('TB_TOKEN', TOKEN).withJson({ status: 'DONE' })
+
+// DELETE
+await spec().delete('/tasks/1').withHeaders('TB_TOKEN', TOKEN)
+```
+
+### Response Assertions
+
+```javascript
+await spec()
+  .get('/endpoint')
+  .expectStatus(200)                           // HTTP status code
+  .expectJson({ key: 'value' })               // Exact full JSON match
+  .expectJsonLike({ partial: 'match' })       // Partial match (ignores extra fields)
+  .expectJsonSchema({                         // JSON Schema validation
+    type: 'object',
+    required: ['id', 'title'],
+    properties: {
+      id: { type: 'number' },
+      title: { type: 'string' }
+    }
+  })
+  .expectHeaderContains('content-type', 'application/json');
+```
+
+**Key distinction**: `.expectJson()` requires an exact match. `.expectJsonLike()` allows partial matching (the response can have extra fields). **Use `.expectJsonLike()` in most tests** since API responses often include timestamps and other dynamic fields.
+
+### Storing Response Values
+
+You can capture response values for later assertions using `returns()`:
+```javascript
+const taskId = await spec()
+  .post('/tasks')
+  .withHeaders('TB_TOKEN', TOKEN)
+  .withJson({ title: 'New task', projectId: 1 })
+  .expectStatus(201)
+  .returns('id');  // Extract 'id' from response body
+
+// Use captured value in next request
+await spec()
+  .get(`/tasks/${taskId}`)
+  .withHeaders('TB_TOKEN', TOKEN)
+  .expectStatus(200);
+```
+
+### Authentication
+
+All routes in this API require the `TB_TOKEN` header:
+```javascript
+const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
+
+await spec()
+  .patch('/tasks/1/status')
+  .withHeaders('TB_TOKEN', VALID_TOKEN)
+  .withJson({ status: 'IN_PROGRESS' })
+  .expectStatus(200);
+```
+
+Missing or invalid token returns `401 Unauthorized`.
+
+### Testing Error Responses
+
+```javascript
+// 401 — no token
+await spec().get('/tasks').expectStatus(401);
+
+// 404 — not found
+await spec().get('/tasks/99999').withHeaders('TB_TOKEN', TOKEN).expectStatus(404)
+  .expectJsonLike({ error: 'Task not found' });
+
+// 400 — validation error
+await spec().post('/tasks').withHeaders('TB_TOKEN', TOKEN)
+  .withJson({ title: '' })  // invalid
+  .expectStatus(400);
+```
+
 ## Writing Tests
 
 ### Basic Test Structure
+
+Every test file follows this pattern:
 
 ```javascript
 import { spec } from 'pactum';
@@ -149,15 +266,16 @@ import { createTestTask, getTaskById, clearTaskData } from '../helpers/testDatab
 const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
 
 describe('PATCH /tasks/:id/status', () => {
+  // Clear task data before each test for isolation
   beforeEach(async () => {
     await clearTaskData();
   });
 
   it('should change task status', async () => {
-    // Setup: Create a test task
+    // 1. Setup: Create test data directly in DB via helpers
     const task = await createTestTask(1, { status: 'TO_DO' });
 
-    // Act: Make API request
+    // 2. Act: Make HTTP request via PactumJS spec()
     await spec()
       .patch(`/tasks/${task.id}/status`)
       .withHeaders('TB_TOKEN', VALID_TOKEN)
@@ -165,39 +283,14 @@ describe('PATCH /tasks/:id/status', () => {
       .expectStatus(200)
       .expectJsonLike({ id: task.id, status: 'IN_PROGRESS' });
 
-    // Assert: Verify in database
+    // 3. Assert: Optionally verify side effects in DB
     const updated = await getTaskById(task.id);
     expect(updated.status).toBe('IN_PROGRESS');
   });
 });
 ```
 
-### PactumJS Matchers
-
-Common assertions:
-```javascript
-await spec()
-  .get('/endpoint')
-  .expectStatus(200)                           // HTTP status
-  .expectJson({ key: 'value' })               // Exact JSON match
-  .expectJsonLike({ partial: 'match' })       // Partial JSON match
-  .expectJsonSchema({ type: 'object', ... })  // JSON Schema validation
-  .expectCookies({ name: 'value' })           // Cookie checks
-  .expectHeadersContains({ 'x-header': 'val' }); // Header checks
-```
-
-### Authentication
-
-All routes in this API require the `TB_TOKEN` header:
-```javascript
-await spec()
-  .patch('/tasks/1/status')
-  .withHeaders('TB_TOKEN', '550e8400-e29b-41d4-a716-446655440000')
-  .withJson({ status: 'IN_PROGRESS' })
-  .expectStatus(200);
-```
-
-Missing or invalid token returns `401 Unauthorized`.
+**Pattern**: Setup data with DB helpers → Make HTTP request with `spec()` → Assert response inline → Optionally verify DB state with Vitest `expect()`.
 
 ## Current Test Coverage
 
@@ -240,9 +333,11 @@ Tests for `PATCH /tasks/:id/status` endpoint:
 - Connection: `localhost:5433` (see `api/.env`)
 
 ### Seeded Data
-- **Project 1** (code: `TEST`) - Used for all tests
-- **User 1** - Michael (token: `550e8400-e29b-41d4-a716-446655440000`)
-- Seeded via `api/scripts/seeders/` on startup
+- **5 projects** (WEBRED, MOBDEV, APIMOD, DATAMIG, SECURE) — Project 1 (WEBRED) commonly used in tests
+- **5 users** — User 1 is Michael (token: `550e8400-e29b-41d4-a716-446655440000`)
+- **5 coordination requirement definitions**, **8 status definitions**, **10 tags**
+- **6 task relations** in APIMOD project (DEPENDS_ON + COORDINATES_WITH)
+- Seeded via `api/scripts/seeders/` during `db:reset`
 
 ### Test Isolation
 Tests clear task data before each run but **reuse seeded projects and users** for speed:

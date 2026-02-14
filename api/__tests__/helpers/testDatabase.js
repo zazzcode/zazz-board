@@ -1,5 +1,5 @@
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, TASKS, TAGS, TASK_TAGS } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS } from '../../lib/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 
 /**
@@ -59,8 +59,24 @@ export async function validateTestEnvironment() {
 export async function clearTaskData() {
   await validateTestEnvironment();
   
+  await db.delete(TASK_RELATIONS);
   await db.delete(TASK_TAGS);
   await db.delete(TASKS);
+}
+
+/**
+ * Reset Project 1 (WEBRED) settings to seeded defaults.
+ * Called to ensure test isolation when other tests modify project settings.
+ * Tests that need specific project settings (e.g. APIMOD) should set them explicitly.
+ */
+export async function resetProjectDefaults() {
+  await db.update(PROJECTS)
+    .set({
+      status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'],
+      completion_criteria_status: null,
+      task_graph_layout_direction: 'LR'
+    })
+    .where(eq(PROJECTS.id, 1));
 }
 
 // Counter for generating unique task IDs within the same millisecond
@@ -126,4 +142,32 @@ export async function getTasksByStatus(projectId, status) {
         eq(TASKS.status, status)
       )
     );
+}
+
+/**
+ * Create a test task relation
+ * @param {number} taskId - Source task ID
+ * @param {number} relatedTaskId - Target task ID
+ * @param {string} relationType - 'DEPENDS_ON' or 'COORDINATES_WITH'
+ * @returns {Promise<object>} Created relation
+ */
+export async function createTestRelation(taskId, relatedTaskId, relationType) {
+  const [relation] = await db.insert(TASK_RELATIONS).values({
+    task_id: taskId,
+    related_task_id: relatedTaskId,
+    relation_type: relationType
+  }).returning();
+  
+  return relation;
+}
+
+/**
+ * Get all relations for a task
+ * @param {number} taskId - Task ID
+ * @returns {Promise<Array>} Array of relations
+ */
+export async function getRelationsForTask(taskId) {
+  return await db.select()
+    .from(TASK_RELATIONS)
+    .where(eq(TASK_RELATIONS.task_id, taskId));
 }

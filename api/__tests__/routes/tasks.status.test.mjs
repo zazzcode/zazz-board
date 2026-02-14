@@ -94,16 +94,16 @@ describe('PATCH /tasks/:id/status', () => {
       expect(updated.status).toBe('DONE');
     });
 
-    it('should change status from TO_DO to REVIEW', async () => {
+    it('should change status from TO_DO to IN_REVIEW', async () => {
       const task = await createTestTask(1, { status: 'TO_DO' });
       await spec()
         .patch(`/tasks/${task.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ status: 'REVIEW' })
+        .withJson({ status: 'IN_REVIEW' })
         .expectStatus(200)
-        .expectJsonLike({ id: task.id, status: 'REVIEW' });
+        .expectJsonLike({ id: task.id, status: 'IN_REVIEW' });
       const updated = await getTaskById(task.id);
-      expect(updated.status).toBe('REVIEW');
+      expect(updated.status).toBe('IN_REVIEW');
     });
   });
 

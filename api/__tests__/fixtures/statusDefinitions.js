@@ -14,7 +14,8 @@ export const expectedStatusCodes = [
   'READY',
   'BACKLOG',
   'TESTING_DEV',
-  'TESTING_STAGE'
+  'TESTING_STAGE',
+  'PLANNING'
 ];
 
 export const statusDefinitionSchema = {

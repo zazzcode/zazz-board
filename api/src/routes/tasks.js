@@ -112,7 +112,7 @@ export default async function taskRoutes(fastify, options) {
         properties: {
           status: { 
             type: 'string', 
-            enum: ['TO_DO', 'IN_PROGRESS', 'REVIEW', 'DONE'] 
+            pattern: '^[A-Z_]+$'
           }
         }
       }
@@ -121,6 +121,12 @@ export default async function taskRoutes(fastify, options) {
     try {
       const { id } = request.params;
       const { status } = request.body;
+      
+      // Validate status against STATUS_DEFINITIONS
+      const statusDef = await dbService.getStatusDefinitionByCode(status);
+      if (!statusDef) {
+        return reply.code(400).send({ error: `Invalid status: ${status}` });
+      }
       
       // Get current task
       const currentTask = await dbService.getTaskById(parseInt(id));
@@ -146,6 +152,12 @@ export default async function taskRoutes(fastify, options) {
         updatedAt: new Date()
       });
       
+      // Auto-promote dependents from TO_DO → READY if their deps are now met
+      const promoted = await dbService.checkAndPromoteDependents(parseInt(id));
+      if (promoted.length > 0) {
+        request.log.info(`Auto-promoted tasks ${promoted.join(', ')} to READY`);
+      }
+
       request.log.info(`Task ${id} status changed from ${currentTask.status} to ${status}`);
       reply.send(updatedTask);
     } catch (error) {

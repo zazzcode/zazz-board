@@ -1,6 +1,16 @@
-import { pgTable, serial, varchar, text, timestamp, integer, boolean, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, integer, boolean, uuid, primaryKey, index } from 'drizzle-orm/pg-core';
+import { pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
+
+// ==================== PostgreSQL ENUMs ====================
+// System-controlled keywords → ENUM; user-definable values → varchar
+
+// Enum for task relation types
+export const taskRelationTypeEnum = pgEnum('task_relation_type', ['DEPENDS_ON', 'COORDINATES_WITH']);
+
+// Enum for graph layout direction
+export const graphLayoutDirectionEnum = pgEnum('graph_layout_direction', ['LR', 'TB']);
 
 // Users table - using integer sequence as primary key (best practice for scalability)
 export const USERS = pgTable('USERS', {
@@ -29,6 +39,16 @@ export const STATUS_DEFINITIONS = pgTable('STATUS_DEFINITIONS', {
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
+// Coordination Requirement Definitions table - reference table for coordination types
+export const COORDINATION_REQUIREMENT_DEFINITIONS = pgTable('COORDINATION_REQUIREMENT_DEFINITIONS', {
+  code: varchar('code', { length: 25 }).primaryKey().notNull(),
+  description: varchar('description', { length: 200 }),
+  created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
 // Translations table - stores all UI translations as JSONB
 export const TRANSLATIONS = pgTable('TRANSLATIONS', {
   id: serial('id').primaryKey(),
@@ -49,6 +69,9 @@ export const PROJECTS = pgTable('PROJECTS', {
   leader_id: integer('leader_id').notNull().references(() => USERS.id, { onDelete: 'restrict' }),
   next_task_sequence: integer('next_task_sequence').notNull().default(1),
   status_workflow: varchar('status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']::varchar[]`),
+  completion_criteria_status: varchar('completion_criteria_status', { length: 25 })
+    .references(() => STATUS_DEFINITIONS.code, { onDelete: 'set null' }),
+  task_graph_layout_direction: graphLayoutDirectionEnum('task_graph_layout_direction').default('LR'),
   created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
@@ -73,15 +96,30 @@ export const TASKS = pgTable('TASKS', {
   git_pull_request_url: varchar('git_pull_request_url'),
   started_at: timestamp('started_at', { withTimezone: true }),
   completed_at: timestamp('completed_at', { withTimezone: true }),
+  coordination_code: varchar('coordination_code', { length: 25 })
+    .references(() => COORDINATION_REQUIREMENT_DEFINITIONS.code, { onDelete: 'set null' }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-// Task-Tags junction table for many-to-many relationship
+// Task-Tags junction table
 export const TASK_TAGS = pgTable('TASK_TAGS', {
   task_id: integer('task_id').notNull().references(() => TASKS.id, { onDelete: 'cascade' }),
   tag: varchar('tag', { length: 100 }).notNull().references(() => TAGS.tag, { onDelete: 'cascade' }),
 });
+
+// Task Relations junction table - composite PK (no surrogate integer PK, same pattern as TASK_TAGS)
+export const TASK_RELATIONS = pgTable('TASK_RELATIONS', {
+  task_id: integer('task_id').notNull().references(() => TASKS.id, { onDelete: 'cascade' }),
+  related_task_id: integer('related_task_id').notNull().references(() => TASKS.id, { onDelete: 'cascade' }),
+  relation_type: taskRelationTypeEnum('relation_type').notNull(),
+  updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.task_id, table.related_task_id, table.relation_type] }),
+  index('idx_task_relations_task_id').on(table.task_id),
+  index('idx_task_relations_related_task_id').on(table.related_task_id),
+]);
 
 // Image metadata table
 export const IMAGE_METADATA = pgTable('IMAGE_METADATA', {
@@ -126,6 +164,21 @@ export const tasksRelations = relations(TASKS, ({ one, many }) => ({
   }),
   taskTags: many(TASK_TAGS),
   images: many(IMAGE_METADATA),
+  relations: many(TASK_RELATIONS, { relationName: 'taskRelations' }),
+  relatedRelations: many(TASK_RELATIONS, { relationName: 'relatedTaskRelations' }),
+}));
+
+export const taskRelationsRelations = relations(TASK_RELATIONS, ({ one }) => ({
+  task: one(TASKS, {
+    fields: [TASK_RELATIONS.task_id],
+    references: [TASKS.id],
+    relationName: 'taskRelations',
+  }),
+  relatedTask: one(TASKS, {
+    fields: [TASK_RELATIONS.related_task_id],
+    references: [TASKS.id],
+    relationName: 'relatedTaskRelations',
+  }),
 }));
 
 export const tagsRelations = relations(TAGS, ({ many }) => ({
