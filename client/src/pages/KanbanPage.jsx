@@ -1,12 +1,12 @@
 import { Container, Text } from '@mantine/core';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useTasks } from '../hooks/useTasks.js';
-import { useModalManager } from '../hooks/useModalManager.js';
+import { usePanelManager } from '../hooks/usePanelManager.js';
 import { useDragAndDrop } from '../hooks/useDragAndDrop.js';
 import { useTaskActions } from '../hooks/useTaskActions.js';
 import { KanbanBoard } from '../components/KanbanBoard.jsx';
 import { KanbanDebug } from '../components/KanbanDebug.jsx';
-import { TaskDetailsModal } from '../components/TaskDetailModal.jsx';
+import { TaskDetailsPanel } from '../components/TaskDetailPanel.jsx';
 
 import { useEffect } from 'react';
 
@@ -28,10 +28,10 @@ export function KanbanPage({ selectedProject, onBackToProjects, refreshTrigger }
   }, [refreshTrigger, refreshTasks]);
   
   // Use custom hooks for better separation of concerns
-  const { openModals, openModal, closeModal, updateModalTask } = useModalManager();
+  const { openPanels, openDetailPanel, closeDetailPanel, updateTaskPanel } = usePanelManager();
   const { handleDragEnd } = useDragAndDrop({ tasks, getTasksByStatus, refreshTasks, selectedProject, taskStatuses });
-  const { handleTaskEdit, handleModalClose, handleTaskSave } = useTaskActions({ 
-    refreshTasks, openModal, closeModal, updateModalTask, selectedProject 
+  const { handleTaskEdit, handlePanelClose, handleTaskSave } = useTaskActions({ 
+    refreshTasks, openDetailPanel, closeDetailPanel, updateTaskPanel, selectedProject 
   });
 
   if (loading) {
@@ -57,22 +57,23 @@ export function KanbanPage({ selectedProject, onBackToProjects, refreshTrigger }
       <KanbanDebug
         selectedProject={selectedProject}
         tasks={tasks}
-        openModals={openModals}
+        openPanels={openPanels}
         loading={loading}
         taskStatuses={taskStatuses}
         getTasksByStatus={getTasksByStatus}
       />
 
-      {/* Multiple Task Detail Modals */}
-      {openModals.map((modal, index) => (
-        <TaskDetailsModal
-          key={modal.id}
-          task={modal.task}
+      {/* Task Detail Panels */}
+      {openPanels.map((panel, index) => (
+        <TaskDetailsPanel
+          key={panel.id}
+          task={panel.task}
           taskStatuses={taskStatuses}
           opened={true}
-          onClose={() => handleModalClose(modal.id)}
-          onSave={(updatedTask) => handleTaskSave(modal.id, updatedTask)}
+          onClose={() => handlePanelClose(panel.id)}
+          onSave={(updatedTask) => handleTaskSave(panel.id, updatedTask)}
           panelIndex={index}
+          initialClickPos={panel.clickPos}
         />
       ))}
     </>

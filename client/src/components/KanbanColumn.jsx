@@ -27,7 +27,7 @@ function SortableTaskCard({ task, onTaskEdit }) {
 
   const handleDoubleClick = (e) => {
     e.stopPropagation();
-    onTaskEdit && onTaskEdit(task);
+    onTaskEdit && onTaskEdit(task, { x: e.clientX, y: e.clientY });
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Paper,
   Stack, 
@@ -19,26 +19,80 @@ import {
   IconDeviceFloppy,
   IconGitBranch,
   IconGitPullRequest,
-  IconLock
+  IconLock,
+  IconGripHorizontal
 } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useTags } from '../hooks/useTags.js';
 import { useUsers } from '../hooks/useUsers.js';
 
-export function TaskDetailsModal({ 
+export function TaskDetailsPanel({ 
   task, 
   taskStatuses = ['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'],
   opened, 
   onClose, 
   onSave,
-  panelIndex = 0
+  panelIndex = 0,
+  initialClickPos = null
 }) {
   const { t, translatePriority, translateStatus } = useTranslation();
   const { tags = [] } = useTags();
   const { users = [] } = useUsers();
   const [editedTask, setEditedTask] = useState(null);
 
-  // Initialize edited task when modal opens
+  // --- Drag state ---
+  const [position, setPosition] = useState(null); // null = use default offset position
+  const dragRef = useRef(null);
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+
+  // Set initial position near click, or reset to default offset
+  useEffect(() => {
+    if (opened && initialClickPos) {
+      // Place panel so the top-left is near the click, but keep it on-screen
+      const panelWidth = Math.min(1040, window.innerWidth * 0.8);
+      const panelHeight = window.innerHeight - 120;
+      const left = Math.max(0, Math.min(initialClickPos.x - 40, window.innerWidth - panelWidth - 16));
+      const top = Math.max(16, Math.min(initialClickPos.y - 30, window.innerHeight - panelHeight - 16));
+      setPosition({ left, top });
+    } else if (opened) {
+      setPosition(null);
+    }
+  }, [opened, initialClickPos]);
+
+  const handleMouseDown = useCallback((e) => {
+    // Only drag on left mouse button
+    if (e.button !== 0) return;
+    e.preventDefault();
+    isDragging.current = true;
+
+    const panel = dragRef.current;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+
+    dragStart.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isDragging.current) return;
+      const newLeft = e.clientX - dragStart.current.x;
+      const newTop = e.clientY - dragStart.current.y;
+      setPosition({ left: newLeft, top: newTop });
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // Initialize edited task when panel opens
   useEffect(() => {
     if (task && opened) {
       setEditedTask({
@@ -91,7 +145,6 @@ export function TaskDetailsModal({
         tagNames: editedTask.tags // Send tag names for API update
       });
       
-      // Close the modal after successful save
       onClose();
     }
   };
@@ -110,19 +163,24 @@ export function TaskDetailsModal({
 
   if (!task || !opened) return null;
 
-  // Each panel offsets right and down so multiple are visible side by side
-  const offsetRight = panelIndex * 30;
-  const offsetDown = panelIndex * 20;
+  // Default stacked offset when not yet dragged
+  const defaultRight = 24 + panelIndex * 30;
+  const defaultTop = 80 + panelIndex * 20;
+
+  // Position style: use dragged position if set, otherwise default offset
+  const positionStyle = position
+    ? { left: `${position.left}px`, top: `${position.top}px` }
+    : { right: `${defaultRight}px`, top: `${defaultTop}px` };
 
   return (
     <Paper
+      ref={dragRef}
       shadow="xl"
       withBorder
       style={{
         position: 'fixed',
-        top: `calc(80px + ${offsetDown}px)`,
-        right: `calc(24px + ${offsetRight}px)`,
-        width: 'min(520px, 40vw)',
+        ...positionStyle,
+        width: 'min(1040px, 80vw)',
         height: 'calc(100vh - 120px)',
         zIndex: 200 + panelIndex,
         borderRadius: '12px',
@@ -156,8 +214,9 @@ export function TaskDetailsModal({
         overflow: 'hidden',
         borderRadius: '12px',
       }}>
-        {/* Header with Task Title, Edit Button, and Close Button */}
+        {/* Header — drag handle + title + close */}
         <Box
+          onMouseDown={handleMouseDown}
           style={{
             padding: '12px 16px',
             borderBottom: '1px solid var(--mantine-color-gray-3)',
@@ -166,9 +225,14 @@ export function TaskDetailsModal({
             justifyContent: 'space-between',
             borderRadius: '8px 8px 0 0',
             position: 'relative',
-            flexShrink: 0
+            flexShrink: 0,
+            cursor: 'grab',
+            userSelect: 'none',
           }}
         >
+          {/* Drag grip icon */}
+          <IconGripHorizontal size={16} style={{ color: 'var(--mantine-color-gray-5)', marginRight: 8, flexShrink: 0 }} />
+
           {/* Task Title */}
           <Text size="lg" fw={600} style={{ flex: 1 }}>
             {task.title}
@@ -178,6 +242,7 @@ export function TaskDetailsModal({
           <ActionIcon
             variant="subtle"
             onClick={handleClose}
+            onMouseDown={(e) => e.stopPropagation()}
             title={t('common.close')}
             size="sm"
           >

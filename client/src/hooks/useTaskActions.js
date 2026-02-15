@@ -1,16 +1,16 @@
 import { useCallback } from 'react';
 
-export function useTaskActions({ refreshTasks, openModal, closeModal, updateModalTask, selectedProject }) {
-  const handleTaskEdit = useCallback((task) => {
-    const modalId = `edit-${task.id}`;
-    openModal(modalId, task);
-  }, [openModal]);
+export function useTaskActions({ refreshTasks, openDetailPanel, closeDetailPanel, updateTaskPanel, selectedProject }) {
+  const handleTaskEdit = useCallback((task, clickPos) => {
+    const panelId = `edit-${task.id}`;
+    openDetailPanel(panelId, task, clickPos);
+  }, [openDetailPanel]);
 
-  const handleModalClose = useCallback((modalId) => {
-    closeModal(modalId);
-  }, [closeModal]);
+  const handlePanelClose = useCallback((panelId) => {
+    closeDetailPanel(panelId);
+  }, [closeDetailPanel]);
 
-  const handleTaskSave = useCallback(async (modalId, updatedTask) => {
+  const handleTaskSave = useCallback(async (panelId, updatedTask) => {
     try {
       // Make API call to save task using project-scoped endpoint
       const token = localStorage.getItem('TB_TOKEN');
@@ -43,8 +43,8 @@ export function useTaskActions({ refreshTasks, openModal, closeModal, updateModa
       if (response.ok) {
         const savedTask = await response.json();
         
-        // Update the task in the modal
-        updateModalTask(modalId, savedTask);
+        // Update the task in the panel
+        updateTaskPanel(panelId, savedTask);
         
         // Refresh tasks to update the board
         await refreshTasks();
@@ -61,7 +61,7 @@ export function useTaskActions({ refreshTasks, openModal, closeModal, updateModa
     } catch (error) {
       console.error('Error saving task:', error);
     }
-  }, [refreshTasks, updateModalTask, selectedProject]);
+  }, [refreshTasks, updateTaskPanel, selectedProject]);
 
-  return { handleTaskEdit, handleModalClose, handleTaskSave };
+  return { handleTaskEdit, handlePanelClose, handleTaskSave };
 }
