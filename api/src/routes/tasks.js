@@ -83,22 +83,14 @@ export default async function taskRoutes(fastify, options) {
       const taskDataWithCurrentStatus = { ...request.body, status: currentTask.status };
       const taskData = applyGitStatus(taskDataWithCurrentStatus);
       
+      // updateTask handles auto-promotion on status change
       const task = await dbService.updateTask(parseInt(id), taskData);
       
       if (!task) {
         return reply.code(404).send({ error: 'Task not found' });
       }
-      
-      // If status changed, auto-promote dependents from TO_DO → READY
-      let promoted = [];
-      if (taskData.status && taskData.status !== currentTask.status) {
-        promoted = await dbService.checkAndPromoteDependents(parseInt(id));
-        if (promoted.length > 0) {
-          request.log.info(`Auto-promoted tasks ${promoted.join(', ')} to READY`);
-        }
-      }
 
-      reply.send({ ...task, promotedTaskIds: promoted });
+      reply.send(task);
     } catch (error) {
       fastify.log.error(error);
       reply.code(500).send({ error: 'Failed to update task' });
@@ -153,19 +145,13 @@ export default async function taskRoutes(fastify, options) {
       const newPosition = targetColumnTasks.length > 0 ? 
         Math.max(...targetColumnTasks.map(t => t.position || 0)) + 10 : 10;
       
-      // Update task with new status and position
+      // updateTask handles auto-promotion on status change
       const updatedTask = await dbService.updateTask(parseInt(id), {
         ...currentTask,
         status,
         position: newPosition,
         updatedAt: new Date()
       });
-      
-      // Auto-promote dependents from TO_DO → READY if their deps are now met
-      const promoted = await dbService.checkAndPromoteDependents(parseInt(id));
-      if (promoted.length > 0) {
-        request.log.info(`Auto-promoted tasks ${promoted.join(', ')} to READY`);
-      }
 
       request.log.info(`Task ${id} status changed from ${currentTask.status} to ${status}`);
       reply.send(updatedTask);

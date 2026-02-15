@@ -214,11 +214,7 @@ export default async function projectRoutes(fastify, options) {
       const taskIdNum = parseInt(taskId);
       const updatedTask = await dbService.updateTaskPosition(taskIdNum, newPosition, status);
 
-      // If status changed, auto-promote dependents from TO_DO → READY
-      // We call unconditionally; method is safe when no dependents qualify.
-      const promoted = await dbService.checkAndPromoteDependents(taskIdNum);
-
-      reply.send({ ...updatedTask, promotedTaskIds: promoted });
+      reply.send(updatedTask);
     } catch (error) {
       fastify.log.error(error);
       reply.code(500).send({ error: 'Failed to update task position' });
@@ -260,19 +256,13 @@ export default async function projectRoutes(fastify, options) {
       const newPosition = targetColumnTasks.length > 0 ? 
         Math.max(...targetColumnTasks.map(t => t.position || 0)) + 10 : 10;
       
-      // Update task with new status and position
+      // Update task with new status and position — updateTask handles auto-promotion
       const updatedTask = await dbService.updateTask(currentTask.id, {
         ...currentTask,
         status,
         position: newPosition,
         updatedAt: new Date()
       });
-      
-      // Auto-promote dependents from TO_DO → READY if their deps are now met
-      const promoted = await dbService.checkAndPromoteDependents(currentTask.id);
-      if (promoted.length > 0) {
-        request.log.info(`Auto-promoted tasks ${promoted.join(', ')} to READY`);
-      }
 
       request.log.info(`Task ${taskId} status changed from ${currentTask.status} to ${status}`);
       reply.send(updatedTask);
@@ -307,20 +297,11 @@ export default async function projectRoutes(fastify, options) {
         return reply.code(403).send({ error: 'Task does not belong to this project' });
       }
       
-      // Update task
+      // Update task — updateTask handles auto-promotion on status change
       const updatedTask = await dbService.updateTask(currentTask.id, taskData);
-      
-      // If status changed, auto-promote dependents from TO_DO → READY
-      let promoted = [];
-      if (taskData.status && taskData.status !== currentTask.status) {
-        promoted = await dbService.checkAndPromoteDependents(currentTask.id);
-        if (promoted.length > 0) {
-          request.log.info(`Auto-promoted tasks ${promoted.join(', ')} to READY`);
-        }
-      }
 
       request.log.info(`Task ${taskId} updated`);
-      reply.send({ ...updatedTask, promotedTaskIds: promoted });
+      reply.send(updatedTask);
     } catch (error) {
       request.log.error(error, 'Failed to update task');
       reply.code(500).send({ error: 'Failed to update task' });

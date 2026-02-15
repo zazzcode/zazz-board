@@ -646,20 +646,9 @@ class DatabaseService {
     const oldStatus = currentTask.status;
     const projectId = currentTask.project_id;
 
-    // If status is changing, handle it as a status change
+    // If status is changing, delegate to updateTask so promotion is centralized there
     if (status !== oldStatus) {
-      await db.update(TASKS)
-        .set({ 
-          status: status,
-          position: newPosition,
-          updated_at: new Date()
-        })
-        .where(eq(TASKS.id, taskId));
-
-      // Central auto-promotion when status changes via position move
-      try { await this.checkAndPromoteDependents(taskId); } catch {}
-
-      return await this.getTaskById(taskId);
+      return await this.updateTask(taskId, { status, position: newPosition });
     }
 
     // Same status - handle position change with sparse positioning
