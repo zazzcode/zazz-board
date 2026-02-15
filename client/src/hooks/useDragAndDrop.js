@@ -1,109 +1,120 @@
 import { useCallback } from 'react';
 
-export function useDragAndDrop({ tasks, getTasksByStatus, refreshTasks, selectedProject }) {
+/**
+ * @dnd-kit drag-end handler.
+ *
+ * Rules:
+ *   1. Reorder within the same column — always allowed.
+ *   2. Move exactly one column to the RIGHT — allowed (advance status).
+ *   3. Skip columns or move left — rejected (card snaps back).
+ */
+export function useDragAndDrop({ tasks, getTasksByStatus, refreshTasks, selectedProject, taskStatuses }) {
+
+  // Resolve which column a task belongs to by its id
+  const findTaskStatus = useCallback((taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    return task?.status ?? null;
+  }, [tasks]);
+
+  // Resolve the target status from a droppable (could be a column or a task inside a column)
+  const resolveTargetStatus = useCallback((overId, overData) => {
+    if (overData?.type === 'column') return overData.status;
+    if (overData?.type === 'task')   return overData.status;
+    // overId might be 'column-STATUS'
+    if (typeof overId === 'string' && overId.startsWith('column-')) return overId.slice(7);
+    // Last resort: look up by task id
+    return findTaskStatus(overId);
+  }, [findTaskStatus]);
+
   const handleDragEnd = useCallback(async (event) => {
     const { active, over } = event;
+    if (!over) return; // dropped outside any droppable
 
-    if (!over || active.id === over.id) {
-      return;
-    }
+    const activeId     = active.id;
+    const sourceStatus = active.data?.current?.status ?? findTaskStatus(activeId);
+    const targetStatus = resolveTargetStatus(over.id, over.data?.current);
 
-    const activeTask = tasks.find(task => task.id === active.id);
-    if (!activeTask) {
-      return;
-    }
+    if (!sourceStatus || !targetStatus) return;
 
-    // Determine target column
-    const overTask = tasks.find(task => task.id === over.id);
-    let targetColumn;
-    let isDroppingOnColumn = false;
-    
-    if (overTask) {
-      // Dropping on a specific task
-      targetColumn = overTask.status;
-      isDroppingOnColumn = false;
-    } else {
-      // Dropping on the column itself (over.id is the column status)
-      targetColumn = over.id;
-      isDroppingOnColumn = true;
+    // ── Column-move validation ───────────────────────────────────────
+    if (sourceStatus !== targetStatus) {
+      const srcIdx = taskStatuses.indexOf(sourceStatus);
+      const tgtIdx = taskStatuses.indexOf(targetStatus);
+      if (tgtIdx !== srcIdx + 1) return; // snap back — invalid move
     }
 
     try {
       const token = localStorage.getItem('TB_TOKEN');
-      if (!token) {
-        console.error('No access token found');
+      if (!token) { console.error('No access token found'); return; }
+
+      // ── Same-column reorder ──────────────────────────────────────
+      if (sourceStatus === targetStatus) {
+        // If dropped on the column droppable itself (not a task) — nothing useful to reorder
+        if (over.data?.current?.type === 'column' && activeId === over.id) return;
+
+        const columnTasks = getTasksByStatus(sourceStatus);
+        const fromIndex = columnTasks.findIndex(t => t.id === activeId);
+        let toIndex;
+
+        if (over.data?.current?.type === 'task') {
+          toIndex = columnTasks.findIndex(t => t.id === over.id);
+        } else {
+          // Dropped on empty column area → end of list
+          toIndex = columnTasks.length - 1;
+        }
+
+        if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+        const newOrder = [...columnTasks];
+        const [moved] = newOrder.splice(fromIndex, 1);
+        newOrder.splice(toIndex, 0, moved);
+
+        const positionUpdates = newOrder.map((task, i) => ({ taskId: task.id, newPosition: (i + 1) * 10 }));
+
+        const resp = await fetch(
+          `http://localhost:3030/projects/${selectedProject.code}/kanban/tasks/column/${sourceStatus}/positions`,
+          { method: 'PATCH', headers: { 'TB_TOKEN': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ positionUpdates }) }
+        );
+        if (resp.ok) await refreshTasks();
         return;
       }
 
-      // If same status, we're reordering within the column
-      if (activeTask.status === targetColumn) {
-        console.log(`Reordering task ${activeTask.taskId} within column ${targetColumn}`);
-        
-        const columnTasks = getTasksByStatus(targetColumn);
-        const currentIndex = columnTasks.findIndex(t => t.id === active.id);
-        
-        let overIndex;
-        if (isDroppingOnColumn) {
-          // Dropping on the column itself - put at the end
-          overIndex = columnTasks.length;
-        } else {
-          // Dropping on a specific task
-          overIndex = columnTasks.findIndex(t => t.id === over.id);
-        }
-        
-        // Create new order with dragged task at target position
-        const newOrder = [...columnTasks];
-        const draggedTask = newOrder.splice(currentIndex, 1)[0];
-        newOrder.splice(overIndex, 0, draggedTask);
-        
-        // Assign new positions with 10-unit gaps
-        const positionUpdates = newOrder.map((task, index) => ({
-          taskId: task.id,
-          newPosition: (index + 1) * 10
-        }));
-        
-        const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/kanban/tasks/column/${targetColumn}/positions`, {
-          method: 'PATCH',
-          headers: {
-            'TB_TOKEN': token,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ positionUpdates })
-        });
+      // ── Cross-column move ────────────────────────────────────────
+      const targetTasks = getTasksByStatus(targetStatus);
 
-        if (response.ok) {
-          console.log(`Task ${activeTask.taskId} reordered in ${targetColumn}`);
-          await refreshTasks();
-        } else {
-          console.error('Failed to reorder task');
-        }
+      // Figure out insertion index from what we landed on
+      let insertIndex;
+      if (over.data?.current?.type === 'task') {
+        insertIndex = targetTasks.findIndex(t => t.id === over.id);
+        if (insertIndex === -1) insertIndex = targetTasks.length;
       } else {
-        // Different status - moving between columns
-        console.log(`Moving task ${activeTask.taskId} from ${activeTask.status} to ${targetColumn}`);
-        
-        // Use the project-scoped status change API with taskId
-        const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/tasks/${activeTask.taskId}/status`, {
-          method: 'PATCH',
-          headers: {
-            'TB_TOKEN': token,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            status: targetColumn
-          })
-        });
-
-        if (response.ok) {
-          console.log(`Task ${activeTask.taskId} moved to ${targetColumn}`);
-          await refreshTasks();
-        } else {
-          console.error('Failed to move task');
-        }
+        insertIndex = targetTasks.length; // end of target column
       }
-    } catch (error) {
-      console.error('Error moving task:', error);
+
+      // Compute sparse position
+      let newPosition;
+      if (targetTasks.length === 0) {
+        newPosition = 10;
+      } else if (insertIndex === 0) {
+        newPosition = Math.floor((targetTasks[0].position || 10) / 2) || 5;
+      } else if (insertIndex >= targetTasks.length) {
+        newPosition = (targetTasks[targetTasks.length - 1].position || 0) + 10;
+      } else {
+        const before = targetTasks[insertIndex - 1];
+        const after  = targetTasks[insertIndex];
+        newPosition  = Math.floor(((before.position || 0) + (after.position || 0)) / 2);
+        if (newPosition === before.position || newPosition === after.position) newPosition = before.position + 1;
+      }
+
+      const resp = await fetch(
+        `http://localhost:3030/projects/${selectedProject.code}/kanban/tasks/${activeId}/position`,
+        { method: 'PATCH', headers: { 'TB_TOKEN': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ newPosition, status: targetStatus }) }
+      );
+      if (resp.ok) await refreshTasks();
+    } catch (err) {
+      console.error('Drag end error:', err);
     }
-  }, [tasks, getTasksByStatus, refreshTasks, selectedProject]);
+  }, [tasks, getTasksByStatus, refreshTasks, selectedProject, taskStatuses, findTaskStatus, resolveTargetStatus]);
 
   return { handleDragEnd };
 }

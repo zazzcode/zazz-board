@@ -1,5 +1,21 @@
 # React + Vite
 
+## Task Blaster Client — Quick Commands
+
+Start the client (from anywhere):
+
+```
+npm --prefix /Users/michael/Dev/task-blaster/task-graph-mvp/client run dev
+```
+
+Alternative using cd:
+
+```
+cd /Users/michael/Dev/task-blaster/task-graph-mvp/client && npm run dev
+```
+
+---
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

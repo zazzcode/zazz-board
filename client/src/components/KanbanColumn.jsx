@@ -1,13 +1,12 @@
 import { Paper, Stack, Text, Badge, Box, Group } from '@mantine/core';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { TaskCard } from './TaskCard.jsx';
-import { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// Draggable Task Card Wrapper
-function DraggableTaskCard({ task, onTaskEdit }) {
+// Wrapper that makes each task card sortable + draggable
+function SortableTaskCard({ task, onTaskEdit }) {
   const {
     attributes,
     listeners,
@@ -15,116 +14,88 @@ function DraggableTaskCard({ task, onTaskEdit }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
+  } = useSortable({
     id: task.id,
-    data: {
-      type: 'task',
-      task: task
-    }
+    data: { type: 'task', taskId: task.id, status: task.status },
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 1000 : 'auto',
+    opacity: isDragging ? 0.4 : 1,
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style}
-      {...attributes}
-      {...listeners}
-    >
-      <TaskCard 
-        task={task} 
-        onEdit={onTaskEdit}
-      />
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <TaskCard task={task} onEdit={onTaskEdit} />
     </div>
   );
 }
 
 export function KanbanColumn({ status, tasks, onTaskEdit }) {
   const { t, translateStatus } = useTranslation();
-  const [isDragOver, setIsDragOver] = useState(false);
 
+  // Column itself is a droppable so empty columns can receive drops
   const { setNodeRef, isOver } = useDroppable({
-    id: status,
+    id: `column-${status}`,
+    data: { type: 'column', status },
   });
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      minHeight: 'calc(100vh - 140px)', 
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 'calc(100vh - 140px)',
       flex: '0 0 320px',
-      maxWidth: '320px'
+      maxWidth: '320px',
     }}>
       {/* Column title */}
       <Box style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px', padding: '0 4px' }}>
         <Group gap="xs" align="center">
-          <Text fw={600} size="lg">
-            {translateStatus(status)}
-          </Text>
-          <Badge size="sm" variant="light">
-            {tasks.length}
-          </Badge>
+          <Text fw={600} size="lg">{translateStatus(status)}</Text>
+          <Badge size="sm" variant="light">{tasks.length}</Badge>
         </Group>
       </Box>
-      
+
       {/* Column content */}
-      <Paper 
-        ref={setNodeRef}
-        p="md" 
-        withBorder 
-        style={{ 
-          flex: 1, 
-          display: 'flex', 
+      <Paper
+        p="md"
+        withBorder
+        style={{
+          flex: 1,
+          display: 'flex',
           flexDirection: 'column',
-          backgroundColor: isOver ? 'rgba(59, 130, 246, 0.1)' : undefined,
+          backgroundColor: isOver ? 'rgba(59,130,246,0.08)' : undefined,
           borderColor: isOver ? 'var(--mantine-color-blue-6)' : undefined,
           borderWidth: isOver ? '2px' : undefined,
-          transition: 'all 0.2s ease'
+          transition: 'all 0.2s ease',
         }}
       >
-        <Box 
-          style={{ 
-            flex: 1, 
-            overflowY: 'auto',
-            padding: '8px'
-          }}
-        >
-          {tasks.length === 0 ? (
-            <Box style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              flex: 1,
-              border: '2px dashed #ccc',
-              borderRadius: '8px',
-              margin: '8px 0',
-              minHeight: '100px'
-            }}>
-              <Text size="sm" c="dimmed" ta="center">
-                {t('kanban.noTasksInColumn')}
-              </Text>
-            </Box>
-          ) : (
-            <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+          <Box ref={setNodeRef} style={{ flex: 1, overflowY: 'auto', padding: '8px', minHeight: '80px' }}>
+            {tasks.length === 0 ? (
+              <Box style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1,
+                border: '2px dashed #ccc',
+                borderRadius: '8px',
+                margin: '8px 0',
+                minHeight: '100px',
+              }}>
+                <Text size="sm" c="dimmed" ta="center">{t('kanban.noTasksInColumn')}</Text>
+              </Box>
+            ) : (
               <Stack gap="xs">
                 {tasks.map(task => (
-                  <DraggableTaskCard 
-                    key={task.id} 
-                    task={task} 
-                    onTaskEdit={onTaskEdit}
-                  />
+                  <SortableTaskCard key={task.id} task={task} onTaskEdit={onTaskEdit} />
                 ))}
               </Stack>
-            </SortableContext>
-          )}
-        </Box>
+            )}
+          </Box>
+        </SortableContext>
       </Paper>
     </div>
   );
-} 
+}

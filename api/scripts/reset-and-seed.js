@@ -85,9 +85,9 @@ execSync('npx drizzle-kit push --force', { stdio: 'inherit' });
     console.log('   • 8 status definitions created');
     console.log('   • 5 coordination requirement definitions created');
     console.log('   • 4 languages translations created');
-    console.log('   • 10 tasks created');
+    console.log('   • 25 tasks created (4 WEBRED + 2 MOBDEV + 14 APIMOD + 5 expanded)');
     console.log('   • 10 task-tag relationships created');
-    console.log('   • 6 task relations created (APIMOD project)');
+    console.log('   • 40+ task relations created (APIMOD + WEBRED graphs)');
     
     process.exit(0);
   } catch (error) {

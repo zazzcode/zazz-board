@@ -15,7 +15,8 @@ import {
   NumberInput, 
   MultiSelect, 
   Button, 
-  Stack
+  Stack,
+  SegmentedControl
 } from '@mantine/core';
 import { createTheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -26,12 +27,15 @@ import {
   IconMenu2, 
   IconKey,
   IconPlus,
-  IconArrowLeft
+  IconArrowLeft,
+  IconGitBranch,
+  IconLayoutKanban
 } from '@tabler/icons-react';
 import { TokenModal } from './components/TokenModal.jsx';
 import { ProjectModal } from './components/ProjectModal.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { KanbanPage } from './pages/KanbanPage.jsx';
+import { TaskGraphPage } from './pages/TaskGraphPage.jsx';
 import { useTranslation } from './hooks/useTranslation.js';
 import i18n from './i18n/index.js';
 import '@mantine/core/styles.css';
@@ -42,7 +46,7 @@ function AppContent() {
   const location = useLocation();
   
   // Extract projectCode from URL manually since useParams only works inside route components
-  const projectCode = location.pathname.startsWith('/projects/') && location.pathname.includes('/kanban')
+  const projectCode = location.pathname.startsWith('/projects/') && (location.pathname.includes('/kanban') || location.pathname.includes('/taskGraph'))
     ? location.pathname.split('/')[2] 
     : null;
   
@@ -442,7 +446,7 @@ function AppContent() {
   // Keyboard shortcut for creating new task (Ctrl/Cmd + N)
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'n' && location.pathname.includes('/kanban')) {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'n' && (location.pathname.includes('/kanban') || location.pathname.includes('/taskGraph'))) {
         event.preventDefault();
         setCreateTaskModalOpened(true);
       }
@@ -463,6 +467,8 @@ function AppContent() {
 
   // Determine current page from location
   const isKanbanPage = location.pathname.includes('/kanban');
+  const isGraphPage = location.pathname.includes('/taskGraph');
+  const isProjectPage = isKanbanPage || isGraphPage;
 
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark" forceColorScheme={colorScheme}>
@@ -487,7 +493,7 @@ function AppContent() {
                     {t('common.setAccessToken')}
                   </Menu.Item>
                   
-                  {isKanbanPage && (
+                  {isProjectPage && (
                     <>
                       <Menu.Divider />
                       <Menu.Label>{t('kanban.title')}</Menu.Label>
@@ -503,20 +509,45 @@ function AppContent() {
                 </Menu.Dropdown>
               </Menu>
               
-              {isKanbanPage && (
-                <Button 
-                  variant="subtle" 
-                  leftSection={<IconArrowLeft size={16} />}
-                  onClick={handleBackToProjects}
-                  size="sm"
-                >
-                  {t('common.back')}
-                </Button>
+              {isProjectPage && (
+                <>
+                  <Button 
+                    variant="subtle" 
+                    leftSection={<IconArrowLeft size={16} />}
+                    onClick={handleBackToProjects}
+                    size="sm"
+                  >
+                    {t('common.back')}
+                  </Button>
+                  <SegmentedControl
+                    size="xs"
+                    value={isGraphPage ? 'graph' : 'kanban'}
+                    onChange={(value) => {
+                      if (projectCode) {
+                        navigate(`/projects/${projectCode}/${value === 'graph' ? 'taskGraph' : 'kanban'}`);
+                      }
+                    }}
+                    data={[
+                      { value: 'kanban', label: (
+                        <Group gap={4}>
+                          <IconLayoutKanban size={14} />
+                          <span>Kanban</span>
+                        </Group>
+                      )},
+                      { value: 'graph', label: (
+                        <Group gap={4}>
+                          <IconGitBranch size={14} />
+                          <span>Graph</span>
+                        </Group>
+                      )},
+                    ]}
+                  />
+                </>
               )}
             </Group>
             
             {/* Project title in center - responsive layout */}
-            {isKanbanPage && selectedProject && (
+            {isProjectPage && selectedProject && (
               <div style={{
                 position: 'absolute',
                 left: '50%',
@@ -579,6 +610,11 @@ function AppContent() {
                 selectedProject={selectedProject}
                 onBackToProjects={handleBackToProjects}
                 refreshTrigger={refreshTrigger}
+              />
+            } />
+            <Route path="/projects/:projectCode/taskGraph" element={
+              <TaskGraphPage 
+                selectedProject={selectedProject}
               />
             } />
           </Routes>
@@ -692,27 +728,6 @@ function AppContent() {
         </form>
       </Modal>
 
-      {/* Debug info - remove in production */}
-      <div style={{ 
-        position: 'fixed', 
-        bottom: '10px', 
-        right: '10px', 
-        background: 'rgba(0,0,0,0.8)', 
-        color: 'white', 
-        padding: '10px', 
-        borderRadius: '5px', 
-        fontSize: '12px',
-        maxWidth: '300px'
-      }}>
-        <div>Token: {accessToken ? 'Set' : 'Not set'}</div>
-        <div>localStorage: {localStorage.getItem('TB_TOKEN') ? 'Has token' : 'No token'}</div>
-        <div>Projects: {projects.length}</div>
-        <div>URL: {location.pathname}</div>
-        <div>isKanbanPage: {isKanbanPage ? 'true' : 'false'}</div>
-        <div>selectedProject: {selectedProject ? selectedProject.title : 'null'}</div>
-        <div>projectCode: {projectCode || 'null'}</div>
-        <div>LOCALE: {navigator.language}</div>
-      </div>
     </MantineProvider>
   );
 }

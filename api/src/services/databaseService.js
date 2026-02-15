@@ -585,6 +585,10 @@ class DatabaseService {
    * Update task
    */
   async updateTask(id, taskData) {
+    // Read current status to detect transitions
+    const [current] = await db.select({ status: TASKS.status }).from(TASKS).where(eq(TASKS.id, id)).limit(1);
+    const beforeStatus = current?.status;
+
     const updateData = {};
     if (taskData.taskId !== undefined) updateData.task_id = taskData.taskId;
     if (taskData.title !== undefined) updateData.title = taskData.title;
@@ -607,6 +611,15 @@ class DatabaseService {
       .set(updateData)
       .where(eq(TASKS.id, id))
       .returning();
+
+    // If status changed, run auto-promotion centrally
+    if (taskData.status !== undefined && beforeStatus && taskData.status !== beforeStatus) {
+      try {
+        await this.checkAndPromoteDependents(id);
+      } catch (e) {
+        // Swallow to avoid masking the primary update; routes also log promotions
+      }
+    }
 
     // Update tags if provided
     if (taskData.tagNames !== undefined) {
@@ -642,6 +655,9 @@ class DatabaseService {
           updated_at: new Date()
         })
         .where(eq(TASKS.id, taskId));
+
+      // Central auto-promotion when status changes via position move
+      try { await this.checkAndPromoteDependents(taskId); } catch {}
 
       return await this.getTaskById(taskId);
     }

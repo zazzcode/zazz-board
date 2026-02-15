@@ -213,7 +213,12 @@ export default async function projectRoutes(fastify, options) {
       
       const taskIdNum = parseInt(taskId);
       const updatedTask = await dbService.updateTaskPosition(taskIdNum, newPosition, status);
-      reply.send(updatedTask);
+
+      // If status changed, auto-promote dependents from TO_DO → READY
+      // We call unconditionally; method is safe when no dependents qualify.
+      const promoted = await dbService.checkAndPromoteDependents(taskIdNum);
+
+      reply.send({ ...updatedTask, promotedTaskIds: promoted });
     } catch (error) {
       fastify.log.error(error);
       reply.code(500).send({ error: 'Failed to update task position' });
@@ -305,8 +310,17 @@ export default async function projectRoutes(fastify, options) {
       // Update task
       const updatedTask = await dbService.updateTask(currentTask.id, taskData);
       
+      // If status changed, auto-promote dependents from TO_DO → READY
+      let promoted = [];
+      if (taskData.status && taskData.status !== currentTask.status) {
+        promoted = await dbService.checkAndPromoteDependents(currentTask.id);
+        if (promoted.length > 0) {
+          request.log.info(`Auto-promoted tasks ${promoted.join(', ')} to READY`);
+        }
+      }
+
       request.log.info(`Task ${taskId} updated`);
-      reply.send(updatedTask);
+      reply.send({ ...updatedTask, promotedTaskIds: promoted });
     } catch (error) {
       request.log.error(error, 'Failed to update task');
       reply.code(500).send({ error: 'Failed to update task' });

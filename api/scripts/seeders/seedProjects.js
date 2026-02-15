@@ -11,8 +11,10 @@ export async function seedProjects() {
         code: 'WEBRED', 
         description: 'Complete overhaul of company website with modern design',
         leader_id: 5,
-        next_task_sequence: 3,
+        next_task_sequence: 10,
         status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'],
+        task_graph_layout_direction: 'LR',
+        completion_criteria_status: 'IN_REVIEW',
         created_by: 1
       },
       { 
@@ -29,7 +31,7 @@ export async function seedProjects() {
         code: 'APIMOD', 
         description: 'Migrate legacy APIs to modern REST architecture',
         leader_id: 3,
-        next_task_sequence: 10,
+        next_task_sequence: 15,
         status_workflow: ['ICEBOX', 'TO_DO', 'READY', 'IN_PROGRESS', 'IN_REVIEW', 'READY_FOR_DEPLOY', 'DONE'],
         completion_criteria_status: 'IN_REVIEW',
         task_graph_layout_direction: 'LR',

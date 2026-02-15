@@ -29,7 +29,7 @@ export function KanbanPage({ selectedProject, onBackToProjects, refreshTrigger }
   
   // Use custom hooks for better separation of concerns
   const { openModals, openModal, closeModal, updateModalTask } = useModalManager();
-  const { handleDragEnd } = useDragAndDrop({ tasks, getTasksByStatus, refreshTasks, selectedProject });
+  const { handleDragEnd } = useDragAndDrop({ tasks, getTasksByStatus, refreshTasks, selectedProject, taskStatuses });
   const { handleTaskEdit, handleModalClose, handleTaskSave } = useTaskActions({ 
     refreshTasks, openModal, closeModal, updateModalTask, selectedProject 
   });

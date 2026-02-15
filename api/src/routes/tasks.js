@@ -89,7 +89,16 @@ export default async function taskRoutes(fastify, options) {
         return reply.code(404).send({ error: 'Task not found' });
       }
       
-      reply.send(task);
+      // If status changed, auto-promote dependents from TO_DO → READY
+      let promoted = [];
+      if (taskData.status && taskData.status !== currentTask.status) {
+        promoted = await dbService.checkAndPromoteDependents(parseInt(id));
+        if (promoted.length > 0) {
+          request.log.info(`Auto-promoted tasks ${promoted.join(', ')} to READY`);
+        }
+      }
+
+      reply.send({ ...task, promotedTaskIds: promoted });
     } catch (error) {
       fastify.log.error(error);
       reply.code(500).send({ error: 'Failed to update task' });

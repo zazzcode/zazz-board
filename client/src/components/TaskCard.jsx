@@ -1,5 +1,5 @@
 import { Card, Stack, Text, Flex, Badge, Group, Box, ActionIcon } from '@mantine/core';
-import { IconUser, IconCalendar, IconFlame, IconArrowUp, IconSquare, IconArrowDown, IconEdit, IconLock } from '@tabler/icons-react';
+import { IconUser, IconCalendar, IconFlame, IconArrowUp, IconSquare, IconArrowDown, IconEdit } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
 
 export function TaskCard({ task, onEdit }) {
@@ -71,8 +71,13 @@ export function TaskCard({ task, onEdit }) {
         position: 'relative',
         opacity: 1,
         transform: 'none',
-        transition: 'opacity 0.2s, transform 0.2s',
-        cursor: 'grab'
+        transition: 'opacity 0.2s, transform 0.2s, border-color 0.2s',
+        cursor: 'grab',
+        ...(task.isBlocked ? {
+          borderColor: 'var(--mantine-color-yellow-5)',
+          borderWidth: '2px',
+          boxShadow: '0 0 8px rgba(250, 176, 5, 0.25)',
+        } : {})
       }}
     >
       {/* Priority icon and edit button in top right corner */}
@@ -109,9 +114,6 @@ export function TaskCard({ task, onEdit }) {
       <Stack gap="xs">
         <Text size="sm" fw={500} lineClamp={2} pr="20px"> {/* Add padding to avoid icon overlap */}
           {task.title}
-          {task.isBlocked && (
-            <IconLock size={12} style={{ marginLeft: '4px', color: 'red' }} />
-          )}
         </Text>
         
         {/* Story Points badge only */}
