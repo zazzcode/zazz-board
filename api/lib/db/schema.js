@@ -92,7 +92,7 @@ export const TASKS = pgTable('TASKS', {
   prompt: text('prompt'),
   is_blocked: boolean('is_blocked').default(false),
   blocked_reason: text('blocked_reason'),
-  git_feature_branch: varchar('git_feature_branch'),
+  git_worktree: varchar('git_worktree'),
   git_pull_request_url: varchar('git_pull_request_url'),
   started_at: timestamp('started_at', { withTimezone: true }),
   completed_at: timestamp('completed_at', { withTimezone: true }),

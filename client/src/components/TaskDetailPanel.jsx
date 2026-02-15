@@ -100,7 +100,7 @@ export function TaskDetailsPanel({
         tags: task.tags && Array.isArray(task.tags) ? task.tags.map(tag => tag?.tag || tag).filter(Boolean) : [],
         isBlocked: Boolean(task.isBlocked),
         blockedReason: task.blockedReason || '',
-        gitFeatureBranch: task.gitFeatureBranch || '',
+        gitWorktree: task.gitWorktree || '',
         gitPullRequestUrl: task.gitPullRequestUrl || ''
       });
     }
@@ -134,7 +134,7 @@ export function TaskDetailsPanel({
       const normalizedTask = {
         ...editedTask,
         blockedReason: editedTask.blockedReason === '' ? null : editedTask.blockedReason,
-        gitFeatureBranch: editedTask.gitFeatureBranch === '' ? null : editedTask.gitFeatureBranch,
+        gitWorktree: editedTask.gitWorktree === '' ? null : editedTask.gitWorktree,
         gitPullRequestUrl: editedTask.gitPullRequestUrl === '' ? null : editedTask.gitPullRequestUrl,
         prompt: editedTask.prompt === '' ? null : editedTask.prompt
       };
@@ -339,10 +339,10 @@ export function TaskDetailsPanel({
               
               {/* Git Feature Branch */}
               <TextInput
-                label={t('tasks.gitFeatureBranch')}
-                placeholder={t('tasks.gitFeatureBranchPlaceholder')}
-                value={editedTask?.gitFeatureBranch || ''}
-                onChange={(e) => setEditedTask({ ...editedTask, gitFeatureBranch: e.target.value })}
+                label={t('tasks.gitWorktree')}
+                placeholder={t('tasks.gitWorktreePlaceholder')}
+                value={editedTask?.gitWorktree || ''}
+                onChange={(e) => setEditedTask({ ...editedTask, gitWorktree: e.target.value })}
                 leftSection={<IconGitBranch size={16} />}
               />
               

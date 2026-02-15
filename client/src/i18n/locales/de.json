@@ -80,6 +80,10 @@
     "assignee": "Zugewiesen",
     "assigneeName": "Name des Zugewiesenen",
     "storyPoints": "Story Points",
+    "gitWorktree": "Git Worktree",
+    "gitWorktreePlaceholder": "feature/aufgabe-123",
+    "gitPullRequestUrl": "Pull-Request-URL",
+    "gitPullRequestUrlPlaceholder": "https://github.com/benutzer/repo/pull/123",
 
     "prompt": "Prompt",
     "isBlocked": "Blockiert",

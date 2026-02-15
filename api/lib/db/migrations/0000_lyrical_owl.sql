@@ -1,3 +1,14 @@
+CREATE TYPE "public"."graph_layout_direction" AS ENUM('LR', 'TB');--> statement-breakpoint
+CREATE TYPE "public"."task_relation_type" AS ENUM('DEPENDS_ON', 'COORDINATES_WITH');--> statement-breakpoint
+CREATE TABLE "COORDINATION_REQUIREMENT_DEFINITIONS" (
+	"code" varchar(25) PRIMARY KEY NOT NULL,
+	"description" varchar(200),
+	"created_by" integer,
+	"created_at" timestamp with time zone DEFAULT now(),
+	"updated_by" integer,
+	"updated_at" timestamp with time zone DEFAULT now()
+);
+--> statement-breakpoint
 CREATE TABLE "IMAGE_DATA" (
 	"id" integer PRIMARY KEY NOT NULL,
 	"data" text NOT NULL,
@@ -23,6 +34,8 @@ CREATE TABLE "PROJECTS" (
 	"leader_id" integer NOT NULL,
 	"next_task_sequence" integer DEFAULT 1 NOT NULL,
 	"status_workflow" varchar(25)[] DEFAULT ARRAY['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']::varchar[] NOT NULL,
+	"completion_criteria_status" varchar(25),
+	"task_graph_layout_direction" "graph_layout_direction" DEFAULT 'LR',
 	"created_by" integer,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_by" integer,
@@ -58,13 +71,23 @@ CREATE TABLE "TASKS" (
 	"prompt" text,
 	"is_blocked" boolean DEFAULT false,
 	"blocked_reason" text,
-	"git_feature_branch" varchar,
+	"git_worktree" varchar,
 	"git_pull_request_url" varchar,
 	"started_at" timestamp with time zone,
 	"completed_at" timestamp with time zone,
+	"coordination_code" varchar(25),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "TASKS_task_id_unique" UNIQUE("task_id")
+);
+--> statement-breakpoint
+CREATE TABLE "TASK_RELATIONS" (
+	"task_id" integer NOT NULL,
+	"related_task_id" integer NOT NULL,
+	"relation_type" "task_relation_type" NOT NULL,
+	"updated_by" integer,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "TASK_RELATIONS_task_id_related_task_id_relation_type_pk" PRIMARY KEY("task_id","related_task_id","relation_type")
 );
 --> statement-breakpoint
 CREATE TABLE "TASK_TAGS" (
@@ -94,16 +117,25 @@ CREATE TABLE "USERS" (
 	CONSTRAINT "USERS_access_token_unique" UNIQUE("access_token")
 );
 --> statement-breakpoint
+ALTER TABLE "COORDINATION_REQUIREMENT_DEFINITIONS" ADD CONSTRAINT "COORDINATION_REQUIREMENT_DEFINITIONS_created_by_USERS_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "COORDINATION_REQUIREMENT_DEFINITIONS" ADD CONSTRAINT "COORDINATION_REQUIREMENT_DEFINITIONS_updated_by_USERS_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "IMAGE_DATA" ADD CONSTRAINT "IMAGE_DATA_id_IMAGE_METADATA_id_fk" FOREIGN KEY ("id") REFERENCES "public"."IMAGE_METADATA"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "IMAGE_METADATA" ADD CONSTRAINT "IMAGE_METADATA_task_id_TASKS_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."TASKS"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "PROJECTS" ADD CONSTRAINT "PROJECTS_leader_id_USERS_id_fk" FOREIGN KEY ("leader_id") REFERENCES "public"."USERS"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "PROJECTS" ADD CONSTRAINT "PROJECTS_completion_criteria_status_STATUS_DEFINITIONS_code_fk" FOREIGN KEY ("completion_criteria_status") REFERENCES "public"."STATUS_DEFINITIONS"("code") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "PROJECTS" ADD CONSTRAINT "PROJECTS_created_by_USERS_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "PROJECTS" ADD CONSTRAINT "PROJECTS_updated_by_USERS_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "STATUS_DEFINITIONS" ADD CONSTRAINT "STATUS_DEFINITIONS_created_by_USERS_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "STATUS_DEFINITIONS" ADD CONSTRAINT "STATUS_DEFINITIONS_updated_by_USERS_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "TASKS" ADD CONSTRAINT "TASKS_project_id_PROJECTS_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."PROJECTS"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "TASKS" ADD CONSTRAINT "TASKS_assignee_id_USERS_id_fk" FOREIGN KEY ("assignee_id") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "TASKS" ADD CONSTRAINT "TASKS_coordination_code_COORDINATION_REQUIREMENT_DEFINITIONS_code_fk" FOREIGN KEY ("coordination_code") REFERENCES "public"."COORDINATION_REQUIREMENT_DEFINITIONS"("code") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "TASK_RELATIONS" ADD CONSTRAINT "TASK_RELATIONS_task_id_TASKS_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."TASKS"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "TASK_RELATIONS" ADD CONSTRAINT "TASK_RELATIONS_related_task_id_TASKS_id_fk" FOREIGN KEY ("related_task_id") REFERENCES "public"."TASKS"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "TASK_RELATIONS" ADD CONSTRAINT "TASK_RELATIONS_updated_by_USERS_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "TASK_TAGS" ADD CONSTRAINT "TASK_TAGS_task_id_TASKS_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."TASKS"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "TASK_TAGS" ADD CONSTRAINT "TASK_TAGS_tag_TAGS_tag_fk" FOREIGN KEY ("tag") REFERENCES "public"."TAGS"("tag") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "TRANSLATIONS" ADD CONSTRAINT "TRANSLATIONS_created_by_USERS_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "TRANSLATIONS" ADD CONSTRAINT "TRANSLATIONS_updated_by_USERS_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "TRANSLATIONS" ADD CONSTRAINT "TRANSLATIONS_updated_by_USERS_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."USERS"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "idx_task_relations_task_id" ON "TASK_RELATIONS" USING btree ("task_id");--> statement-breakpoint
+CREATE INDEX "idx_task_relations_related_task_id" ON "TASK_RELATIONS" USING btree ("related_task_id");

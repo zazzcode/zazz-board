@@ -110,7 +110,7 @@ export async function createTestTask(projectId, overrides = {}) {
     is_blocked: overrides.isBlocked || false,
     blocked_reason: overrides.blockedReason || null,
     story_points: overrides.storyPoints || null,
-    git_feature_branch: overrides.gitFeatureBranch || null,
+    git_worktree: overrides.gitWorktree || null,
     git_pull_request_url: overrides.gitPullRequestUrl || null
   }).returning();
   

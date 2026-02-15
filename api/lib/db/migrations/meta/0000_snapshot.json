@@ -1,9 +1,87 @@
 {
-  "id": "2dea46ab-6066-442c-9654-9c01196ba399",
+  "id": "efbbaea5-24ee-40c3-92af-7462d53b97f5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.COORDINATION_REQUIREMENT_DEFINITIONS": {
+      "name": "COORDINATION_REQUIREMENT_DEFINITIONS",
+      "schema": "",
+      "columns": {
+        "code": {
+          "name": "code",
+          "type": "varchar(25)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "COORDINATION_REQUIREMENT_DEFINITIONS_created_by_USERS_id_fk": {
+          "name": "COORDINATION_REQUIREMENT_DEFINITIONS_created_by_USERS_id_fk",
+          "tableFrom": "COORDINATION_REQUIREMENT_DEFINITIONS",
+          "tableTo": "USERS",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "COORDINATION_REQUIREMENT_DEFINITIONS_updated_by_USERS_id_fk": {
+          "name": "COORDINATION_REQUIREMENT_DEFINITIONS_updated_by_USERS_id_fk",
+          "tableFrom": "COORDINATION_REQUIREMENT_DEFINITIONS",
+          "tableTo": "USERS",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.IMAGE_DATA": {
       "name": "IMAGE_DATA",
       "schema": "",
@@ -174,6 +252,20 @@
           "notNull": true,
           "default": "ARRAY['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']::varchar[]"
         },
+        "completion_criteria_status": {
+          "name": "completion_criteria_status",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "task_graph_layout_direction": {
+          "name": "task_graph_layout_direction",
+          "type": "graph_layout_direction",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'LR'"
+        },
         "created_by": {
           "name": "created_by",
           "type": "integer",
@@ -214,6 +306,19 @@
             "id"
           ],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "PROJECTS_completion_criteria_status_STATUS_DEFINITIONS_code_fk": {
+          "name": "PROJECTS_completion_criteria_status_STATUS_DEFINITIONS_code_fk",
+          "tableFrom": "PROJECTS",
+          "tableTo": "STATUS_DEFINITIONS",
+          "columnsFrom": [
+            "completion_criteria_status"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "PROJECTS_created_by_USERS_id_fk": {
@@ -447,8 +552,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "git_feature_branch": {
-          "name": "git_feature_branch",
+        "git_worktree": {
+          "name": "git_worktree",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -468,6 +573,12 @@
         "completed_at": {
           "name": "completed_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coordination_code": {
+          "name": "coordination_code",
+          "type": "varchar(25)",
           "primaryKey": false,
           "notNull": false
         },
@@ -513,6 +624,19 @@
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
+        },
+        "TASKS_coordination_code_COORDINATION_REQUIREMENT_DEFINITIONS_code_fk": {
+          "name": "TASKS_coordination_code_COORDINATION_REQUIREMENT_DEFINITIONS_code_fk",
+          "tableFrom": "TASKS",
+          "tableTo": "COORDINATION_REQUIREMENT_DEFINITIONS",
+          "columnsFrom": [
+            "coordination_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -525,6 +649,131 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TASK_RELATIONS": {
+      "name": "TASK_RELATIONS",
+      "schema": "",
+      "columns": {
+        "task_id": {
+          "name": "task_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "related_task_id": {
+          "name": "related_task_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relation_type": {
+          "name": "relation_type",
+          "type": "task_relation_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_task_relations_task_id": {
+          "name": "idx_task_relations_task_id",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_task_relations_related_task_id": {
+          "name": "idx_task_relations_related_task_id",
+          "columns": [
+            {
+              "expression": "related_task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "TASK_RELATIONS_task_id_TASKS_id_fk": {
+          "name": "TASK_RELATIONS_task_id_TASKS_id_fk",
+          "tableFrom": "TASK_RELATIONS",
+          "tableTo": "TASKS",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "TASK_RELATIONS_related_task_id_TASKS_id_fk": {
+          "name": "TASK_RELATIONS_related_task_id_TASKS_id_fk",
+          "tableFrom": "TASK_RELATIONS",
+          "tableTo": "TASKS",
+          "columnsFrom": [
+            "related_task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "TASK_RELATIONS_updated_by_USERS_id_fk": {
+          "name": "TASK_RELATIONS_updated_by_USERS_id_fk",
+          "tableFrom": "TASK_RELATIONS",
+          "tableTo": "USERS",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "TASK_RELATIONS_task_id_related_task_id_relation_type_pk": {
+          "name": "TASK_RELATIONS_task_id_related_task_id_relation_type_pk",
+          "columns": [
+            "task_id",
+            "related_task_id",
+            "relation_type"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -740,7 +989,24 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.graph_layout_direction": {
+      "name": "graph_layout_direction",
+      "schema": "public",
+      "values": [
+        "LR",
+        "TB"
+      ]
+    },
+    "public.task_relation_type": {
+      "name": "task_relation_type",
+      "schema": "public",
+      "values": [
+        "DEPENDS_ON",
+        "COORDINATES_WITH"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},

@@ -34,7 +34,7 @@ export function useTaskActions({ refreshTasks, openDetailPanel, closeDetailPanel
           prompt: updatedTask.prompt,
           isBlocked: updatedTask.isBlocked,
           blockedReason: updatedTask.blockedReason,
-          gitFeatureBranch: updatedTask.gitFeatureBranch,
+          gitWorktree: updatedTask.gitWorktree,
           gitPullRequestUrl: updatedTask.gitPullRequestUrl,
           tagNames: updatedTask.tagNames || []
         })

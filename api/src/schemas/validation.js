@@ -134,7 +134,7 @@ export const taskSchemas = {
         dueDate: { type: 'string', format: 'date-time', nullable: true },
         assigneeId: { type: 'integer', minimum: 1, nullable: true },
         position: { type: 'integer', minimum: 0 },
-        git_feature_branch: { type: 'string', maxLength: 255 },
+        git_worktree: { type: 'string', maxLength: 255 },
         git_pull_request_url: { type: 'string', maxLength: 500 }
       },
       required: ['title', 'projectId'],
@@ -157,7 +157,7 @@ export const taskSchemas = {
         prompt: { type: 'string', maxLength: 10000 },
         isBlocked: { type: 'boolean' },
         blockedReason: { type: 'string', maxLength: 1000 },
-        gitFeatureBranch: { type: 'string', maxLength: 255 },
+        gitWorktree: { type: 'string', maxLength: 255 },
         gitPullRequestUrl: { type: 'string', maxLength: 500 },
         position: { type: 'integer', minimum: 0 },
         tagNames: {
@@ -376,7 +376,7 @@ export const projectSchemas = {
         prompt: { type: 'string', nullable: true },
         isBlocked: { type: 'boolean' },
         blockedReason: { type: 'string', nullable: true },
-        gitFeatureBranch: { type: 'string', nullable: true },
+        gitWorktree: { type: 'string', nullable: true },
         gitPullRequestUrl: { type: 'string', nullable: true },
         tagNames: { type: 'array', items: { type: 'string' } }
       }

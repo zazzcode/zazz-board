@@ -80,6 +80,10 @@
     "assignee": "Asignado",
     "assigneeName": "Nombre del Asignado",
     "storyPoints": "Puntos de Historia",
+    "gitWorktree": "Git Worktree",
+    "gitWorktreePlaceholder": "feature/tarea-123",
+    "gitPullRequestUrl": "URL de Pull Request",
+    "gitPullRequestUrlPlaceholder": "https://github.com/usuario/repo/pull/123",
 
     "prompt": "Prompt",
     "isBlocked": "Bloqueado",
