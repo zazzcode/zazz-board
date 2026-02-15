@@ -25,9 +25,14 @@ function SortableTaskCard({ task, onTaskEdit }) {
     opacity: isDragging ? 0.4 : 1,
   };
 
+  const handleDoubleClick = (e) => {
+    e.stopPropagation();
+    onTaskEdit && onTaskEdit(task);
+  };
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TaskCard task={task} onEdit={onTaskEdit} />
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} onDoubleClick={handleDoubleClick}>
+      <TaskCard task={task} />
     </div>
   );
 }

@@ -64,7 +64,7 @@ export function KanbanPage({ selectedProject, onBackToProjects, refreshTrigger }
       />
 
       {/* Multiple Task Detail Modals */}
-      {openModals.map(modal => (
+      {openModals.map((modal, index) => (
         <TaskDetailsModal
           key={modal.id}
           task={modal.task}
@@ -72,6 +72,7 @@ export function KanbanPage({ selectedProject, onBackToProjects, refreshTrigger }
           opened={true}
           onClose={() => handleModalClose(modal.id)}
           onSave={(updatedTask) => handleTaskSave(modal.id, updatedTask)}
+          panelIndex={index}
         />
       ))}
     </>

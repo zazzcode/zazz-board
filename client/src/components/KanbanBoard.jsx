@@ -51,7 +51,7 @@ export function KanbanBoard({ taskStatuses, getTasksByStatus, onTaskEdit, onDrag
       <DragOverlay dropAnimation={null}>
         {activeTask ? (
           <div style={{ width: 288, pointerEvents: 'none', opacity: 0.9 }}>
-            <TaskCard task={activeTask} onEdit={() => {}} />
+            <TaskCard task={activeTask} />
           </div>
         ) : null}
       </DragOverlay>

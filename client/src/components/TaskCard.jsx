@@ -1,5 +1,5 @@
-import { Card, Stack, Text, Flex, Badge, Group, Box, ActionIcon } from '@mantine/core';
-import { IconUser, IconCalendar, IconFlame, IconArrowUp, IconSquare, IconArrowDown, IconEdit } from '@tabler/icons-react';
+import { Card, Stack, Text, Flex, Badge, Group, Box } from '@mantine/core';
+import { IconUser, IconCalendar, IconFlame, IconArrowUp, IconSquare, IconArrowDown } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
 
 export function TaskCard({ task, onEdit }) {
@@ -56,15 +56,10 @@ export function TaskCard({ task, onEdit }) {
     }
   };
 
-  const handleEditClick = (e) => {
-    e.stopPropagation();
-    onEdit && onEdit(task);
-  };
-
   return (
     <Card 
       shadow="sm" 
-      padding="sm" 
+      padding="0" 
       mb="xs" 
       withBorder
       style={{ 
@@ -73,6 +68,7 @@ export function TaskCard({ task, onEdit }) {
         transform: 'none',
         transition: 'opacity 0.2s, transform 0.2s, border-color 0.2s',
         cursor: 'grab',
+        overflow: 'visible',
         ...(task.isBlocked ? {
           borderColor: 'var(--mantine-color-yellow-5)',
           borderWidth: '2px',
@@ -80,39 +76,33 @@ export function TaskCard({ task, onEdit }) {
         } : {})
       }}
     >
-      {/* Priority icon and edit button in top right corner */}
-      <Box
-        style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          zIndex: 1,
-          display: 'flex',
-          gap: '4px'
-        }}
-      >
-        <Box
-          title={translatePriority(task.priority)} // Show priority on hover
-        >
-          {getPriorityIcon(task.priority)}
-        </Box>
-        <ActionIcon
-          variant="filled"
-          size="xs"
-          onClick={handleEditClick}
-          title="Edit task"
-          style={{ 
-            opacity: 0.8,
+      {/* Blue task-id tab centered at top */}
+      <Box style={{ display: 'flex', justifyContent: 'center', marginTop: '-10px', marginBottom: '4px' }}>
+        <Badge
+          size="sm"
+          style={{
             backgroundColor: 'var(--mantine-color-blue-6)',
-            color: 'white'
+            color: 'white',
+            fontWeight: 700,
+            fontSize: '11px',
+            textTransform: 'none',
           }}
         >
-          <IconEdit size={12} />
-        </ActionIcon>
+          {task.taskId}
+        </Badge>
+      </Box>
+
+      {/* Priority icon in top right */}
+      <Box
+        style={{ position: 'absolute', top: '12px', right: '8px', zIndex: 1 }}
+        title={translatePriority(task.priority)}
+      >
+        {getPriorityIcon(task.priority)}
       </Box>
       
+      <Box style={{ padding: '0 12px 12px 12px' }}>
       <Stack gap="xs">
-        <Text size="sm" fw={500} lineClamp={2} pr="20px"> {/* Add padding to avoid icon overlap */}
+        <Text size="sm" fw={500} lineClamp={2} pr="20px">
           {task.title}
         </Text>
         
@@ -162,6 +152,7 @@ export function TaskCard({ task, onEdit }) {
           </Text>
         </Group>
       </Stack>
+      </Box>
     </Card>
   );
 } 

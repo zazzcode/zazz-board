@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { 
-  Modal, 
+  Paper,
   Stack, 
   TextInput, 
   Textarea, 
   Select, 
-  NumberInput, 
-  MultiSelect, 
   Button, 
   Group, 
   Badge, 
@@ -17,9 +15,7 @@ import {
 } from '@mantine/core';
 import { 
   IconUser, 
-  IconCalendar, 
   IconX, 
-  IconEdit,
   IconDeviceFloppy,
   IconGitBranch,
   IconGitPullRequest,
@@ -31,10 +27,11 @@ import { useUsers } from '../hooks/useUsers.js';
 
 export function TaskDetailsModal({ 
   task, 
-  taskStatuses = ['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'], // Default fallback
+  taskStatuses = ['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'],
   opened, 
   onClose, 
-  onSave
+  onSave,
+  panelIndex = 0
 }) {
   const { t, translatePriority, translateStatus } = useTranslation();
   const { tags = [] } = useTags();
@@ -113,57 +110,51 @@ export function TaskDetailsModal({
 
   if (!task || !opened) return null;
 
+  // Each panel offsets right and down so multiple are visible side by side
+  const offsetRight = panelIndex * 30;
+  const offsetDown = panelIndex * 20;
+
   return (
-    <Modal
-      opened={opened}
-      onClose={handleClose}
-      title={null}
-      withCloseButton={false}
-      size="50%"
-      styles={{
-        content: {
-          boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-          border: '1px solid var(--mantine-color-gray-3)',
-          borderRadius: '12px',
-          overflow: 'visible',
-          height: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          marginTop: '35px',
-          padding: '0 0 8px 0'
-        }
+    <Paper
+      shadow="xl"
+      withBorder
+      style={{
+        position: 'fixed',
+        top: `calc(80px + ${offsetDown}px)`,
+        right: `calc(24px + ${offsetRight}px)`,
+        width: 'min(520px, 40vw)',
+        height: 'calc(100vh - 120px)',
+        zIndex: 200 + panelIndex,
+        borderRadius: '12px',
+        overflow: 'visible',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 0,
       }}
     >
-      {/* Task ID tab positioned relative to modal */}
-      <Box
-        style={{
-          position: 'absolute',
-          top: '-30px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'var(--mantine-color-blue-6)',
-          color: 'white',
-          padding: '6px 16px',
-          borderRadius: '8px 8px 0 0',
-          fontSize: '14px',
-          fontWeight: 'bold',
-          zIndex: 1000,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          border: '1px solid var(--mantine-color-gray-3)',
-          borderBottom: 'none',
-          minWidth: '80px',
-          textAlign: 'center'
-        }}
-      >
-        {task.taskId}
+      {/* Blue task-id badge centered at top — matches TaskCard style */}
+      <Box style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+        <Badge
+          size="lg"
+          style={{
+            backgroundColor: 'var(--mantine-color-blue-6)',
+            color: 'white',
+            fontWeight: 700,
+            fontSize: '14px',
+            textTransform: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}
+        >
+          {task.taskId}
+        </Badge>
       </Box>
 
       <div style={{ 
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        borderRadius: '12px',
       }}>
         {/* Header with Task Title, Edit Button, and Close Button */}
         <Box
@@ -194,7 +185,7 @@ export function TaskDetailsModal({
           </ActionIcon>
         </Box>
 
-        {/* Modal Content - Scrollable */}
+        {/* Panel Content - Scrollable */}
         <Box 
           p="md" 
           style={{ 
@@ -202,7 +193,6 @@ export function TaskDetailsModal({
             overflowY: 'auto',
             overflowX: 'hidden',
             minHeight: 0,
-            maxHeight: 'calc(85vh - 140px)'
           }}
         >
           <Stack gap="md">
@@ -372,6 +362,6 @@ export function TaskDetailsModal({
             </Group>
           </Box>
       </div>
-    </Modal>
+    </Paper>
   );
 }
