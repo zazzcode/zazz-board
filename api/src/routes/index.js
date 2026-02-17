@@ -33,7 +33,7 @@ export default async function routes(fastify, options) {
     reply.send({ 
       message: 'Task Blaster API', 
       version: '1.0.0',
-      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/images', '/translations', '/status-definitions', '/coordination-requirements']
+      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/images', '/translations', '/status-definitions', '/coordination-types']
     });
   });
 

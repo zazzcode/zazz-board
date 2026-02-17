@@ -16,6 +16,39 @@ cd /Users/michael/Dev/task-blaster/task-graph-mvp/client && npm run dev
 
 ---
 
+## Browser Console Logging
+
+The client uses a configurable logger to control console output verbosity.
+
+### Log Levels
+- `ERROR`: Only error messages
+- `WARN`: Errors and warnings
+- `INFO`: Errors, warnings, and important info (default in production)
+- `DEBUG`: All messages (default in development)
+
+### Configuration
+
+Set the `VITE_LOG_LEVEL` environment variable to control logging:
+
+```bash
+# Show only warnings and errors (clean console)
+VITE_LOG_LEVEL=warn npm run dev
+
+# Show only errors
+VITE_LOG_LEVEL=error npm run dev
+
+# Show all debug logs (default in development)
+VITE_LOG_LEVEL=debug npm run dev
+```
+
+Or create a `.env.development` file in the client directory:
+
+```
+VITE_LOG_LEVEL=warn
+```
+
+---
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

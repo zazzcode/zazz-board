@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, asc, like, or, inArray, ne } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_REQUIREMENT_DEFINITIONS } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES } from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
 import { keysToCamelCase } from '../utils/propertyMapper.js';
 import { randomUUID } from 'crypto';
@@ -1719,36 +1719,36 @@ class DatabaseService {
     return promoted;
   }
 
-  // ==================== COORDINATION REQUIREMENT DEFINITIONS ====================
+  // ==================== COORDINATION TYPES ====================
 
   /**
-   * Get all coordination requirement definitions
+   * Get all coordination types
    */
-  async getCoordinationRequirementDefinitions() {
+  async getCoordinationTypes() {
     const defs = await db.select({
-      code: COORDINATION_REQUIREMENT_DEFINITIONS.code,
-      description: COORDINATION_REQUIREMENT_DEFINITIONS.description,
-      createdAt: COORDINATION_REQUIREMENT_DEFINITIONS.created_at,
-      updatedAt: COORDINATION_REQUIREMENT_DEFINITIONS.updated_at
+      code: COORDINATION_TYPES.code,
+      description: COORDINATION_TYPES.description,
+      createdAt: COORDINATION_TYPES.created_at,
+      updatedAt: COORDINATION_TYPES.updated_at
     })
-    .from(COORDINATION_REQUIREMENT_DEFINITIONS)
-    .orderBy(asc(COORDINATION_REQUIREMENT_DEFINITIONS.code));
+    .from(COORDINATION_TYPES)
+    .orderBy(asc(COORDINATION_TYPES.code));
 
     return defs;
   }
 
   /**
-   * Get coordination requirement definition by code
+   * Get coordination type by code
    */
-  async getCoordinationRequirementByCode(code) {
+  async getCoordinationTypeByCode(code) {
     const [def] = await db.select({
-      code: COORDINATION_REQUIREMENT_DEFINITIONS.code,
-      description: COORDINATION_REQUIREMENT_DEFINITIONS.description,
-      createdAt: COORDINATION_REQUIREMENT_DEFINITIONS.created_at,
-      updatedAt: COORDINATION_REQUIREMENT_DEFINITIONS.updated_at
+      code: COORDINATION_TYPES.code,
+      description: COORDINATION_TYPES.description,
+      createdAt: COORDINATION_TYPES.created_at,
+      updatedAt: COORDINATION_TYPES.updated_at
     })
-    .from(COORDINATION_REQUIREMENT_DEFINITIONS)
-    .where(eq(COORDINATION_REQUIREMENT_DEFINITIONS.code, code))
+    .from(COORDINATION_TYPES)
+    .where(eq(COORDINATION_TYPES.code, code))
     .limit(1);
 
     return def || null;

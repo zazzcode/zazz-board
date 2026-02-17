@@ -202,7 +202,7 @@ curl -X PATCH -H "TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000" \
 
 ---
 
-## Phase 5 — Test Infrastructure + API Tests ✅ (partial)
+## Phase 5 — Test Infrastructure + API Tests ✅ (COMPLETE)
 
 **Goal**: All existing tests pass with updated data shapes. New deliverable tests pass.
 
@@ -370,18 +370,91 @@ The graph rendering components in `client/src/components/graph/` need to group n
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2026-02-17
-**Status**: In Progress — Phases 1–4 complete, Phase 5 partial, Phases 6–7 remaining
+**Status**: Phases 1–5 Complete, Phases 6–7 Remaining
 
-### Progress Notes (2026-02-17)
-- Phases 1–4: All backend work complete (schema, seeds, service layer, routes, validation schemas)
-- Phase 5a–5c: Test infrastructure updated, existing tests updated, test DB reset working
-- Phase 5d: `deliverables.test.mjs` created with 7 CRUD/status/approval tests (all passing). Remaining: `deliverables.status.test.mjs`, `deliverables.approval.test.mjs`, `deliverables.tasks.test.mjs`, `projectDeliverableStatuses.test.mjs`
-- All 107 tests pass (6 test files)
-- `npm run db:reset` verified: 6 deliverables, 16 tasks, correct statuses
-- Bugs fixed during implementation:
-  - `seedTaskTags.js` referenced non-existent tags (`documentation`, `bug`, `api`) — mapped to existing tags
-  - `createDeliverable()` called `getDeliverableById()` inside transaction using global `db` — moved read outside transaction
-  - `projectStatuses.test.mjs` used `DONE` status instead of `COMPLETED` for Zazz methodology
-- **Next up**: Phase 5d (remaining test files), then Phase 6 (client)
+### Progress Notes (2026-02-17 - Updated)
+
+#### Backend Implementation (Phases 1–5) ✅ COMPLETE
+
+**Phase 1 - Schema Changes**: ✅
+- Added `DELIVERABLES` table with all required fields (id, project_id, deliverable_id, name, type, status, status_history, file paths, approval tracking)
+- Added `deliverableTypeEnum` with 6 types (FEATURE, BUG_FIX, REFACTOR, ENHANCEMENT, CHORE, DOCUMENTATION)
+- Added `deliverable_status_workflow` to PROJECTS (default: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'])
+- Renamed `next_task_sequence` to `next_deliverable_sequence`
+- Removed `task_id` (varchar) and `git_pull_request_url` from TASKS
+- Added `deliverable_id` FK to TASKS (NOT NULL, CASCADE)
+
+**Phase 2 - Seed Data**: ✅
+- Created `seedDeliverables.js` with 6 deliverables across 4 projects
+- Updated task seeds to use `deliverable_id` instead of `task_id`
+- Verified: 5 users, 5 projects, 6 deliverables, 26 tasks, 17 task relations
+
+**Phase 3 - Database Service**: ✅
+- Removed all `task_id` and `git_pull_request_url` references
+- Removed `getTaskByTaskId()` method (no longer needed)
+- Added 10+ deliverable query methods (CRUD, status transitions, approval, task filtering)
+- Updated project methods to handle `deliverable_status_workflow` and `nextDeliverableSequence`
+
+**Phase 4 - API Routes**: ✅
+- Created `deliverables.js` route file with 8 endpoints:
+  - `GET /projects/:projectCode/deliverables` (with status/type filters)
+  - `GET /projects/:projectCode/deliverables/:id`
+  - `POST /projects/:projectCode/deliverables` (create)
+  - `PUT /projects/:projectCode/deliverables/:id` (update)
+  - `DELETE /projects/:projectCode/deliverables/:id`
+  - `PATCH /projects/:projectCode/deliverables/:id/status` (with guards)
+  - `PATCH /projects/:projectCode/deliverables/:id/approve` (plan approval)
+  - `GET /projects/:projectCode/deliverables/:id/tasks`
+- Added deliverable validation schemas
+- Registered deliverable routes in `routes/index.js`
+
+**Phase 5 - Test Infrastructure & Tests**: ✅ COMPLETE
+- Updated test helpers: `createTestTask()` now requires `deliverableId`, added `createTestDeliverable()`
+- Updated `testDatabase.js`: `clearTaskData()` now drops DELIVERABLES before TASKS
+- Created 5 new test files:
+  - `deliverables.test.mjs`: 7 CRUD tests
+  - `deliverables.status.test.mjs`: 11 status transition tests
+  - `deliverables.approval.test.mjs`: 10 plan approval tests
+  - `deliverables.tasks.test.mjs`: 12 tasks-for-deliverable tests
+  - `projectDeliverableStatuses.test.mjs`: 15 workflow config tests
+- Updated 5 existing test files to work with new data model
+- **Test Results**: ✅ **All 155 tests PASSING** (10 test files)
+  - deliverables.test.mjs: 7/7 ✅
+  - deliverables.status.test.mjs: 11/11 ✅
+  - deliverables.approval.test.mjs: 10/10 ✅
+  - deliverables.tasks.test.mjs: 12/12 ✅
+  - projectDeliverableStatuses.test.mjs: 15/15 ✅
+  - projectStatuses.test.mjs: 31/31 ✅
+  - tasks.status.test.mjs: 15/15 ✅
+  - taskGraph.test.mjs: 34/34 ✅
+  - statusDefinitions.test.mjs: 8/8 ✅
+  - translations.test.mjs: 12/12 ✅
+
+**Verified**:
+- `npm run db:reset`: 6 deliverables, 26 tasks, correct statuses ✅
+- API starts successfully with seeded test data ✅
+- All route refactoring complete and tested ✅
+- Database schema matches DED specification ✅
+
+**Bugs Fixed**:
+- `seedTaskTags.js` referenced non-existent tags — mapped to existing tags
+- `createDeliverable()` transaction issue — moved read outside transaction
+- `projectStatuses.test.mjs` used wrong status — corrected to Zazz methodology
+- Fixed duplicate task relations in `seedTaskRelations.js`
+
+#### Remaining Work
+
+**Phase 6 - Client Updates**: 🔲 Not started
+- Update existing components (TaskCard, KanbanBoard, TaskGraphPage)
+- Create new components for deliverables (DeliverableCard, DeliverableModal, DeliverableTable)
+- Create new pages (DeliverableListPage, DeliverableKanbanPage)
+- Add deliverable translations (en, es, fr, de)
+- Add swim lane grouping by deliverable in task graph
+- Update routing and navigation
+
+**Phase 7 - Integration Verification**: 🔲 Not started
+- End-to-end testing across all layers
+- Manual UI verification
+- Client linting

@@ -1,6 +1,7 @@
 import { Container, Text } from '@mantine/core';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useTasks } from '../hooks/useTasks.js';
+import { useDeliverables } from '../hooks/useDeliverables.js';
 import { usePanelManager } from '../hooks/usePanelManager.js';
 import { useDragAndDrop } from '../hooks/useDragAndDrop.js';
 import { useTaskActions } from '../hooks/useTaskActions.js';
@@ -12,13 +13,20 @@ import { useEffect } from 'react';
 
 export function KanbanPage({ selectedProject, refreshTrigger }) {
   const { t } = useTranslation();
+  
+  // Fetch deliverables first
+  const { 
+    deliverables
+  } = useDeliverables(selectedProject);
+  
+  // Then fetch tasks from all deliverables
   const { 
     tasks, 
     loading, 
     taskStatuses, 
     getTasksByStatus,
     refreshTasks 
-  } = useTasks(selectedProject);
+  } = useTasks(selectedProject, deliverables);
   
   // Refresh tasks when trigger changes
   useEffect(() => {

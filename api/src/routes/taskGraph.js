@@ -167,16 +167,16 @@ export default async function taskGraphRoutes(fastify, options) {
     }
   });
 
-  // GET /coordination-requirements - List all coordination requirement definitions
-  fastify.get('/coordination-requirements', {
-    schema: taskGraphSchemas.getCoordinationRequirements
+  // GET /coordination-types - List all coordination types
+  fastify.get('/coordination-types', {
+    schema: taskGraphSchemas.getCoordinationTypes
   }, async (request, reply) => {
     try {
-      const defs = await dbService.getCoordinationRequirementDefinitions();
+      const defs = await dbService.getCoordinationTypes();
       reply.send(defs);
     } catch (error) {
-      request.log.error(error, 'Failed to fetch coordination requirements');
-      reply.code(500).send({ error: 'Failed to fetch coordination requirements' });
+      request.log.error(error, 'Failed to fetch coordination types');
+      reply.code(500).send({ error: 'Failed to fetch coordination types' });
     }
   });
 }

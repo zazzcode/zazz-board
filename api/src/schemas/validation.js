@@ -278,8 +278,8 @@ export const taskGraphSchemas = {
     }
   },
 
-  // GET /coordination-requirements
-  getCoordinationRequirements: {},
+  // GET /coordination-types
+  getCoordinationTypes: {},
 };
 
 // Project schemas

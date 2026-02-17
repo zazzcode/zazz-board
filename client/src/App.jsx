@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useParams, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { 
   MantineProvider, 
   AppShell, 
@@ -16,7 +16,8 @@ import {
   MultiSelect, 
   Button, 
   Stack,
-  SegmentedControl
+  SegmentedControl,
+  UnstyledButton
 } from '@mantine/core';
 import { createTheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -24,24 +25,20 @@ import {
   IconSun, 
   IconMoon, 
   IconDashboard, 
-  IconMenu2, 
   IconKey,
   IconPlus,
-  IconArrowLeft,
-  IconGitBranch,
-  IconLayoutKanban
+  IconFolder
 } from '@tabler/icons-react';
 import { TokenModal } from './components/TokenModal.jsx';
 import { ProjectModal } from './components/ProjectModal.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { KanbanPage } from './pages/KanbanPage.jsx';
 import { TaskGraphPage } from './pages/TaskGraphPage.jsx';
+import { DeliverableKanbanPage } from './pages/DeliverableKanbanPage.jsx';
+import { DeliverableListPage } from './pages/DeliverableListPage.jsx';
 import { useTranslation } from './hooks/useTranslation.js';
+import logger from './utils/logger.js';
 import '@mantine/core/styles.css';
-function LegacyProjectRouteRedirect({ to }) {
-  const { projectCode } = useParams();
-  return <Navigate to={`/projects/${projectCode}/${to}`} replace />;
-}
 
 function AppContent() {
   const { t, i18n } = useTranslation();
@@ -49,7 +46,9 @@ function AppContent() {
   const location = useLocation();
   
   // Extract projectCode from URL manually since useParams only works inside route components
-  const projectCode = location.pathname.startsWith('/projects/') && (location.pathname.includes('/task-kanban') || location.pathname.includes('/task-graph'))
+  const projectCode = location.pathname.startsWith('/projects/') && 
+    (location.pathname.includes('/kanban') || location.pathname.includes('/task-kanban') || 
+     location.pathname.includes('/task-graph') || location.pathname.includes('/deliverables'))
     ? location.pathname.split('/')[2] 
     : null;
   
@@ -88,7 +87,7 @@ function AppContent() {
 
     const token = localStorage.getItem('TB_TOKEN');
     if (!token) {
-      console.log('No token available, skipping API translation loading');
+      logger.debug('No token available, skipping API translation loading');
       return;
     }
 
@@ -105,12 +104,12 @@ function AppContent() {
         const data = await response.json();
         // Merge API translations into i18n
         i18n.addResourceBundle(language, 'translation', data.translations, true, true);
-        console.log(`Loaded ${language} translations from API`);
+        logger.debug(`Loaded ${language} translations from API`);
       } else {
-        console.warn(`Failed to load ${language} translations from API:`, response.status);
+        logger.warn(`Failed to load ${language} translations from API:`, response.status);
       }
     } catch (error) {
-      console.error(`Error loading ${language} translations from API:`, error);
+      logger.error(`Error loading ${language} translations from API:`, error);
     }
   };
 
@@ -156,18 +155,18 @@ function AppContent() {
         const data = await response.json();
         setProjects(data);
         // Debug info
-        console.log('Token: Set');
-        console.log('localStorage: Has token');
-        console.log('Projects:', data.length);
-        console.log('TEST navigator:', navigator);
-        console.log('TEST navigator.language:', navigator.language);
-        console.log('BROWSER LOCALE:', navigator.language);
+        logger.debug('Token: Set');
+        logger.debug('localStorage: Has token');
+        logger.debug('Projects:', data.length);
+        logger.debug('TEST navigator:', navigator);
+        logger.debug('TEST navigator.language:', navigator.language);
+        logger.debug('BROWSER LOCALE:', navigator.language);
       } else {
         const errorText = await response.text();
-        console.error('Failed to fetch projects:', response.status, errorText);
+        logger.error('Failed to fetch projects:', response.status, errorText);
       }
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      logger.error('Error fetching projects:', error);
     } finally {
       setLoading(false);
     }
@@ -186,7 +185,7 @@ function AppContent() {
         setCurrentUser(user);
       }
     } catch (error) {
-      console.error('Error fetching current user:', error);
+      logger.error('Error fetching current user:', error);
     }
   };
 
@@ -257,7 +256,7 @@ function AppContent() {
 
   const handleProjectSelect = (project) => {
     setSelectedProject(project);
-    navigate(`/projects/${project.code}/task-kanban`);
+    navigate(`/projects/${project.code}/kanban`);
   };
 
   const handleProjectCreate = () => {
@@ -358,7 +357,7 @@ function AppContent() {
     }
 
     if (!newTask.title || !targetProject) {
-      console.error('Missing title or project', { title: newTask.title, project: targetProject });
+      logger.error('Missing title or project', { title: newTask.title, project: targetProject });
       return;
     }
 
@@ -383,12 +382,12 @@ function AppContent() {
         }
       });
       if (!deliverablesResponse.ok) {
-        console.error('Failed to fetch deliverables for task creation:', deliverablesResponse.status);
+        logger.error('Failed to fetch deliverables for task creation:', deliverablesResponse.status);
         return;
       }
       const deliverables = await deliverablesResponse.json();
       if (!Array.isArray(deliverables) || deliverables.length === 0) {
-        console.error('Cannot create task without at least one deliverable');
+        logger.error('Cannot create task without at least one deliverable');
         return;
       }
 
@@ -426,10 +425,10 @@ function AppContent() {
         setRefreshTrigger(prev => prev + 1);
         
       } else {
-        console.error('Failed to create task:', response.status);
+        logger.error('Failed to create task:', response.status);
       }
     } catch (error) {
-      console.error('Error creating task:', error);
+      logger.error('Error creating task:', error);
     }
   };
 
@@ -442,6 +441,7 @@ function AppContent() {
           setSelectedProject(project);
         } else {
           // Project not found, redirect to home
+          logger.debug('Project not found, redirecting to home');
           navigate('/');
         }
       }
@@ -450,7 +450,7 @@ function AppContent() {
     }
   }, [projectCode, projects, navigate]);
 
-  // Keyboard shortcut for creating new task (Ctrl/Cmd + N)
+  // Keyboard shortcut for creating new task (Ctrl/Cmd + N) - only on task views
   useEffect(() => {
     const handleKeyDown = (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'n' && (location.pathname.includes('/task-kanban') || location.pathname.includes('/task-graph'))) {
@@ -472,23 +472,42 @@ function AppContent() {
     // You can customize theme here if needed
   });
 
-  // Determine current page from location
-  const isKanbanPage = location.pathname.includes('/task-kanban');
-  const isGraphPage = location.pathname.includes('/task-graph');
-  const isProjectPage = isKanbanPage || isGraphPage;
+  // Determine current view from location
+  const isKanbanPage = location.pathname.includes('/kanban') && !location.pathname.includes('/task-kanban');
+  const isTaskKanbanPage = location.pathname.includes('/task-kanban');
+  const isTaskGraphPage = location.pathname.includes('/task-graph');
+  const isDeliverablesPage = location.pathname.includes('/deliverables');
+  const isProjectPage = isKanbanPage || isTaskKanbanPage || isTaskGraphPage || isDeliverablesPage;
 
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark" forceColorScheme={colorScheme}>
       <AppShell padding={0}>
-        {/* Header with hamburger menu and theme toggle */}
+        {/* Header with Zazz Board menu and navigation */}
         <AppShell.Header p="md">
-          <Flex justify="space-between" align="center" style={{ position: 'relative' }}>
-            <Group style={{ flexShrink: 0 }}>
+          <Flex justify="space-between" align="center" style={{ height: '100%' }}>
+            {/* Left: Zazz Board Logo (clickable menu) and Project Button */}
+            <Group gap="xs" style={{ flexShrink: 0 }}>
               <Menu shadow="md" width={200}>
                 <Menu.Target>
-                  <ActionIcon variant="subtle" size="lg">
-                    <IconMenu2 size={20} />
-                  </ActionIcon>
+                  <UnstyledButton
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      transition: 'background-color 200ms ease',
+                      '&:hover': {
+                        backgroundColor: 'var(--mantine-color-dark-6)'
+                      }
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--mantine-color-dark-6)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <IconDashboard size={24} stroke={1.5} />
+                    <Text size="lg" fw={700}>Zazz Board</Text>
+                  </UnstyledButton>
                 </Menu.Target>
 
                 <Menu.Dropdown>
@@ -500,7 +519,7 @@ function AppContent() {
                     {t('common.setAccessToken')}
                   </Menu.Item>
                   
-                  {isProjectPage && (
+                  {(isTaskKanbanPage || isTaskGraphPage) && (
                     <>
                       <Menu.Divider />
                       <Menu.Label>{t('kanban.title')}</Menu.Label>
@@ -516,76 +535,89 @@ function AppContent() {
                 </Menu.Dropdown>
               </Menu>
               
-              {isProjectPage && (
-                <>
-                  <Button 
-                    variant="subtle" 
-                    leftSection={<IconArrowLeft size={16} />}
-                    onClick={handleBackToProjects}
-                    size="sm"
-                  >
-                    {t('common.back')}
-                  </Button>
-                  <SegmentedControl
-                    size="xs"
-                    value={isGraphPage ? 'graph' : 'kanban'}
-                    onChange={(value) => {
-                      if (projectCode) {
-                        navigate(`/projects/${projectCode}/${value === 'graph' ? 'task-graph' : 'task-kanban'}`);
-                      }
-                    }}
-                    data={[
-                      { value: 'kanban', label: (
-                        <Group gap={4}>
-                          <IconLayoutKanban size={14} />
-                          <span>Kanban</span>
-                        </Group>
-                      )},
-                      { value: 'graph', label: (
-                        <Group gap={4}>
-                          <IconGitBranch size={14} />
-                          <span>Graph</span>
-                        </Group>
-                      )},
-                    ]}
-                  />
-                </>
+              {/* Project Button - only show on project detail pages */}
+              {isProjectPage && selectedProject && (
+                <UnstyledButton
+                  onClick={handleBackToProjects}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 14px',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    backgroundColor: 'var(--mantine-color-blue-9)',
+                    transition: 'all 200ms ease',
+                    border: '1px solid var(--mantine-color-blue-7)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--mantine-color-blue-8)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--mantine-color-blue-9)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <IconFolder size={18} color="var(--mantine-color-blue-2)" />
+                  <Text size="sm" fw={600} c="blue.2">
+                    Projects
+                  </Text>
+                </UnstyledButton>
               )}
             </Group>
             
-            {/* Project title in center - responsive layout */}
+            {/* Center: Project Title */}
             {isProjectPage && selectedProject && (
-              <div style={{
-                position: 'absolute',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                maxWidth: 'calc(100% - 400px)', // Leave space for left and right groups
-                overflow: 'hidden',
-                textAlign: 'center',
-                pointerEvents: 'none'
-              }}>
-                <Text 
-                  size="xl" 
-                  fw={600} 
-                  c="blue.4"
-                  style={{
-                    whiteSpace: 'nowrap',
-                    textOverflow: 'ellipsis',
-                    overflow: 'hidden'
-                  }}
-                  title={selectedProject.title} // Show full title on hover
-                >
-                  {selectedProject.title}
-                </Text>
-              </div>
+              <Text 
+                size="md" 
+                fw={500} 
+                c="dimmed"
+                style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  maxWidth: '300px',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                  margin: '0 auto'
+                }}
+                title={selectedProject.title}
+              >
+                {selectedProject.title}
+              </Text>
             )}
             
-            <Group style={{ flexShrink: 0 }}>
-              <IconDashboard size={24} stroke={1.5} />
-              <Text size="lg" fw={700}>Task Blaster</Text>
+            {/* Right: Navigation and Theme Toggle */}
+            <Group gap="sm" style={{ flexShrink: 0 }}>
+              {isProjectPage && (
+                <SegmentedControl
+                  size="sm"
+                  value={isTaskGraphPage ? 'task-graph' : isDeliverablesPage ? 'deliverables' : isTaskKanbanPage ? 'task-kanban' : 'kanban'}
+                  onChange={(value) => {
+                    if (projectCode) {
+                      const routeMap = {
+                        'kanban': '/kanban',
+                        'task-kanban': '/task-kanban',
+                        'task-graph': '/task-graph',
+                        'deliverables': '/deliverables'
+                      };
+                      navigate(`/projects/${projectCode}${routeMap[value]}`);
+                    }
+                  }}
+                  data={[
+                    { value: 'kanban', label: 'Kanban' },
+                    { value: 'task-kanban', label: 'Task Kanban' },
+                    { value: 'task-graph', label: 'Graph' },
+                    { value: 'deliverables', label: 'Deliverables' },
+                  ]}
+                />
+              )}
               <ActionIcon 
                 onClick={toggleTheme}
-                variant="subtle"
+                variant="light"
                 size="lg"
                 aria-label="Toggle theme"
               >
@@ -612,6 +644,11 @@ function AppContent() {
                 onProjectCreate={handleProjectCreate}
               />
             } />
+            <Route path="/projects/:projectCode/kanban" element={
+              <DeliverableKanbanPage 
+                selectedProject={selectedProject}
+              />
+            } />
             <Route path="/projects/:projectCode/task-kanban" element={
               <KanbanPage 
                 selectedProject={selectedProject}
@@ -624,8 +661,16 @@ function AppContent() {
                 selectedProject={selectedProject}
               />
             } />
-            <Route path="/projects/:projectCode/kanban" element={<LegacyProjectRouteRedirect to="task-kanban" />} />
-            <Route path="/projects/:projectCode/taskGraph" element={<LegacyProjectRouteRedirect to="task-graph" />} />
+            <Route path="/projects/:projectCode/deliverables" element={
+              <DeliverableListPage 
+                selectedProject={selectedProject}
+              />
+            } />
+            <Route path="/projects/:projectCode/deliverable-kanban" element={
+              <DeliverableKanbanPage 
+                selectedProject={selectedProject}
+              />
+            } />
           </Routes>
         </AppShell.Main>
       </AppShell>

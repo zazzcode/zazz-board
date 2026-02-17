@@ -33,7 +33,8 @@
     "enterAccessToken": "Enter your access token",
     "tokenSaved": "Access token saved successfully",
     "actions": "Actions",
-    "keyboardShortcut": "Keyboard shortcut"
+    "keyboardShortcut": "Keyboard shortcut",
+    "confirmDelete": "Are you sure you want to delete this item? This action cannot be undone."
   },
   "navigation": {
     "home": "Home",
@@ -123,6 +124,50 @@
     "noTasksInColumn": "No tasks in this column",
     "dragToReorder": "Drag to reorder tasks",
     "dropToMove": "Drop to move task"
+  },
+  "deliverables": {
+    "title": "Deliverables",
+    "createDeliverable": "Create Deliverable",
+    "editDeliverable": "Edit Deliverable",
+    "deleteDeliverable": "Delete Deliverable",
+    "id": "ID",
+    "name": "Name",
+    "nameHint": "Enter deliverable name",
+    "type": "Type",
+    "selectType": "Select deliverable type",
+    "status": "Status",
+    "description": "Description",
+    "descriptionHint": "Enter deliverable description",
+    "dedPath": "DED Path",
+    "planPath": "Plan Path",
+    "prdPath": "PRD Path",
+    "dedFilePath": "DED File Path",
+    "planFilePath": "Plan File Path",
+    "prdFilePath": "PRD File Path",
+    "gitWorktree": "Git Worktree",
+    "gitBranch": "Git Branch",
+    "pullRequestUrl": "Pull Request URL",
+    "approvedBy": "Approved By",
+    "updated": "Updated",
+    "tasks": "Tasks",
+    "noDeliverables": "No deliverables in this column",
+    "statuses": {
+      "PLANNING": "Planning",
+      "IN_PROGRESS": "In Progress",
+      "IN_REVIEW": "In Review",
+      "STAGED": "Staged",
+      "DONE": "Done",
+      "UAT": "UAT",
+      "PROD": "Production"
+    },
+    "types": {
+      "FEATURE": "Feature",
+      "BUG_FIX": "Bug Fix",
+      "REFACTOR": "Refactor",
+      "ENHANCEMENT": "Enhancement",
+      "CHORE": "Chore",
+      "DOCUMENTATION": "Documentation"
+    }
   },
   "users": {
     "title": "Users",

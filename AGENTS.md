@@ -8,6 +8,8 @@ Task Blaster is a Kanban-style orchestration management application for coordina
 
 **Stack**: Fastify API (JavaScript, ES modules) · React client (JavaScript, Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
 
+⚠️ **CRITICAL**: This is a **JavaScript-only codebase**. **NO TYPESCRIPT**. All code must use plain JavaScript with `.js` or `.mjs` extensions. Use JSDoc comments for type hints if needed, but do not add TypeScript, `.ts` files, or any TS tooling.
+
 ## Monorepo Layout
 
 ```

@@ -410,16 +410,16 @@ describe('Task Graph API', () => {
 
   // ==================== COORDINATION REQUIREMENTS ====================
 
-  describe('GET /coordination-requirements', () => {
+  describe('GET /coordination-types', () => {
     it('should return 401 without token', async () => {
       await spec()
-        .get('/coordination-requirements')
+        .get('/coordination-types')
         .expectStatus(401);
     });
 
-    it('should return all coordination requirement definitions', async () => {
+    it('should return all coordination types', async () => {
       const response = await spec()
-        .get('/coordination-requirements')
+        .get('/coordination-types')
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .returns('res.body');

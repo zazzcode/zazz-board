@@ -335,7 +335,7 @@ Tests for `PATCH /tasks/:id/status` endpoint:
 ### Seeded Data
 - **5 projects** (WEBRED, MOBDEV, APIMOD, DATAMIG, SECURE) — Project 1 (WEBRED) commonly used in tests
 - **5 users** — User 1 is Michael (token: `550e8400-e29b-41d4-a716-446655440000`)
-- **5 coordination requirement definitions**, **8 status definitions**, **10 tags**
+- **5 coordination types**, **8 status definitions**, **10 tags**
 - **6 task relations** in APIMOD project (DEPENDS_ON + COORDINATES_WITH)
 - Seeded via `api/scripts/seeders/` during `db:reset`
 

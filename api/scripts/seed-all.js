@@ -1,6 +1,6 @@
 import { seedUsers } from './seeders/seedUsers.js';
 import { seedStatusDefinitions } from './seeders/seedStatusDefinitions.js';
-import { seedCoordinationRequirementDefinitions } from './seeders/seedCoordinationRequirementDefinitions.js';
+import { seedCoordinationTypes } from './seeders/seedCoordinationTypes.js';
 import { seedTranslations } from './seeders/seedTranslations.js';
 import { seedProjects } from './seeders/seedProjects.js';
 import { seedTags } from './seeders/seedTags.js';
@@ -45,7 +45,7 @@ async function seedAll() {
     console.log('📋 Step 1: Seeding base entities...');
     await seedUsers();
     await seedStatusDefinitions();
-    await seedCoordinationRequirementDefinitions();
+    await seedCoordinationTypes();
     await seedTranslations();
     await seedTags();
     console.log('');

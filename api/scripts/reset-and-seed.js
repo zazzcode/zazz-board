@@ -5,7 +5,7 @@ import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { seedUsers } from './seeders/seedUsers.js';
 import { seedStatusDefinitions } from './seeders/seedStatusDefinitions.js';
-import { seedCoordinationRequirementDefinitions } from './seeders/seedCoordinationRequirementDefinitions.js';
+import { seedCoordinationTypes } from './seeders/seedCoordinationTypes.js';
 import { seedTranslations } from './seeders/seedTranslations.js';
 import { seedProjects } from './seeders/seedProjects.js';
 import { seedDeliverables } from './seeders/seedDeliverables.js';
@@ -29,7 +29,7 @@ async function resetAndSeed() {
     await db.execute(sql`DROP TABLE IF EXISTS "PROJECTS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TAGS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TRANSLATIONS" CASCADE`);
-    await db.execute(sql`DROP TABLE IF EXISTS "COORDINATION_REQUIREMENT_DEFINITIONS" CASCADE`);
+    await db.execute(sql`DROP TABLE IF EXISTS "COORDINATION_TYPES" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "STATUS_DEFINITIONS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "USERS" CASCADE`);
     await db.execute(sql`DROP TYPE IF EXISTS task_relation_type CASCADE`);
@@ -53,7 +53,7 @@ async function resetAndSeed() {
     await seedUsers();
     await seedTags();
     await seedStatusDefinitions();
-    await seedCoordinationRequirementDefinitions();
+    await seedCoordinationTypes(); // Populates COORDINATION_TYPES table
     await seedTranslations();
     console.log('');
 

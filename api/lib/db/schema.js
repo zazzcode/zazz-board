@@ -42,8 +42,8 @@ export const STATUS_DEFINITIONS = pgTable('STATUS_DEFINITIONS', {
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
-// Coordination Requirement Definitions table - reference table for coordination types
-export const COORDINATION_REQUIREMENT_DEFINITIONS = pgTable('COORDINATION_REQUIREMENT_DEFINITIONS', {
+// Coordination Types table - reference table for task coordination types
+export const COORDINATION_TYPES = pgTable('COORDINATION_TYPES', {
   code: varchar('code', { length: 25 }).primaryKey().notNull(),
   description: varchar('description', { length: 200 }),
   created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
@@ -125,7 +125,7 @@ export const TASKS = pgTable('TASKS', {
   started_at: timestamp('started_at', { withTimezone: true }),
   completed_at: timestamp('completed_at', { withTimezone: true }),
   coordination_code: varchar('coordination_code', { length: 25 })
-    .references(() => COORDINATION_REQUIREMENT_DEFINITIONS.code, { onDelete: 'set null' }),
+    .references(() => COORDINATION_TYPES.code, { onDelete: 'set null' }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

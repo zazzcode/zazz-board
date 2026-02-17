@@ -30,12 +30,24 @@ export const useTranslation = () => {
     return t(`common.${action}`, action);
   };
   
+  // Helper for translating deliverable status values
+  const translateDeliverableStatus = (status) => {
+    return t(`deliverables.statuses.${status}`, status);
+  };
+  
+  // Helper for translating deliverable type values
+  const translateDeliverableType = (type) => {
+    return t(`deliverables.types.${type}`, type);
+  };
+  
   return {
     t: translate,
     translateStatus,
     translatePriority,
     translateStatusDescription,
     translateAction,
+    translateDeliverableStatus,
+    translateDeliverableType,
     i18n,
     currentLanguage: i18n.language,
     changeLanguage: i18n.changeLanguage,

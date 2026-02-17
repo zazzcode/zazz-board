@@ -1,11 +1,11 @@
 import { db } from '../../lib/db/index.js';
-import { COORDINATION_REQUIREMENT_DEFINITIONS } from '../../lib/db/schema.js';
+import { COORDINATION_TYPES } from '../../lib/db/schema.js';
 
-export async function seedCoordinationRequirementDefinitions() {
-  console.log('  📝 Seeding coordination requirement definitions...');
+export async function seedCoordinationTypes() {
+  console.log('  📝 Seeding coordination types...');
   
   try {
-    await db.insert(COORDINATION_REQUIREMENT_DEFINITIONS).values([
+    await db.insert(COORDINATION_TYPES).values([
       {
         code: 'MERGE_TOGETHER',
         description: 'All PRs must merge to dev together'
@@ -28,9 +28,9 @@ export async function seedCoordinationRequirementDefinitions() {
       }
     ]);
     
-    console.log('  ✅ Coordination requirement definitions seeded successfully');
+    console.log('  ✅ Coordination types seeded successfully');
   } catch (error) {
-    console.error('  ❌ Error seeding coordination requirement definitions:', error.message);
+    console.error('  ❌ Error seeding coordination types:', error.message);
     throw error;
   }
 }
