@@ -2,24 +2,32 @@
  * Expected project status workflow structures for testing
  */
 
-export const defaultStatusWorkflow = ['TO_DO', 'IN_PROGRESS', 'DONE'];  // WEBRED project default workflow
+export const defaultStatusWorkflow = ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'];  // ZAZZ project default workflow
 
 export const allAvailableStatuses = [
+  'BACKLOG',
+  'COMPLETED',
+  'DONE',
+  'ICEBOX',
   'TO_DO',
+  'READY',
   'IN_PROGRESS', 
   'IN_REVIEW',
-  'DONE',
-  'TESTING',
   'AWAITING_APPROVAL',
+  'PLANNING',
+  'PROD',
+  'QA',
   'READY_FOR_DEPLOY',
-  'ICEBOX'
+  'STAGED',
+  'TESTING',
+  'UAT'
 ];
 
 export const minimalWorkflow = ['TO_DO'];
 
-export const threeStatusWorkflow = ['TO_DO', 'IN_PROGRESS', 'DONE'];
+export const threeStatusWorkflow = ['TO_DO', 'IN_PROGRESS', 'COMPLETED'];
 
-export const reorderedWorkflow = ['DONE', 'IN_PROGRESS', 'TO_DO'];
+export const reorderedWorkflow = ['COMPLETED', 'IN_PROGRESS', 'TO_DO'];
 
 export const statusWorkflowSchema = {
   type: 'object',

@@ -24,7 +24,7 @@ const taskIdParam = {
   type: 'object',
   required: ['taskId'],
   properties: {
-    taskId: { type: 'string' } // task_id format: PROJECT-001
+    taskId: { type: 'string', pattern: '^\\d+$' }
   }
 };
 
@@ -129,15 +129,15 @@ export const taskSchemas = {
         title: { type: 'string', minLength: 1, maxLength: 255 },
         description: { type: 'string', maxLength: 5000 },
         projectId: { type: 'integer', minimum: 1 },
+        deliverableId: { type: 'integer', minimum: 1 },
         status: { type: 'string', pattern: '^[A-Z_]+$', default: 'TO_DO' },
         priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], default: 'MEDIUM' },
         dueDate: { type: 'string', format: 'date-time', nullable: true },
         assigneeId: { type: 'integer', minimum: 1, nullable: true },
         position: { type: 'integer', minimum: 0 },
         git_worktree: { type: 'string', maxLength: 255 },
-        git_pull_request_url: { type: 'string', maxLength: 500 }
       },
-      required: ['title', 'projectId'],
+      required: ['title', 'deliverableId'],
       additionalProperties: false
     }
   },
@@ -154,11 +154,11 @@ export const taskSchemas = {
         priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
         storyPoints: { type: 'integer', minimum: 1, maximum: 21, nullable: true },
         assigneeId: { type: 'integer', minimum: 1, nullable: true },
+        deliverableId: { type: 'integer', minimum: 1 },
         prompt: { type: 'string', maxLength: 10000 },
         isBlocked: { type: 'boolean' },
         blockedReason: { type: 'string', maxLength: 1000 },
         gitWorktree: { type: 'string', maxLength: 255 },
-        gitPullRequestUrl: { type: 'string', maxLength: 500 },
         position: { type: 'integer', minimum: 0 },
         tagNames: {
           type: 'array',
@@ -340,7 +340,7 @@ export const projectSchemas = {
       required: ['code', 'taskId'],
       properties: {
         code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-        taskId: { type: 'string' }
+        taskId: { type: 'string', pattern: '^\\d+$' }
       }
     },
     body: {
@@ -362,7 +362,7 @@ export const projectSchemas = {
       required: ['code', 'taskId'],
       properties: {
         code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-        taskId: { type: 'string' }
+        taskId: { type: 'string', pattern: '^\\d+$' }
       }
     },
     body: {
@@ -377,7 +377,7 @@ export const projectSchemas = {
         isBlocked: { type: 'boolean' },
         blockedReason: { type: 'string', nullable: true },
         gitWorktree: { type: 'string', nullable: true },
-        gitPullRequestUrl: { type: 'string', nullable: true },
+        deliverableId: { type: 'number', nullable: false },
         tagNames: { type: 'array', items: { type: 'string' } }
       }
     }
@@ -390,7 +390,130 @@ export const projectSchemas = {
       required: ['code', 'taskId'],
       properties: {
         code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-        taskId: { type: 'string' }
+        taskId: { type: 'string', pattern: '^\\d+$' }
+      }
+    }
+  }
+};
+
+export const deliverableSchemas = {
+  getProjectDeliverables: {
+    params: {
+      type: 'object',
+      required: ['projectCode'],
+      properties: { projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' } }
+    },
+    querystring: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', pattern: '^[A-Z_]+$' },
+        type: { type: 'string', enum: ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION'] }
+      }
+    }
+  },
+  getDeliverableById: {
+    params: {
+      type: 'object',
+      required: ['projectCode', 'id'],
+      properties: {
+        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        id: { type: 'string', pattern: '^\\d+$' }
+      }
+    }
+  },
+  createDeliverable: {
+    params: {
+      type: 'object',
+      required: ['projectCode'],
+      properties: { projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' } }
+    },
+    body: {
+      type: 'object',
+      required: ['name', 'type'],
+      properties: {
+        name: { type: 'string', minLength: 1, maxLength: 30 },
+        description: { type: 'string' },
+        type: { type: 'string', enum: ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION'] },
+        dedFilePath: { type: 'string', maxLength: 500 },
+        planFilePath: { type: 'string', maxLength: 500 },
+        prdFilePath: { type: 'string', maxLength: 500 },
+        gitWorktree: { type: 'string', maxLength: 255 },
+        gitBranch: { type: 'string', maxLength: 255 },
+        pullRequestUrl: { type: 'string', maxLength: 500 }
+      },
+      additionalProperties: false
+    }
+  },
+  updateDeliverable: {
+    params: {
+      type: 'object',
+      required: ['projectCode', 'id'],
+      properties: {
+        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        id: { type: 'string', pattern: '^\\d+$' }
+      }
+    },
+    body: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', minLength: 1, maxLength: 30 },
+        description: { type: 'string' },
+        type: { type: 'string', enum: ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION'] },
+        status: { type: 'string', pattern: '^[A-Z_]+$' },
+        dedFilePath: { type: 'string', maxLength: 500 },
+        planFilePath: { type: 'string', maxLength: 500 },
+        prdFilePath: { type: 'string', maxLength: 500 },
+        gitWorktree: { type: 'string', maxLength: 255 },
+        gitBranch: { type: 'string', maxLength: 255 },
+        pullRequestUrl: { type: 'string', maxLength: 500 },
+        position: { type: 'integer', minimum: 0 }
+      },
+      additionalProperties: false
+    }
+  },
+  deleteDeliverable: {
+    params: {
+      type: 'object',
+      required: ['projectCode', 'id'],
+      properties: {
+        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        id: { type: 'string', pattern: '^\\d+$' }
+      }
+    }
+  },
+  updateDeliverableStatus: {
+    params: {
+      type: 'object',
+      required: ['projectCode', 'id'],
+      properties: {
+        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        id: { type: 'string', pattern: '^\\d+$' }
+      }
+    },
+    body: {
+      type: 'object',
+      required: ['status'],
+      properties: { status: { type: 'string', pattern: '^[A-Z_]+$' } },
+      additionalProperties: false
+    }
+  },
+  approveDeliverable: {
+    params: {
+      type: 'object',
+      required: ['projectCode', 'id'],
+      properties: {
+        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        id: { type: 'string', pattern: '^\\d+$' }
+      }
+    }
+  },
+  getDeliverableTasks: {
+    params: {
+      type: 'object',
+      required: ['projectCode', 'id'],
+      properties: {
+        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        id: { type: 'string', pattern: '^\\d+$' }
       }
     }
   }

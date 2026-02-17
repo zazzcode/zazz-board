@@ -10,6 +10,7 @@ import imageRoutes from './images.js';
 import translationsRoutes from './translations.js';
 import statusDefinitionsRoutes from './statusDefinitions.js';
 import taskGraphRoutes from './taskGraph.js';
+import deliverableRoutes from './deliverables.js';
 
 const dbService = new DatabaseService();
 
@@ -32,7 +33,7 @@ export default async function routes(fastify, options) {
     reply.send({ 
       message: 'Task Blaster API', 
       version: '1.0.0',
-      endpoints: ['/health', '/users', '/projects', '/tasks', '/tags', '/images', '/translations', '/status-definitions', '/coordination-requirements']
+      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/images', '/translations', '/status-definitions', '/coordination-requirements']
     });
   });
 
@@ -69,4 +70,5 @@ export default async function routes(fastify, options) {
   await fastify.register(translationsRoutes, pluginOptions);
   await fastify.register(statusDefinitionsRoutes, pluginOptions);
   await fastify.register(taskGraphRoutes, pluginOptions);
+  await fastify.register(deliverableRoutes, pluginOptions);
 }

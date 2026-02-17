@@ -48,6 +48,10 @@ Task Blaster is a Kanban-style orchestration management application for coordina
 
 **Key rule**: Always know which directory you're in. Commands behave differently at project root vs `api/`.
 
+### Main Branch / Worktree Is Read-Only
+
+The `main` branch (and its worktree at `/Users/michael/Dev/task-blaster/main`) represents the current production/release state and **must be treated as read-only**. Never create, modify, or delete files in the main worktree. All work must be done in a feature branch worktree (e.g. `deliverables-mvp`). Changes reach `main` only through a branch push/merge to main — never through direct local edits.
+
 ## Related Documentation
 
 - **`api/__tests__/README.md`** — PactumJS test guide: writing tests, helpers, matchers, troubleshooting.

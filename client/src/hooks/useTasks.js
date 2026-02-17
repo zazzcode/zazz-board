@@ -5,7 +5,7 @@ export function useTasks(selectedProject) {
   const [loading, setLoading] = useState(false);
 
   // Task statuses from project workflow, fallback to default 3 statuses
-  const taskStatuses = selectedProject?.statusWorkflow || ['TO_DO', 'IN_PROGRESS', 'DONE'];
+  const taskStatuses = selectedProject?.statusWorkflow || ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'];
 
   // Fetch tasks from API
   useEffect(() => {
@@ -118,14 +118,14 @@ export function useTasks(selectedProject) {
         return;
       }
 
-      // Find the task to get its taskId
+      // Find the task to get current values
       const task = tasks.find(t => t.id === taskId);
       if (!task) {
         console.error('Task not found for update');
         return;
       }
 
-      const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/tasks/${task.taskId}`, {
+      const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/tasks/${task.id}`, {
         method: 'PUT',
         headers: {
           'TB_TOKEN': token,
@@ -162,14 +162,14 @@ export function useTasks(selectedProject) {
         return;
       }
 
-      // Find the task to get its taskId
+      // Find the task to get current values
       const task = tasks.find(t => t.id === taskId);
       if (!task) {
         console.error('Task not found for deletion');
         return;
       }
 
-      const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/tasks/${task.taskId}`, {
+      const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/tasks/${task.id}`, {
         method: 'DELETE',
         headers: {
           'TB_TOKEN': token,

@@ -6,10 +6,10 @@ const { spec } = pactum;
 // Use seeded token from seeders/seedUsers.js
 const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
 
-// Project 1 (WEBRED) has workflow: TO_DO, READY, IN_PROGRESS, IN_REVIEW, DONE
+// Project 1 (ZAZZ) has workflow: TO_DO, READY, IN_PROGRESS, QA, COMPLETED
 const PROJECT_WITH_READY = 1;
-const PROJECT_CODE_WEBRED = 'WEBRED';
-// Project 3 (APIMOD) has completionCriteriaStatus: IN_REVIEW
+const PROJECT_CODE_ZAZZ = 'ZAZZ';
+// Project 3 (APIMOD) has completionCriteriaStatus: COMPLETED
 const PROJECT_APIMOD = 3;
 const PROJECT_CODE_APIMOD = 'APIMOD';
 
@@ -222,7 +222,7 @@ describe('Task Graph API', () => {
   describe('GET /projects/:code/graph', () => {
     it('should return 401 without token', async () => {
       await spec()
-        .get(`/projects/${PROJECT_CODE_WEBRED}/graph`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/graph`)
         .expectStatus(401);
     });
 
@@ -243,13 +243,13 @@ describe('Task Graph API', () => {
       await createTestRelation(taskC.id, taskB.id, 'DEPENDS_ON');
 
       const response = await spec()
-        .get(`/projects/${PROJECT_CODE_WEBRED}/graph`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/graph`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .returns('res.body');
 
       expect(response.projectId).toBe(PROJECT_WITH_READY);
-      expect(response.projectCode).toBe('WEBRED');
+      expect(response.projectCode).toBe('ZAZZ');
       expect(response.taskGraphLayoutDirection).toBe('LR');
       expect(response.tasks.length).toBe(3);
       expect(response.relations.length).toBe(2);
@@ -291,8 +291,8 @@ describe('Task Graph API', () => {
       expect(response.blockedBy[0].id).toBe(dep.id);
     });
 
-    it('should return ready=true when dependency is DONE', async () => {
-      const dep = await createTestTask(PROJECT_WITH_READY, { status: 'DONE' });
+    it('should return ready=true when dependency is COMPLETED', async () => {
+      const dep = await createTestTask(PROJECT_WITH_READY, { status: 'COMPLETED' });
       const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO' });
       await createTestRelation(task.id, dep.id, 'DEPENDS_ON');
 
@@ -304,13 +304,13 @@ describe('Task Graph API', () => {
     });
 
     it('should use project completionCriteriaStatus for readiness threshold', async () => {
-      // APIMOD project has completionCriteriaStatus: IN_REVIEW
-      // Workflow: ICEBOX, TO_DO, READY, IN_PROGRESS, IN_REVIEW, READY_FOR_DEPLOY, DONE
-      const dep = await createTestTask(PROJECT_APIMOD, { status: 'IN_REVIEW' });
+      // APIMOD project has completionCriteriaStatus: COMPLETED
+      // Workflow: TO_DO, READY, IN_PROGRESS, QA, COMPLETED
+      const dep = await createTestTask(PROJECT_APIMOD, { status: 'COMPLETED' });
       const task = await createTestTask(PROJECT_APIMOD, { status: 'TO_DO' });
       await createTestRelation(task.id, dep.id, 'DEPENDS_ON');
 
-      // IN_REVIEW meets the criteria (>= IN_REVIEW position)
+      // COMPLETED meets the criteria (>= COMPLETED position)
       await spec()
         .get(`/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
@@ -329,17 +329,17 @@ describe('Task Graph API', () => {
   // ==================== AUTO-PROMOTION ====================
 
   describe('Auto-promotion TO_DO → READY', () => {
-    it('should auto-promote dependent task when dependency status reaches DONE', async () => {
+    it('should auto-promote dependent task when dependency status reaches COMPLETED', async () => {
       // Setup: depTask (IN_PROGRESS) ← task (TO_DO, depends on depTask)
       const depTask = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS' });
       const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO' });
       await createTestRelation(task.id, depTask.id, 'DEPENDS_ON');
 
-      // Move depTask to DONE — should trigger auto-promotion of task
+      // Move depTask to COMPLETED — should trigger auto-promotion of task
       await spec()
         .patch(`/tasks/${depTask.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ status: 'DONE' })
+        .withJson({ status: 'COMPLETED' })
         .expectStatus(200);
 
       // Verify dependent task was promoted to READY
@@ -354,11 +354,11 @@ describe('Task Graph API', () => {
       await createTestRelation(task.id, dep1.id, 'DEPENDS_ON');
       await createTestRelation(task.id, dep2.id, 'DEPENDS_ON');
 
-      // Move dep1 to DONE — dep2 is still TO_DO
+      // Move dep1 to COMPLETED — dep2 is still TO_DO
       await spec()
         .patch(`/tasks/${dep1.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ status: 'DONE' })
+        .withJson({ status: 'COMPLETED' })
         .expectStatus(200);
 
       // task should still be TO_DO
@@ -367,17 +367,17 @@ describe('Task Graph API', () => {
     });
 
     it('should promote when all dependencies are met', async () => {
-      const dep1 = await createTestTask(PROJECT_WITH_READY, { status: 'DONE' });
+      const dep1 = await createTestTask(PROJECT_WITH_READY, { status: 'COMPLETED' });
       const dep2 = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS' });
       const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO' });
       await createTestRelation(task.id, dep1.id, 'DEPENDS_ON');
       await createTestRelation(task.id, dep2.id, 'DEPENDS_ON');
 
-      // Now move dep2 to DONE — both deps met
+      // Now move dep2 to COMPLETED — both deps met
       await spec()
         .patch(`/tasks/${dep2.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ status: 'DONE' })
+        .withJson({ status: 'COMPLETED' })
         .expectStatus(200);
 
       const updated = await getTaskById(task.id);
@@ -392,7 +392,7 @@ describe('Task Graph API', () => {
       await spec()
         .patch(`/tasks/${dep.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ status: 'DONE' })
+        .withJson({ status: 'COMPLETED' })
         .expectStatus(200);
 
       // task should stay IN_PROGRESS
@@ -439,7 +439,7 @@ describe('Task Graph API', () => {
 
       // Verify via graph endpoint (uses project code now)
       const graph = await spec()
-        .get(`/projects/${PROJECT_CODE_WEBRED}/graph`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/graph`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .returns('res.body');
@@ -451,16 +451,16 @@ describe('Task Graph API', () => {
       await spec()
         .put(`/projects/${PROJECT_WITH_READY}`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ completionCriteriaStatus: 'IN_REVIEW' })
+        .withJson({ completionCriteriaStatus: 'QA' })
         .expectStatus(200);
 
       const graph = await spec()
-        .get(`/projects/${PROJECT_CODE_WEBRED}/graph`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/graph`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .returns('res.body');
 
-      expect(graph.completionCriteriaStatus).toBe('IN_REVIEW');
+      expect(graph.completionCriteriaStatus).toBe('QA');
     });
 
     it('should reject invalid layout direction', async () => {

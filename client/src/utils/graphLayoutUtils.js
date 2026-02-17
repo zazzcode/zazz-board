@@ -22,6 +22,8 @@ const STATUS_COLORS = {
   TO_DO: '#868e96',       // gray
   READY: '#228be6',       // blue
   IN_PROGRESS: '#fab005', // yellow
+  QA: '#be4bdb',          // violet
+  COMPLETED: '#40c057',   // green
   IN_REVIEW: '#be4bdb',   // violet
   READY_FOR_DEPLOY: '#15aabf', // cyan
   TESTING: '#15aabf',     // cyan
@@ -84,7 +86,7 @@ export function generateGraphLayout(tasks, relations, direction = 'LR', completi
   }
 
   // ── 4. Assign rows using barycenter heuristic (minimizes crossings) ─
-  const { rowAssignment, maxRowPerDepth } = assignRows(tasks, depth, dependsOn, coordinationGroups);
+  const { rowAssignment } = assignRows(tasks, depth, dependsOn, coordinationGroups);
 
   // ── 5. Generate React Flow nodes ────────────────────────────
   const nodes = [];
@@ -366,8 +368,8 @@ function assignRows(tasks, depth, dependsOn, coordinationGroups) {
     if (d === 0) {
       // Depth 0 (roots): sort by task number for a stable baseline
       tasksAtDepth.sort((a, b) => {
-        const numA = parseInt(a.taskId.split('-').pop()) || 0;
-        const numB = parseInt(b.taskId.split('-').pop()) || 0;
+        const numA = parseInt(String(a.taskId).split('-').pop()) || 0;
+        const numB = parseInt(String(b.taskId).split('-').pop()) || 0;
         return numA - numB;
       });
     } else {
@@ -387,8 +389,8 @@ function assignRows(tasks, depth, dependsOn, coordinationGroups) {
         const bb = barycenter(b);
         if (ba !== bb) return ba - bb;
         // Tie-break: keep coordinated tasks adjacent by group, then by task number
-        const numA = parseInt(a.taskId.split('-').pop()) || 0;
-        const numB = parseInt(b.taskId.split('-').pop()) || 0;
+        const numA = parseInt(String(a.taskId).split('-').pop()) || 0;
+        const numB = parseInt(String(b.taskId).split('-').pop()) || 0;
         return numA - numB;
       });
     }

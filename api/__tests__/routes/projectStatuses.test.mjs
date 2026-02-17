@@ -23,7 +23,7 @@ describe('Project Status Workflow', () => {
     beforeEach(async () => {
       // Reset to default workflow to ensure test isolation
       await spec()
-        .put('/projects/WEBRED/statuses')
+        .put('/projects/ZAZZ/statuses')
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ statusWorkflow: defaultStatusWorkflow })
         .expectStatus(200);
@@ -32,13 +32,13 @@ describe('Project Status Workflow', () => {
     describe('Authentication', () => {
       it('should return 401 without authentication token', async () => {
         await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .expectStatus(401);
       });
 
       it('should return 401 with invalid token', async () => {
         await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', 'invalid-token-12345')
           .expectStatus(401)
           .expectJsonLike({ error: 'Unauthorized' });
@@ -48,21 +48,21 @@ describe('Project Status Workflow', () => {
     describe('Valid Project', () => {
       it('should return status workflow for existing project', async () => {
         await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .expectStatus(200)
           .expectJsonSchema(statusWorkflowSchema);
       });
 
-      it('should return default workflow for WEBRED project', async () => {
+      it('should return default workflow for ZAZZ project', async () => {
         const response = await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .expectStatus(200);
 
         const { statusWorkflow } = response.json;
         
-        // WEBRED project has 3 statuses by default
+        // ZAZZ project has 3 statuses by default
         expect(statusWorkflow).toHaveLength(defaultStatusWorkflow.length);
         expect(statusWorkflow).toEqual(defaultStatusWorkflow);
       });
@@ -83,14 +83,14 @@ describe('Project Status Workflow', () => {
     describe('Authentication and Authorization', () => {
       it('should return 401 without authentication token', async () => {
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withJson({ statusWorkflow: ['TO_DO', 'DONE'] })
           .expectStatus(401);
       });
 
       it('should return 401 with invalid token', async () => {
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', 'invalid-token-12345')
           .withJson({ statusWorkflow: ['TO_DO', 'DONE'] })
           .expectStatus(401);
@@ -98,7 +98,7 @@ describe('Project Status Workflow', () => {
 
       it('should allow project leader to update workflow', async () => {
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: threeStatusWorkflow })
           .expectStatus(200);
@@ -110,7 +110,7 @@ describe('Project Status Workflow', () => {
     describe('Valid Workflow Updates', () => {
       it('should update workflow to 3 statuses', async () => {
         const response = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: threeStatusWorkflow })
           .expectStatus(200);
@@ -122,7 +122,7 @@ describe('Project Status Workflow', () => {
 
       it('should update workflow to use all 8 available statuses', async () => {
         const response = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: allAvailableStatuses })
           .expectStatus(200);
@@ -133,7 +133,7 @@ describe('Project Status Workflow', () => {
 
       it('should allow reordering statuses', async () => {
         const response = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: reorderedWorkflow })
           .expectStatus(200);
@@ -144,7 +144,7 @@ describe('Project Status Workflow', () => {
 
       it('should allow minimal 1-status workflow', async () => {
         const response = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: minimalWorkflow })
           .expectStatus(200);
@@ -158,7 +158,7 @@ describe('Project Status Workflow', () => {
     describe('Invalid Workflow Updates', () => {
       it('should return 400 for empty workflow array', async () => {
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: [] })
           .expectStatus(400);
@@ -166,7 +166,7 @@ describe('Project Status Workflow', () => {
 
       it('should return 400 for missing statusWorkflow field', async () => {
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({})
           .expectStatus(400);
@@ -174,7 +174,7 @@ describe('Project Status Workflow', () => {
 
       it('should return 400 for invalid status code', async () => {
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'INVALID_STATUS', 'DONE'] })
           .expectStatus(400)
@@ -186,7 +186,7 @@ describe('Project Status Workflow', () => {
 
       it('should return 400 for multiple invalid status codes', async () => {
         const response = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ 
             statusWorkflow: ['TO_DO', 'FAKE_ONE', 'DONE', 'FAKE_TWO'] 
@@ -207,7 +207,7 @@ describe('Project Status Workflow', () => {
       it('should prevent removing status when tasks exist with that status', async () => {
         // First ensure IN_REVIEW is in the workflow
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'] })
           .expectStatus(200);
@@ -217,7 +217,7 @@ describe('Project Status Workflow', () => {
 
         // Try to remove IN_REVIEW from workflow - should fail
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE'] })
           .expectStatus(400)
@@ -233,7 +233,7 @@ describe('Project Status Workflow', () => {
 
         // Should successfully remove IN_PROGRESS and IN_REVIEW
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'DONE'] })
           .expectStatus(200);
@@ -245,7 +245,7 @@ describe('Project Status Workflow', () => {
 
         // Should allow adding TESTING to workflow
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'TESTING', 'DONE'] })
           .expectStatus(200);
@@ -260,7 +260,7 @@ describe('Project Status Workflow', () => {
 
         // Should allow reordering without removing any
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['DONE', 'IN_REVIEW', 'IN_PROGRESS', 'TO_DO'] })
           .expectStatus(200);
@@ -271,14 +271,14 @@ describe('Project Status Workflow', () => {
       it('should persist workflow changes', async () => {
         // Update workflow
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'TESTING', 'DONE'] })
           .expectStatus(200);
 
         // Verify persistence by fetching again
         const response = await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .expectStatus(200);
 
@@ -289,7 +289,7 @@ describe('Project Status Workflow', () => {
       it('should include statusWorkflow in project details', async () => {
         // Update workflow first
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE'] })
           .expectStatus(200);
@@ -312,7 +312,7 @@ describe('Project Status Workflow', () => {
       beforeEach(async () => {
         // Set up 4-status workflow for each test
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: fourStatusWorkflow })
           .expectStatus(200);
@@ -320,7 +320,7 @@ describe('Project Status Workflow', () => {
 
       it('should successfully set 4-status workflow', async () => {
         const response = await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .expectStatus(200);
 
@@ -352,7 +352,7 @@ describe('Project Status Workflow', () => {
 
         // Try to remove IN_REVIEW - should fail
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE'] })
           .expectStatus(400)
@@ -365,7 +365,7 @@ describe('Project Status Workflow', () => {
         const reordered = ['DONE', 'IN_REVIEW', 'IN_PROGRESS', 'TO_DO'];
         
         const response = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: reordered })
           .expectStatus(200);
@@ -379,7 +379,7 @@ describe('Project Status Workflow', () => {
         const fiveStatusWorkflow = ['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'TESTING', 'DONE'];
         
         const response = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: fiveStatusWorkflow })
           .expectStatus(200);
@@ -393,11 +393,11 @@ describe('Project Status Workflow', () => {
         // Create tasks only in 3 of the 4 statuses
         await createTestTask(1, { status: 'TO_DO' });
         await createTestTask(1, { status: 'IN_PROGRESS' });
-        await createTestTask(1, { status: 'DONE' });
+        await createTestTask(1, { status: 'COMPLETED' });
         // No tasks in IN_REVIEW
 
         const response = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: threeStatusWorkflow })
           .expectStatus(200);
@@ -424,7 +424,7 @@ describe('Project Status Workflow', () => {
       beforeEach(async () => {
         // Reset to default workflow before each E2E test
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: defaultStatusWorkflow })
           .expectStatus(200);
@@ -443,7 +443,7 @@ describe('Project Status Workflow', () => {
 
         // Step 2: Check current project workflow (should be default 3-status)
         const initialWorkflowResponse = await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .expectStatus(200);
         
@@ -454,7 +454,7 @@ describe('Project Status Workflow', () => {
         // Step 3: Project leader adds TESTING status to workflow
         const updatedWorkflow = ['TO_DO', 'IN_PROGRESS', 'TESTING', 'DONE'];
         const updateResponse = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: updatedWorkflow })
           .expectStatus(200);
@@ -463,7 +463,7 @@ describe('Project Status Workflow', () => {
 
         // Step 4: Verify the workflow change persisted
         const verifyResponse = await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .expectStatus(200);
         
@@ -518,7 +518,7 @@ describe('Project Status Workflow', () => {
 
         // Step 8: Verify TESTING status cannot be removed while task exists
         const removeAttemptResponse = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE'] })
           .expectStatus(400);
@@ -528,7 +528,7 @@ describe('Project Status Workflow', () => {
 
         // Step 9: Verify workflow remains unchanged after failed removal
         const finalWorkflowResponse = await spec()
-          .get('/projects/WEBRED/statuses')
+          .get('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .expectStatus(200);
         
@@ -538,7 +538,7 @@ describe('Project Status Workflow', () => {
       it('should complete full workflow of adding multiple new statuses', async () => {
         // Start with default workflow
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: defaultStatusWorkflow })
           .expectStatus(200);
@@ -553,7 +553,7 @@ describe('Project Status Workflow', () => {
         ];
 
         const updateResponse = await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: enhancedWorkflow })
           .expectStatus(200);
@@ -588,7 +588,7 @@ describe('Project Status Workflow', () => {
 
         // Verify removal is blocked for both
         await spec()
-          .put('/projects/WEBRED/statuses')
+          .put('/projects/ZAZZ/statuses')
           .withHeaders('TB_TOKEN', VALID_TOKEN)
           .withJson({ statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE'] })
           .expectStatus(400);

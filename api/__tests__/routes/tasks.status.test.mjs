@@ -82,28 +82,28 @@ describe('PATCH /tasks/:id/status', () => {
       expect(updated.status).toBe('IN_PROGRESS');
     });
 
-    it('should change status from IN_PROGRESS to DONE', async () => {
+    it('should change status from IN_PROGRESS to COMPLETED', async () => {
       const task = await createTestTask(1, { status: 'IN_PROGRESS' });
       await spec()
         .patch(`/tasks/${task.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ status: 'DONE' })
+        .withJson({ status: 'COMPLETED' })
         .expectStatus(200)
-        .expectJsonLike({ id: task.id, status: 'DONE' });
+        .expectJsonLike({ id: task.id, status: 'COMPLETED' });
       const updated = await getTaskById(task.id);
-      expect(updated.status).toBe('DONE');
+      expect(updated.status).toBe('COMPLETED');
     });
 
-    it('should change status from TO_DO to IN_REVIEW', async () => {
+    it('should change status from TO_DO to QA', async () => {
       const task = await createTestTask(1, { status: 'TO_DO' });
       await spec()
         .patch(`/tasks/${task.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
-        .withJson({ status: 'IN_REVIEW' })
+        .withJson({ status: 'QA' })
         .expectStatus(200)
-        .expectJsonLike({ id: task.id, status: 'IN_REVIEW' });
+        .expectJsonLike({ id: task.id, status: 'QA' });
       const updated = await getTaskById(task.id);
-      expect(updated.status).toBe('IN_REVIEW');
+      expect(updated.status).toBe('QA');
     });
   });
 
@@ -175,15 +175,16 @@ describe('PATCH /tasks/:id/status', () => {
         .expectStatus(200)
         .expectJsonSchema({
           type: 'object',
-          required: ['id', 'taskId', 'title', 'status', 'priority', 'position', 'projectId'],
+          required: ['id', 'taskId', 'title', 'status', 'priority', 'position', 'projectId', 'deliverableId'],
           properties: {
             id: { type: 'number' },
-            taskId: { type: 'string' },
+            taskId: { type: 'number' },
             title: { type: 'string' },
             status: { type: 'string' },
             priority: { type: 'string' },
             position: { type: 'number' },
-            projectId: { type: 'number' }
+            projectId: { type: 'number' },
+            deliverableId: { type: 'number' }
           }
         });
     });

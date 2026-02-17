@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, asc, like, or, inArray, ne } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_REQUIREMENT_DEFINITIONS } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_REQUIREMENT_DEFINITIONS } from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
 import { keysToCamelCase } from '../utils/propertyMapper.js';
 import { randomUUID } from 'crypto';
@@ -113,14 +113,18 @@ class DatabaseService {
       leaderName: USERS.full_name,
       leaderEmail: USERS.email,
       statusWorkflow: PROJECTS.status_workflow,
+      deliverableStatusWorkflow: PROJECTS.deliverable_status_workflow,
+      nextDeliverableSequence: PROJECTS.next_deliverable_sequence,
       completionCriteriaStatus: PROJECTS.completion_criteria_status,
       taskGraphLayoutDirection: PROJECTS.task_graph_layout_direction,
       createdAt: PROJECTS.created_at,
       updatedAt: PROJECTS.updated_at,
-      taskCount: sql`COUNT(${TASKS.id})`.as('taskCount')
+      taskCount: sql`COUNT(DISTINCT ${TASKS.id})`.as('taskCount'),
+      deliverableCount: sql`COUNT(DISTINCT ${DELIVERABLES.id})`.as('deliverableCount')
     })
     .from(PROJECTS)
     .leftJoin(USERS, eq(PROJECTS.leader_id, USERS.id))
+    .leftJoin(DELIVERABLES, eq(PROJECTS.id, DELIVERABLES.project_id))
     .leftJoin(TASKS, eq(PROJECTS.id, TASKS.project_id))
     .groupBy(
       PROJECTS.id, 
@@ -129,6 +133,7 @@ class DatabaseService {
       PROJECTS.description, 
       PROJECTS.leader_id,
       PROJECTS.status_workflow,
+      PROJECTS.deliverable_status_workflow,
       PROJECTS.completion_criteria_status,
       PROJECTS.task_graph_layout_direction,
       PROJECTS.created_at,
@@ -154,6 +159,8 @@ class DatabaseService {
       leaderName: USERS.full_name,
       leaderEmail: USERS.email,
       statusWorkflow: PROJECTS.status_workflow,
+      deliverableStatusWorkflow: PROJECTS.deliverable_status_workflow,
+      nextDeliverableSequence: PROJECTS.next_deliverable_sequence,
       completionCriteriaStatus: PROJECTS.completion_criteria_status,
       taskGraphLayoutDirection: PROJECTS.task_graph_layout_direction,
       createdAt: PROJECTS.created_at,
@@ -180,6 +187,8 @@ class DatabaseService {
       leaderName: USERS.full_name,
       leaderEmail: USERS.email,
       statusWorkflow: PROJECTS.status_workflow,
+      deliverableStatusWorkflow: PROJECTS.deliverable_status_workflow,
+      nextDeliverableSequence: PROJECTS.next_deliverable_sequence,
       completionCriteriaStatus: PROJECTS.completion_criteria_status,
       taskGraphLayoutDirection: PROJECTS.task_graph_layout_direction,
       createdAt: PROJECTS.created_at,
@@ -203,7 +212,8 @@ class DatabaseService {
         code: projectData.code,
         description: projectData.description,
         leader_id: projectData.leaderId,
-        status_workflow: projectData.statusWorkflow || ['TO_DO', 'IN_PROGRESS', 'DONE']
+        status_workflow: projectData.statusWorkflow || ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+        deliverable_status_workflow: projectData.deliverableStatusWorkflow || ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']
       })
       .returning();
     
@@ -219,6 +229,8 @@ class DatabaseService {
     // Project codes are immutable - cannot be updated after creation
     if (projectData.description !== undefined) updateData.description = projectData.description;
     if (projectData.leaderId !== undefined) updateData.leader_id = projectData.leaderId;
+    if (projectData.statusWorkflow !== undefined) updateData.status_workflow = projectData.statusWorkflow;
+    if (projectData.deliverableStatusWorkflow !== undefined) updateData.deliverable_status_workflow = projectData.deliverableStatusWorkflow;
     if (projectData.completionCriteriaStatus !== undefined) updateData.completion_criteria_status = projectData.completionCriteriaStatus;
     if (projectData.taskGraphLayoutDirection !== undefined) updateData.task_graph_layout_direction = projectData.taskGraphLayoutDirection;
     
@@ -313,6 +325,252 @@ class DatabaseService {
     return parseInt(result.count) > 0;
   }
 
+  async hasDeliverablesWithStatus(projectId, status) {
+    const [result] = await db.select({
+      count: sql`COUNT(*)`.as('count')
+    })
+    .from(DELIVERABLES)
+    .where(and(eq(DELIVERABLES.project_id, projectId), eq(DELIVERABLES.status, status)));
+
+    return parseInt(result.count) > 0;
+  }
+
+  async getProjectDeliverableStatusWorkflow(projectId) {
+    const [project] = await db.select({
+      id: PROJECTS.id,
+      code: PROJECTS.code,
+      deliverableStatusWorkflow: PROJECTS.deliverable_status_workflow
+    })
+    .from(PROJECTS)
+    .where(eq(PROJECTS.id, projectId))
+    .limit(1);
+    return project || null;
+  }
+
+  async updateProjectDeliverableStatusWorkflow(projectId, deliverableStatusWorkflow, updatedBy) {
+    const [project] = await db.update(PROJECTS)
+      .set({
+        deliverable_status_workflow: deliverableStatusWorkflow,
+        updated_by: updatedBy,
+        updated_at: new Date()
+      })
+      .where(eq(PROJECTS.id, projectId))
+      .returning();
+    return project || null;
+  }
+
+  async getDeliverablesForProject(projectId, filters = {}) {
+    const conditions = [eq(DELIVERABLES.project_id, projectId)];
+    if (filters.status) conditions.push(eq(DELIVERABLES.status, filters.status));
+    if (filters.type) conditions.push(eq(DELIVERABLES.type, filters.type));
+
+    const rows = await db.select({
+      id: DELIVERABLES.id,
+      projectId: DELIVERABLES.project_id,
+      deliverableId: DELIVERABLES.deliverable_id,
+      name: DELIVERABLES.name,
+      description: DELIVERABLES.description,
+      type: DELIVERABLES.type,
+      status: DELIVERABLES.status,
+      statusHistory: DELIVERABLES.status_history,
+      dedFilePath: DELIVERABLES.ded_file_path,
+      planFilePath: DELIVERABLES.plan_file_path,
+      prdFilePath: DELIVERABLES.prd_file_path,
+      approvedBy: DELIVERABLES.approved_by,
+      approvedByName: USERS.full_name,
+      approvedAt: DELIVERABLES.approved_at,
+      gitWorktree: DELIVERABLES.git_worktree,
+      gitBranch: DELIVERABLES.git_branch,
+      pullRequestUrl: DELIVERABLES.pull_request_url,
+      position: DELIVERABLES.position,
+      createdBy: DELIVERABLES.created_by,
+      createdAt: DELIVERABLES.created_at,
+      updatedBy: DELIVERABLES.updated_by,
+      updatedAt: DELIVERABLES.updated_at,
+      taskCount: sql`COUNT(${TASKS.id})`.as('taskCount'),
+      completedTaskCount: sql`COUNT(CASE WHEN ${TASKS.status} = 'COMPLETED' THEN 1 END)`.as('completedTaskCount')
+    })
+    .from(DELIVERABLES)
+    .leftJoin(USERS, eq(DELIVERABLES.approved_by, USERS.id))
+    .leftJoin(TASKS, eq(DELIVERABLES.id, TASKS.deliverable_id))
+    .where(and(...conditions))
+    .groupBy(
+      DELIVERABLES.id,
+      DELIVERABLES.project_id,
+      DELIVERABLES.deliverable_id,
+      DELIVERABLES.name,
+      DELIVERABLES.description,
+      DELIVERABLES.type,
+      DELIVERABLES.status,
+      DELIVERABLES.status_history,
+      DELIVERABLES.ded_file_path,
+      DELIVERABLES.plan_file_path,
+      DELIVERABLES.prd_file_path,
+      DELIVERABLES.approved_by,
+      USERS.full_name,
+      DELIVERABLES.approved_at,
+      DELIVERABLES.git_worktree,
+      DELIVERABLES.git_branch,
+      DELIVERABLES.pull_request_url,
+      DELIVERABLES.position,
+      DELIVERABLES.created_by,
+      DELIVERABLES.created_at,
+      DELIVERABLES.updated_by,
+      DELIVERABLES.updated_at
+    )
+    .orderBy(asc(DELIVERABLES.position), asc(DELIVERABLES.id));
+
+    return rows;
+  }
+
+  async getDeliverableById(id) {
+    const [deliverable] = await db.select({
+      id: DELIVERABLES.id,
+      projectId: DELIVERABLES.project_id,
+      projectCode: PROJECTS.code,
+      deliverableId: DELIVERABLES.deliverable_id,
+      name: DELIVERABLES.name,
+      description: DELIVERABLES.description,
+      type: DELIVERABLES.type,
+      status: DELIVERABLES.status,
+      statusHistory: DELIVERABLES.status_history,
+      dedFilePath: DELIVERABLES.ded_file_path,
+      planFilePath: DELIVERABLES.plan_file_path,
+      prdFilePath: DELIVERABLES.prd_file_path,
+      approvedBy: DELIVERABLES.approved_by,
+      approvedByName: USERS.full_name,
+      approvedAt: DELIVERABLES.approved_at,
+      gitWorktree: DELIVERABLES.git_worktree,
+      gitBranch: DELIVERABLES.git_branch,
+      pullRequestUrl: DELIVERABLES.pull_request_url,
+      position: DELIVERABLES.position,
+      createdBy: DELIVERABLES.created_by,
+      createdAt: DELIVERABLES.created_at,
+      updatedBy: DELIVERABLES.updated_by,
+      updatedAt: DELIVERABLES.updated_at,
+      taskCount: sql`COUNT(${TASKS.id})`.as('taskCount'),
+      completedTaskCount: sql`COUNT(CASE WHEN ${TASKS.status} = 'COMPLETED' THEN 1 END)`.as('completedTaskCount')
+    })
+    .from(DELIVERABLES)
+    .leftJoin(PROJECTS, eq(DELIVERABLES.project_id, PROJECTS.id))
+    .leftJoin(USERS, eq(DELIVERABLES.approved_by, USERS.id))
+    .leftJoin(TASKS, eq(DELIVERABLES.id, TASKS.deliverable_id))
+    .where(eq(DELIVERABLES.id, id))
+    .groupBy(
+      DELIVERABLES.id, PROJECTS.code, USERS.full_name
+    )
+    .limit(1);
+    return deliverable || null;
+  }
+
+  async createDeliverable(projectId, data, userId) {
+    const created = await db.transaction(async (tx) => {
+      const [project] = await tx.select().from(PROJECTS).where(eq(PROJECTS.id, projectId)).limit(1);
+      if (!project) throw new Error('Project not found');
+
+      const deliverableId = `${project.code}-${project.next_deliverable_sequence}`;
+      await tx.update(PROJECTS)
+        .set({ next_deliverable_sequence: project.next_deliverable_sequence + 1, updated_by: userId, updated_at: new Date() })
+        .where(eq(PROJECTS.id, projectId));
+
+      const [maxPosition] = await tx.select({ max: sql`COALESCE(MAX(${DELIVERABLES.position}),0)`.as('max') })
+        .from(DELIVERABLES).where(eq(DELIVERABLES.project_id, projectId));
+      const nextPosition = Math.floor(maxPosition.max / 10) * 10 + 10;
+
+      const [row] = await tx.insert(DELIVERABLES).values({
+        project_id: projectId,
+        deliverable_id: deliverableId,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        status: 'PLANNING',
+        status_history: [{ status: 'PLANNING', changedAt: new Date().toISOString(), changedBy: userId }],
+        ded_file_path: data.dedFilePath,
+        plan_file_path: data.planFilePath,
+        prd_file_path: data.prdFilePath,
+        git_worktree: data.gitWorktree,
+        git_branch: data.gitBranch,
+        pull_request_url: data.pullRequestUrl,
+        position: nextPosition,
+        created_by: userId,
+        updated_by: userId
+      }).returning();
+
+      return row;
+    });
+
+    return await this.getDeliverableById(created.id);
+  }
+
+  async updateDeliverable(id, data, userId) {
+    const updateData = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.dedFilePath !== undefined) updateData.ded_file_path = data.dedFilePath;
+    if (data.planFilePath !== undefined) updateData.plan_file_path = data.planFilePath;
+    if (data.prdFilePath !== undefined) updateData.prd_file_path = data.prdFilePath;
+    if (data.gitWorktree !== undefined) updateData.git_worktree = data.gitWorktree;
+    if (data.gitBranch !== undefined) updateData.git_branch = data.gitBranch;
+    if (data.pullRequestUrl !== undefined) updateData.pull_request_url = data.pullRequestUrl;
+    if (data.position !== undefined) updateData.position = data.position;
+    updateData.updated_by = userId;
+    updateData.updated_at = new Date();
+
+    const [updated] = await db.update(DELIVERABLES).set(updateData).where(eq(DELIVERABLES.id, id)).returning();
+    if (!updated) return null;
+    return await this.getDeliverableById(id);
+  }
+
+  async deleteDeliverable(id) {
+    const [deleted] = await db.delete(DELIVERABLES).where(eq(DELIVERABLES.id, id)).returning();
+    return deleted || null;
+  }
+
+  async approveDeliverablePlan(id, userId) {
+    const deliverable = await this.getDeliverableById(id);
+    if (!deliverable) throw new Error('Deliverable not found');
+    if (!deliverable.planFilePath) throw new Error('plan_file_path must be set before approval');
+    if (deliverable.approvedAt) throw new Error('Deliverable already approved');
+    if (deliverable.status !== 'PLANNING') throw new Error('Only PLANNING deliverables can be approved');
+
+    const [updated] = await db.update(DELIVERABLES)
+      .set({ approved_by: userId, approved_at: new Date(), updated_by: userId, updated_at: new Date() })
+      .where(eq(DELIVERABLES.id, id))
+      .returning();
+    if (!updated) return null;
+    return await this.getDeliverableById(id);
+  }
+
+  async updateDeliverableStatus(id, status, userId) {
+    const deliverable = await this.getDeliverableById(id);
+    if (!deliverable) throw new Error('Deliverable not found');
+
+    const [project] = await db.select({ workflow: PROJECTS.deliverable_status_workflow })
+      .from(PROJECTS).where(eq(PROJECTS.id, deliverable.projectId)).limit(1);
+    if (!project?.workflow?.includes(status)) throw new Error(`Status ${status} not allowed for this project`);
+
+    if (status === 'IN_PROGRESS') {
+      if (!deliverable.planFilePath) throw new Error('plan_file_path must be set before moving to IN_PROGRESS');
+      if (!deliverable.approvedAt) throw new Error('Deliverable must be approved before moving to IN_PROGRESS');
+    }
+
+    const nextHistory = Array.isArray(deliverable.statusHistory) ? [...deliverable.statusHistory] : [];
+    nextHistory.push({ status, changedAt: new Date().toISOString(), changedBy: userId });
+
+    const [updated] = await db.update(DELIVERABLES)
+      .set({ status, status_history: nextHistory, updated_by: userId, updated_at: new Date() })
+      .where(eq(DELIVERABLES.id, id))
+      .returning();
+    if (!updated) return null;
+    return await this.getDeliverableById(id);
+  }
+
+  async getTasksForDeliverable(deliverableId) {
+    return await this.getTasks({ deliverableId });
+  }
+
   // ==================== TASK OPERATIONS ====================
 
   /**
@@ -321,13 +579,15 @@ class DatabaseService {
   async getTasksForProject(projectId) {
     const tasks = await db.select({
       id: TASKS.id,
-      taskId: TASKS.task_id,
+      taskId: TASKS.id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
       position: TASKS.position,
       storyPoints: TASKS.story_points,
       projectId: TASKS.project_id,
+      deliverableId: TASKS.deliverable_id,
+      deliverableName: DELIVERABLES.name,
       assigneeId: TASKS.assignee_id,
       assigneeName: USERS.full_name,
       assigneeEmail: USERS.email,
@@ -335,7 +595,6 @@ class DatabaseService {
       isBlocked: TASKS.is_blocked,
       blockedReason: TASKS.blocked_reason,
       gitWorktree: TASKS.git_worktree,
-      gitPullRequestUrl: TASKS.git_pull_request_url,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
       coordinationCode: TASKS.coordination_code,
@@ -343,6 +602,7 @@ class DatabaseService {
       updatedAt: TASKS.updated_at
     })
     .from(TASKS)
+    .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id))
     .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
     .where(eq(TASKS.project_id, projectId))
     .orderBy(asc(TASKS.status), asc(TASKS.position));
@@ -364,7 +624,7 @@ class DatabaseService {
   async getTasks(filters = {}) {
     let query = db.select({
       id: TASKS.id,
-      taskId: TASKS.task_id,
+      taskId: TASKS.id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -372,6 +632,8 @@ class DatabaseService {
       storyPoints: TASKS.story_points,
       projectId: TASKS.project_id,
       projectName: PROJECTS.title,
+      deliverableId: TASKS.deliverable_id,
+      deliverableName: DELIVERABLES.name,
       assigneeId: TASKS.assignee_id,
       assigneeName: USERS.full_name,
       assigneeEmail: USERS.email,
@@ -379,7 +641,6 @@ class DatabaseService {
       isBlocked: TASKS.is_blocked,
       blockedReason: TASKS.blocked_reason,
       gitWorktree: TASKS.git_worktree,
-      gitPullRequestUrl: TASKS.git_pull_request_url,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
       coordinationCode: TASKS.coordination_code,
@@ -388,6 +649,7 @@ class DatabaseService {
     })
     .from(TASKS)
     .leftJoin(PROJECTS, eq(TASKS.project_id, PROJECTS.id))
+    .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id))
     .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id));
 
     // Apply filters
@@ -400,6 +662,9 @@ class DatabaseService {
     }
     if (filters.assigneeId) {
       conditions.push(eq(TASKS.assignee_id, filters.assigneeId));
+    }
+    if (filters.deliverableId) {
+      conditions.push(eq(TASKS.deliverable_id, filters.deliverableId));
     }
     if (filters.search) {
       conditions.push(
@@ -433,7 +698,7 @@ class DatabaseService {
   async getTaskById(id) {
     const [task] = await db.select({
       id: TASKS.id,
-      taskId: TASKS.task_id,
+      taskId: TASKS.id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -441,6 +706,8 @@ class DatabaseService {
       storyPoints: TASKS.story_points,
       projectId: TASKS.project_id,
       projectName: PROJECTS.title,
+      deliverableId: TASKS.deliverable_id,
+      deliverableName: DELIVERABLES.name,
       assigneeId: TASKS.assignee_id,
       assigneeName: USERS.full_name,
       assigneeEmail: USERS.email,
@@ -448,7 +715,6 @@ class DatabaseService {
       isBlocked: TASKS.is_blocked,
       blockedReason: TASKS.blocked_reason,
       gitWorktree: TASKS.git_worktree,
-      gitPullRequestUrl: TASKS.git_pull_request_url,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
       coordinationCode: TASKS.coordination_code,
@@ -457,6 +723,7 @@ class DatabaseService {
     })
     .from(TASKS)
     .leftJoin(PROJECTS, eq(TASKS.project_id, PROJECTS.id))
+    .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id))
     .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
     .where(eq(TASKS.id, id))
     .limit(1);
@@ -473,7 +740,7 @@ class DatabaseService {
   async getTaskByTaskId(taskId) {
     const [task] = await db.select({
       id: TASKS.id,
-      taskId: TASKS.task_id,
+      taskId: TASKS.id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -481,6 +748,8 @@ class DatabaseService {
       storyPoints: TASKS.story_points,
       projectId: TASKS.project_id,
       projectName: PROJECTS.title,
+      deliverableId: TASKS.deliverable_id,
+      deliverableName: DELIVERABLES.name,
       assigneeId: TASKS.assignee_id,
       assigneeName: USERS.full_name,
       assigneeEmail: USERS.email,
@@ -488,7 +757,6 @@ class DatabaseService {
       isBlocked: TASKS.is_blocked,
       blockedReason: TASKS.blocked_reason,
       gitWorktree: TASKS.git_worktree,
-      gitPullRequestUrl: TASKS.git_pull_request_url,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
       coordinationCode: TASKS.coordination_code,
@@ -497,8 +765,9 @@ class DatabaseService {
     })
     .from(TASKS)
     .leftJoin(PROJECTS, eq(TASKS.project_id, PROJECTS.id))
+    .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id))
     .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
-    .where(eq(TASKS.task_id, taskId))
+    .where(eq(TASKS.id, parseInt(taskId)))
     .limit(1);
 
     if (!task) return null;
@@ -511,63 +780,43 @@ class DatabaseService {
    * Create new task with auto-generated task_id and proper positioning
    */
   async createTask(taskData) {
-    // Use transaction to ensure atomicity for task_id generation
     const task = await db.transaction(async (tx) => {
-      // Get project to generate task_id
-      const [project] = await tx
-        .select()
-        .from(PROJECTS)
-        .where(eq(PROJECTS.id, taskData.projectId));
-
-      if (!project) {
-        throw new Error('Project not found');
+      if (!taskData.deliverableId) {
+        throw new Error('deliverableId is required');
       }
 
-      // Generate task_id using project code + sequence
-      const taskId = `${project.code}-${project.next_task_sequence}`;
+      const [deliverable] = await tx.select().from(DELIVERABLES).where(eq(DELIVERABLES.id, taskData.deliverableId)).limit(1);
+      if (!deliverable) throw new Error('Deliverable not found');
+      if (taskData.projectId && taskData.projectId !== deliverable.project_id) {
+        throw new Error('projectId does not match deliverable project');
+      }
 
-      // Increment next_task_sequence atomically
-      await tx
-        .update(PROJECTS)
-        .set({ next_task_sequence: project.next_task_sequence + 1 })
-        .where(eq(PROJECTS.id, taskData.projectId));
-
-      // Get the next position for this project and status
-      const [maxPosition] = await tx.select({ 
-        max: sql`COALESCE(MAX(${TASKS.position}), 0)`.as('max') 
+      const projectId = deliverable.project_id;
+      const status = taskData.status || 'TO_DO';
+      const [maxPosition] = await tx.select({
+        max: sql`COALESCE(MAX(${TASKS.position}), 0)`.as('max')
       })
       .from(TASKS)
-      .where(
-        and(
-          eq(TASKS.project_id, taskData.projectId),
-          eq(TASKS.status, taskData.status || 'TO_DO')
-        )
-      );
-
-      // Use sparse positioning (count by 10s) to avoid frequent rebalancing
+      .where(and(eq(TASKS.project_id, projectId), eq(TASKS.status, status)));
       const nextPosition = Math.floor(maxPosition.max / 10) * 10 + 10;
-      
-      // Create the task with auto-generated task_id
-      const [newTask] = await tx.insert(TASKS)
-        .values({
-          task_id: taskId, // Auto-generated, not from API
-          title: taskData.title,
-          status: taskData.status || 'TO_DO',
-          priority: taskData.priority || 'MEDIUM',
-          position: nextPosition,
-          story_points: taskData.storyPoints,
-          project_id: taskData.projectId,
-          assignee_id: taskData.assigneeId,
-          prompt: taskData.prompt,
-          is_blocked: taskData.isBlocked || false,
-          blocked_reason: taskData.blockedReason,
-          git_worktree: taskData.gitWorktree,
-          git_pull_request_url: taskData.gitPullRequestUrl,
-          started_at: taskData.startedAt,
-          completed_at: taskData.completedAt,
-          coordination_code: taskData.coordinationCode || null
-        })
-        .returning();
+
+      const [newTask] = await tx.insert(TASKS).values({
+        title: taskData.title,
+        status,
+        priority: taskData.priority || 'MEDIUM',
+        position: taskData.position ?? nextPosition,
+        story_points: taskData.storyPoints,
+        project_id: projectId,
+        deliverable_id: taskData.deliverableId,
+        assignee_id: taskData.assigneeId,
+        prompt: taskData.prompt,
+        is_blocked: taskData.isBlocked || false,
+        blocked_reason: taskData.blockedReason,
+        git_worktree: taskData.gitWorktree,
+        started_at: taskData.startedAt,
+        completed_at: taskData.completedAt,
+        coordination_code: taskData.coordinationCode || null
+      }).returning();
 
       return newTask;
     });
@@ -590,19 +839,18 @@ class DatabaseService {
     const beforeStatus = current?.status;
 
     const updateData = {};
-    if (taskData.taskId !== undefined) updateData.task_id = taskData.taskId;
     if (taskData.title !== undefined) updateData.title = taskData.title;
     if (taskData.status !== undefined) updateData.status = taskData.status;
     if (taskData.priority !== undefined) updateData.priority = taskData.priority;
     if (taskData.position !== undefined) updateData.position = taskData.position;
     if (taskData.storyPoints !== undefined) updateData.story_points = taskData.storyPoints;
     if (taskData.projectId !== undefined) updateData.project_id = taskData.projectId;
+    if (taskData.deliverableId !== undefined) updateData.deliverable_id = taskData.deliverableId;
     if (taskData.assigneeId !== undefined) updateData.assignee_id = taskData.assigneeId;
     if (taskData.prompt !== undefined) updateData.prompt = taskData.prompt;
     if (taskData.isBlocked !== undefined) updateData.is_blocked = taskData.isBlocked;
     if (taskData.blockedReason !== undefined) updateData.blocked_reason = taskData.blockedReason;
     if (taskData.gitWorktree !== undefined) updateData.git_worktree = taskData.gitWorktree;
-    if (taskData.gitPullRequestUrl !== undefined) updateData.git_pull_request_url = taskData.gitPullRequestUrl;
     if (taskData.startedAt !== undefined) updateData.started_at = taskData.startedAt;
     if (taskData.completedAt !== undefined) updateData.completed_at = taskData.completedAt;
     if (taskData.coordinationCode !== undefined) updateData.coordination_code = taskData.coordinationCode;
@@ -1280,7 +1528,7 @@ class DatabaseService {
     // Get all tasks for the project (lightweight — id, taskId, title, status, coordinationCode)
     const tasks = await db.select({
       id: TASKS.id,
-      taskId: TASKS.task_id,
+      taskId: TASKS.id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -1291,7 +1539,7 @@ class DatabaseService {
     .from(TASKS)
     .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
     .where(eq(TASKS.project_id, projectId))
-    .orderBy(asc(TASKS.task_id));
+    .orderBy(asc(TASKS.id));
 
     if (tasks.length === 0) return { tasks: [], relations: [] };
 
@@ -1378,8 +1626,8 @@ class DatabaseService {
       statusWorkflow: PROJECTS.status_workflow
     }).from(PROJECTS).where(eq(PROJECTS.id, task.projectId));
 
-    const criteriaStatus = project.completionCriteriaStatus || 'DONE';
-    const workflow = project.statusWorkflow;
+    const workflow = project.statusWorkflow || [];
+    const criteriaStatus = project.completionCriteriaStatus || (workflow.includes('COMPLETED') ? 'COMPLETED' : 'DONE');
     const criteriaIndex = workflow.indexOf(criteriaStatus);
 
     // Get all tasks this task DEPENDS_ON
@@ -1401,7 +1649,7 @@ class DatabaseService {
     const depTaskIds = deps.map(d => d.relatedTaskId);
     const depTasks = await db.select({
       id: TASKS.id,
-      taskId: TASKS.task_id,
+      taskId: TASKS.id,
       status: TASKS.status
     })
     .from(TASKS)
@@ -1409,6 +1657,9 @@ class DatabaseService {
 
     const blockedBy = depTasks.filter(t => {
       const taskIndex = workflow.indexOf(t.status);
+      if (criteriaIndex === -1) {
+        return t.status !== criteriaStatus;
+      }
       return taskIndex < criteriaIndex;
     });
 

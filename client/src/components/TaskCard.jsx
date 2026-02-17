@@ -2,7 +2,7 @@ import { Card, Stack, Text, Flex, Badge, Group, Box } from '@mantine/core';
 import { IconUser, IconCalendar, IconFlame, IconArrowUp, IconSquare, IconArrowDown } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
 
-export function TaskCard({ task, onEdit }) {
+export function TaskCard({ task }) {
   const { translatePriority, t, i18n } = useTranslation();
   
   // Map language codes to proper locale codes for date formatting
@@ -88,7 +88,7 @@ export function TaskCard({ task, onEdit }) {
             textTransform: 'none',
           }}
         >
-          {task.taskId}
+          {task.id}
         </Badge>
       </Box>
 
@@ -153,6 +153,13 @@ export function TaskCard({ task, onEdit }) {
         </Group>
       </Stack>
       </Box>
+      {task.deliverableName && (
+        <Box style={{ borderTop: '1px solid var(--mantine-color-gray-3)', padding: '4px 12px' }}>
+          <Text size="xs" c="dimmed" truncate>
+            📦 {task.deliverableName}
+          </Text>
+        </Box>
+      )}
     </Card>
   );
 } 

@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, boolean, uuid, primaryKey, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index } from 'drizzle-orm/pg-core';
 import { pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
@@ -11,6 +11,9 @@ export const taskRelationTypeEnum = pgEnum('task_relation_type', ['DEPENDS_ON', 
 
 // Enum for graph layout direction
 export const graphLayoutDirectionEnum = pgEnum('graph_layout_direction', ['LR', 'TB']);
+
+// Enum for deliverable types
+export const deliverableTypeEnum = pgEnum('deliverable_type', ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION']);
 
 // Users table - using integer sequence as primary key (best practice for scalability)
 export const USERS = pgTable('USERS', {
@@ -67,11 +70,37 @@ export const PROJECTS = pgTable('PROJECTS', {
   code: varchar('code', { length: 10 }).notNull().unique(),
   description: text('description'),
   leader_id: integer('leader_id').notNull().references(() => USERS.id, { onDelete: 'restrict' }),
-  next_task_sequence: integer('next_task_sequence').notNull().default(1),
-  status_workflow: varchar('status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']::varchar[]`),
+  next_deliverable_sequence: integer('next_deliverable_sequence').notNull().default(1),
+  status_workflow: varchar('status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED']::varchar[]`),
+  deliverable_status_workflow: varchar('deliverable_status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']::varchar[]`),
   completion_criteria_status: varchar('completion_criteria_status', { length: 25 })
     .references(() => STATUS_DEFINITIONS.code, { onDelete: 'set null' }),
   task_graph_layout_direction: graphLayoutDirectionEnum('task_graph_layout_direction').default('LR'),
+  created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Deliverables table
+export const DELIVERABLES = pgTable('DELIVERABLES', {
+  id: serial('id').primaryKey(),
+  project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
+  deliverable_id: varchar('deliverable_id', { length: 50 }).notNull().unique(),
+  name: varchar('name', { length: 30 }).notNull(),
+  description: text('description'),
+  type: deliverableTypeEnum('type').notNull(),
+  status: varchar('status', { length: 25 }).notNull().default('PLANNING'),
+  status_history: jsonb('status_history').notNull().default(sql`'[]'::jsonb`),
+  ded_file_path: varchar('ded_file_path', { length: 500 }),
+  plan_file_path: varchar('plan_file_path', { length: 500 }),
+  prd_file_path: varchar('prd_file_path', { length: 500 }),
+  approved_by: integer('approved_by').references(() => USERS.id, { onDelete: 'set null' }),
+  approved_at: timestamp('approved_at', { withTimezone: true }),
+  git_worktree: varchar('git_worktree', { length: 255 }),
+  git_branch: varchar('git_branch', { length: 255 }),
+  pull_request_url: varchar('pull_request_url', { length: 500 }),
+  position: integer('position').notNull().default(10),
   created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
@@ -82,9 +111,9 @@ export const PROJECTS = pgTable('PROJECTS', {
 export const TASKS = pgTable('TASKS', {
   id: serial('id').primaryKey(),
   project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
-  task_id: varchar('task_id', { length: 50 }).notNull().unique(),
+  deliverable_id: integer('deliverable_id').notNull().references(() => DELIVERABLES.id, { onDelete: 'cascade' }),
   title: varchar('title', { length: 255 }).notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('TO_DO'), // 'TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'
+  status: varchar('status', { length: 20 }).notNull().default('TO_DO'),
   position: integer('position').notNull().default(0), // Position within the column for ordering
   story_points: integer('story_points'),
   priority: varchar('priority', { length: 20 }).notNull().default('MEDIUM'), // 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
@@ -93,7 +122,6 @@ export const TASKS = pgTable('TASKS', {
   is_blocked: boolean('is_blocked').default(false),
   blocked_reason: text('blocked_reason'),
   git_worktree: varchar('git_worktree'),
-  git_pull_request_url: varchar('git_pull_request_url'),
   started_at: timestamp('started_at', { withTimezone: true }),
   completed_at: timestamp('completed_at', { withTimezone: true }),
   coordination_code: varchar('coordination_code', { length: 25 })
@@ -150,6 +178,23 @@ export const projectsRelations = relations(PROJECTS, ({ one, many }) => ({
     fields: [PROJECTS.leader_id],
     references: [USERS.id],
   }),
+  deliverables: many(DELIVERABLES),
+  tasks: many(TASKS),
+}));
+
+export const deliverablesRelations = relations(DELIVERABLES, ({ one, many }) => ({
+  project: one(PROJECTS, {
+    fields: [DELIVERABLES.project_id],
+    references: [PROJECTS.id],
+  }),
+  approvedByUser: one(USERS, {
+    fields: [DELIVERABLES.approved_by],
+    references: [USERS.id],
+  }),
+  createdByUser: one(USERS, {
+    fields: [DELIVERABLES.created_by],
+    references: [USERS.id],
+  }),
   tasks: many(TASKS),
 }));
 
@@ -157,6 +202,10 @@ export const tasksRelations = relations(TASKS, ({ one, many }) => ({
   project: one(PROJECTS, {
     fields: [TASKS.project_id],
     references: [PROJECTS.id],
+  }),
+  deliverable: one(DELIVERABLES, {
+    fields: [TASKS.deliverable_id],
+    references: [DELIVERABLES.id],
   }),
   assignee: one(USERS, {
     fields: [TASKS.assignee_id],

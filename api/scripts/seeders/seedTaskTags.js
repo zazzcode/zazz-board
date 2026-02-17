@@ -6,25 +6,21 @@ export async function seedTaskTags() {
   
   try {
     await db.insert(TASK_TAGS).values([
-      // WEB-1: Design mockups (frontend, feature)
+      // ZAZZ deliverables work
       { task_id: 1, tag: 'frontend' },
       { task_id: 1, tag: 'feature' },
-      
-      // WEB-2: Navigation (frontend, urgent) 
       { task_id: 2, tag: 'frontend' },
       { task_id: 2, tag: 'urgent' },
-      
-      // MOB-1: React Native setup (backend, feature)
-      { task_id: 3, tag: 'backend' },
-      { task_id: 3, tag: 'feature' },
-      
-      // MOB-2: Auth screens (frontend, feature)
-      { task_id: 4, tag: 'frontend' },
-      { task_id: 4, tag: 'feature' },
-      
-      // API-1: API audit (backend, urgent)
-      { task_id: 5, tag: 'backend' },
-      { task_id: 5, tag: 'urgent' }
+
+      { task_id: 6, tag: 'database' },
+      { task_id: 7, tag: 'bug-fix' },
+      { task_id: 8, tag: 'testing' },
+
+      // MOBDEV/APIMOD
+      { task_id: 9, tag: 'frontend' },
+      { task_id: 10, tag: 'feature' },
+      { task_id: 12, tag: 'backend' },
+      { task_id: 13, tag: 'backend' }
     ]);
     
     console.log('  ✅ Task-tag relationships seeded successfully');

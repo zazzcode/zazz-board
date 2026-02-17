@@ -1,5 +1,5 @@
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS } from '../../lib/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 
 /**
@@ -62,45 +62,60 @@ export async function clearTaskData() {
   await db.delete(TASK_RELATIONS);
   await db.delete(TASK_TAGS);
   await db.delete(TASKS);
+  await db.delete(DELIVERABLES);
 }
 
 /**
- * Reset Project 1 (WEBRED) settings to seeded defaults.
+ * Reset Project 1 (ZAZZ) settings to seeded defaults.
  * Called to ensure test isolation when other tests modify project settings.
  * Tests that need specific project settings (e.g. APIMOD) should set them explicitly.
  */
 export async function resetProjectDefaults() {
   await db.update(PROJECTS)
     .set({
-      status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'],
+      status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+      deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
       completion_criteria_status: null,
       task_graph_layout_direction: 'LR'
     })
     .where(eq(PROJECTS.id, 1));
 }
 
-// Counter for generating unique task IDs within the same millisecond
-let taskCounter = 0;
-
-/**
- * Create a test task
- * @param {number} projectId - Project ID for the task
- * @param {object} overrides - Override default task values
- * @returns {Promise<object>} Created task
- */
-export async function createTestTask(projectId, overrides = {}) {
+export async function createTestDeliverable(projectId, overrides = {}) {
   const [project] = await db.select().from(PROJECTS).where(eq(PROJECTS.id, projectId));
-  
   if (!project) {
     throw new Error(`Project with id ${projectId} not found`);
   }
-  
-  // Create unique task_id using timestamp and counter to avoid duplicates
-  const taskId = `${project.code}-TEST-${Date.now()}-${taskCounter++}`;
-  
+
+  const [count] = await db.select({ count: sql`COUNT(*)`.as('count') })
+    .from(DELIVERABLES)
+    .where(eq(DELIVERABLES.project_id, projectId));
+  const sequence = parseInt(count.count) + 1;
+
+  const [deliverable] = await db.insert(DELIVERABLES).values({
+    project_id: projectId,
+    deliverable_id: overrides.deliverableId || `${project.code}-T${sequence}`,
+    name: overrides.name || `Test Deliverable ${sequence}`,
+    description: overrides.description || null,
+    type: overrides.type || 'FEATURE',
+    status: overrides.status || 'PLANNING',
+    status_history: overrides.statusHistory || [{ status: overrides.status || 'PLANNING', changedAt: new Date().toISOString(), changedBy: 1 }],
+    plan_file_path: overrides.planFilePath || null,
+    approved_by: overrides.approvedBy || null,
+    approved_at: overrides.approvedAt || null,
+    position: overrides.position ?? sequence * 10,
+    created_by: overrides.createdBy || 1,
+    updated_by: overrides.updatedBy || 1
+  }).returning();
+
+  return deliverable;
+}
+
+export async function createTestTask(projectId, overrides = {}) {
+  const deliverableId = overrides.deliverableId || (await createTestDeliverable(projectId)).id;
   const [task] = await db.insert(TASKS).values({
     project_id: projectId,
-    task_id: taskId,
+    deliverable_id: deliverableId,
     title: overrides.title || 'Test Task',
     status: overrides.status || 'TO_DO',
     priority: overrides.priority || 'MEDIUM',
@@ -110,10 +125,8 @@ export async function createTestTask(projectId, overrides = {}) {
     is_blocked: overrides.isBlocked || false,
     blocked_reason: overrides.blockedReason || null,
     story_points: overrides.storyPoints || null,
-    git_worktree: overrides.gitWorktree || null,
-    git_pull_request_url: overrides.gitPullRequestUrl || null
+    git_worktree: overrides.gitWorktree || null
   }).returning();
-  
   return task;
 }
 
@@ -125,6 +138,11 @@ export async function createTestTask(projectId, overrides = {}) {
 export async function getTaskById(id) {
   const [task] = await db.select().from(TASKS).where(eq(TASKS.id, id));
   return task || null;
+}
+
+export async function getDeliverableById(id) {
+  const [deliverable] = await db.select().from(DELIVERABLES).where(eq(DELIVERABLES.id, id));
+  return deliverable || null;
 }
 
 /**

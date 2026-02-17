@@ -37,8 +37,11 @@ import { HomePage } from './pages/HomePage.jsx';
 import { KanbanPage } from './pages/KanbanPage.jsx';
 import { TaskGraphPage } from './pages/TaskGraphPage.jsx';
 import { useTranslation } from './hooks/useTranslation.js';
-import i18n from './i18n/index.js';
 import '@mantine/core/styles.css';
+function LegacyProjectRouteRedirect({ to }) {
+  const { projectCode } = useParams();
+  return <Navigate to={`/projects/${projectCode}/${to}`} replace />;
+}
 
 function AppContent() {
   const { t, i18n } = useTranslation();
@@ -46,7 +49,7 @@ function AppContent() {
   const location = useLocation();
   
   // Extract projectCode from URL manually since useParams only works inside route components
-  const projectCode = location.pathname.startsWith('/projects/') && (location.pathname.includes('/kanban') || location.pathname.includes('/taskGraph'))
+  const projectCode = location.pathname.startsWith('/projects/') && (location.pathname.includes('/task-kanban') || location.pathname.includes('/task-graph'))
     ? location.pathname.split('/')[2] 
     : null;
   
@@ -71,15 +74,6 @@ function AppContent() {
     tags: []
   });
 
-  // Map language codes to proper locale codes for date formatting
-  const getLocaleCode = (language) => {
-    switch (language) {
-      case 'es': return 'es-ES';
-      case 'fr': return 'fr-FR';
-      case 'de': return 'de-DE';
-      default: return 'en-US';
-    }
-  };
 
   // Load API translations and merge with static translations
   const loadApiTranslations = async (language) => {
@@ -219,7 +213,7 @@ function AppContent() {
     console.log('Token:', savedToken ? 'Set' : 'Not set');
     console.log('localStorage:', savedToken ? 'Has token' : 'No token');
     console.log('URL:', window.location.pathname);
-    console.log('isKanbanPage:', window.location.pathname.includes('/kanban'));
+    console.log('isKanbanPage:', window.location.pathname.includes('/task-kanban'));
     console.log('selectedProject:', selectedProject?.title || 'null');
     console.log('projectCode:', projectCode || 'null');
     console.log('BROWSER LOCALE:', navigator.language);
@@ -263,7 +257,7 @@ function AppContent() {
 
   const handleProjectSelect = (project) => {
     setSelectedProject(project);
-    navigate(`/projects/${project.code}/kanban`);
+    navigate(`/projects/${project.code}/task-kanban`);
   };
 
   const handleProjectCreate = () => {
@@ -377,14 +371,26 @@ function AppContent() {
         ? targetProject.statusWorkflow[0]
         : 'TO_DO';
 
-      const tagColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'];
-      const tagsWithColors = newTask.tags.map((tagName, index) => ({
-        tag: tagName,
-        color: tagColors[index % tagColors.length]
-      }));
 
       // Map tags to tagNames array for API
       const tagNames = newTask.tags;
+
+      const deliverablesResponse = await fetch(`http://localhost:3030/projects/${targetProject.id}/deliverables`, {
+        method: 'GET',
+        headers: {
+          'TB_TOKEN': token,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!deliverablesResponse.ok) {
+        console.error('Failed to fetch deliverables for task creation:', deliverablesResponse.status);
+        return;
+      }
+      const deliverables = await deliverablesResponse.json();
+      if (!Array.isArray(deliverables) || deliverables.length === 0) {
+        console.error('Cannot create task without at least one deliverable');
+        return;
+      }
 
       const response = await fetch('http://localhost:3030/tasks', {
         method: 'POST',
@@ -398,6 +404,7 @@ function AppContent() {
           priority: newTask.priority,
           storyPoints: newTask.storyPoints ? parseInt(newTask.storyPoints) : null,
           projectId: targetProject.id,
+          deliverableId: deliverables[0].id,
           status: initialStatus,
           assigneeId: newTask.assigneeId ? parseInt(newTask.assigneeId) : null,
           tagNames: tagNames
@@ -446,7 +453,7 @@ function AppContent() {
   // Keyboard shortcut for creating new task (Ctrl/Cmd + N)
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'n' && (location.pathname.includes('/kanban') || location.pathname.includes('/taskGraph'))) {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'n' && (location.pathname.includes('/task-kanban') || location.pathname.includes('/task-graph'))) {
         event.preventDefault();
         setCreateTaskModalOpened(true);
       }
@@ -466,8 +473,8 @@ function AppContent() {
   });
 
   // Determine current page from location
-  const isKanbanPage = location.pathname.includes('/kanban');
-  const isGraphPage = location.pathname.includes('/taskGraph');
+  const isKanbanPage = location.pathname.includes('/task-kanban');
+  const isGraphPage = location.pathname.includes('/task-graph');
   const isProjectPage = isKanbanPage || isGraphPage;
 
   return (
@@ -524,7 +531,7 @@ function AppContent() {
                     value={isGraphPage ? 'graph' : 'kanban'}
                     onChange={(value) => {
                       if (projectCode) {
-                        navigate(`/projects/${projectCode}/${value === 'graph' ? 'taskGraph' : 'kanban'}`);
+                        navigate(`/projects/${projectCode}/${value === 'graph' ? 'task-graph' : 'task-kanban'}`);
                       }
                     }}
                     data={[
@@ -605,18 +612,20 @@ function AppContent() {
                 onProjectCreate={handleProjectCreate}
               />
             } />
-            <Route path="/projects/:projectCode/kanban" element={
+            <Route path="/projects/:projectCode/task-kanban" element={
               <KanbanPage 
                 selectedProject={selectedProject}
                 onBackToProjects={handleBackToProjects}
                 refreshTrigger={refreshTrigger}
               />
             } />
-            <Route path="/projects/:projectCode/taskGraph" element={
+            <Route path="/projects/:projectCode/task-graph" element={
               <TaskGraphPage 
                 selectedProject={selectedProject}
               />
             } />
+            <Route path="/projects/:projectCode/kanban" element={<LegacyProjectRouteRedirect to="task-kanban" />} />
+            <Route path="/projects/:projectCode/taskGraph" element={<LegacyProjectRouteRedirect to="task-graph" />} />
           </Routes>
         </AppShell.Main>
       </AppShell>

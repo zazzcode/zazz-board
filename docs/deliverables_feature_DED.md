@@ -107,9 +107,40 @@ Default workflow for new projects (and seed data):
 | 4 | `STAGED` | Staged | Merged to staging branch |
 | 5 | `DONE` | Done | Merged to main, deliverable complete |
 
-New statuses to add to `STATUS_DEFINITIONS` seed data: `STAGED` (if not already present).
+New statuses to add to `STATUS_DEFINITIONS` seed data: `STAGED`, `UAT`, `PROD`.
 
 The deliverable workflow array is stored on the `PROJECTS` table as `deliverable_status_workflow` (same pattern as existing `status_workflow` for tasks).
+
+**Workflow flexibility**: Deliverable workflows are fully configurable per project. The default above suits most teams, but projects can define their own columns to match their release pipeline. For example, the **APIMOD** project uses a release-pipeline workflow:
+
+| Order | ENUM Value | Display (en) | Description |
+|---|---|---|---|
+| 1 | `PLANNING` | Planning | DED and plan being created/refined |
+| 2 | `IN_PROGRESS` | In Progress | Plan approved, tasks being worked |
+| 3 | `IN_REVIEW` | In Review | PR created, awaiting human review |
+| 4 | `UAT` | UAT | User acceptance testing in integration environment |
+| 5 | `STAGED` | Staged | Deployed to staging for final validation |
+| 6 | `PROD` | Prod | Merged to main and deployed to production (terminal state) |
+
+In this workflow, `PROD` is the terminal state — equivalent to `DONE` in the default workflow. The deliverable is considered complete when its branch is merged to `main` and deployed to production.
+
+The seed data includes **both workflows** to demonstrate and test this flexibility. Task workflows remain fixed to the Zazz methodology across all projects.
+
+#### Deliverable Status Transitions (Default Workflow)
+
+```mermaid
+stateDiagram-v2
+    [*] --> PLANNING : Deliverable created
+
+    PLANNING --> PLANNING : Approve Plan\n(sets approved_by/approved_at;\nstatus stays PLANNING)
+    PLANNING --> IN_PROGRESS : [plan approved AND\nplan_file_path set]
+
+    IN_PROGRESS --> IN_REVIEW : PR created
+    IN_REVIEW --> STAGED : Merged to staging
+    STAGED --> DONE : Merged to main
+```
+
+> **Key detail**: Approving a plan (`PATCH /deliverables/:id/approve`) is a distinct action from transitioning status. Approval sets `approved_by` and `approved_at` but does **not** change the status — the deliverable remains in `PLANNING` until explicitly moved to `IN_PROGRESS`. The `IN_PROGRESS` transition guard validates that both conditions are met.
 
 ### 5.2 Task Statuses (Task Kanban Columns — Zazz Methodology)
 
@@ -127,6 +158,23 @@ New statuses to add to `STATUS_DEFINITIONS` seed data: `QA`, `COMPLETED`.
 
 **Key change**: Tasks are never `IN_REVIEW` individually. Tasks move to `COMPLETED` after QA passes. Only the deliverable goes through `IN_REVIEW` when the PR is created.
 
+#### Task Status Transitions
+
+```mermaid
+stateDiagram-v2
+    [*] --> TO_DO : Task created
+
+    TO_DO --> READY : Auto-promotion\n[all DEPENDS_ON deps met]
+    READY --> IN_PROGRESS : Agent picks up task
+    IN_PROGRESS --> QA : Work submitted for QA
+    QA --> IN_PROGRESS : Rework needed
+    QA --> COMPLETED : QA passes
+
+    COMPLETED --> [*]
+```
+
+> **Auto-promotion**: When a dependency task's status changes, `checkAndPromoteDependents()` automatically promotes dependent tasks from `TO_DO` → `READY` if all their `DEPENDS_ON` dependencies have reached the project's `completionCriteriaStatus`. This is a system-triggered transition, not user-initiated.
+
 ### 5.3 Status History Tracking
 
 Each deliverable tracks its status change history as a JSONB array column (`status_history`):
@@ -140,6 +188,59 @@ Each deliverable tracks its status change history as a JSONB array column (`stat
 ```
 
 This enables reporting on time spent in each status phase.
+
+### 5.4 Zazz Methodology — End-to-End Lifecycle
+
+The following sequence diagram shows the full lifecycle of a deliverable from specification through deployment. It illustrates the handoffs between Human, System, and Agent actors and the corresponding deliverable status at each phase.
+
+```mermaid
+sequenceDiagram
+    participant H as Human
+    participant S as System
+    participant A as Agent
+
+    rect rgb(230, 240, 255)
+    note over H,S: Phase 1 — Planning (PLANNING status)
+    H->>S: Create deliverable
+    S-->>H: Status = PLANNING
+    H->>S: Set DED + Plan file paths
+    H->>S: Approve plan
+    S-->>H: approved_by / approved_at set (status stays PLANNING)
+    H->>S: Transition → IN_PROGRESS
+    S->>S: Guard: plan approved AND plan_file_path set
+    S-->>H: Status = IN_PROGRESS
+    end
+
+    rect rgb(230, 255, 230)
+    note over A,S: Phase 2 — Execution (IN_PROGRESS status)
+    A->>S: Create tasks from plan
+    loop For each task
+        A->>S: Pick up task (TO_DO → READY → IN_PROGRESS)
+        A->>S: Implement task
+        A->>S: Submit for QA
+        alt QA fails
+            S-->>A: Rework needed (QA → IN_PROGRESS)
+            A->>S: Fix and resubmit for QA
+        end
+        A->>S: Mark task COMPLETED
+    end
+    A->>S: All tasks COMPLETED — create PR
+    A->>S: Set pull_request_url on deliverable
+    end
+
+    rect rgb(255, 240, 230)
+    note over H,S: Phase 3 — Review & Release (IN_REVIEW → DONE)
+    S->>S: Transition → IN_REVIEW
+    H->>S: Review PR
+    H->>S: Merge → Staging (STAGED)
+    H->>S: Merge → Main (DONE or PROD)
+    end
+```
+
+**Phase ↔ Status mapping**:
+- **Phase 1** (Planning) = deliverable in `PLANNING`. Human authors the DED, writes the plan, and approves it. The deliverable stays in `PLANNING` until explicitly transitioned.
+- **Phase 2** (Execution) = deliverable in `IN_PROGRESS`. Agents create tasks, implement them, and run QA. Each task cycles through `TO_DO → READY → IN_PROGRESS → QA → COMPLETED`.
+- **Phase 3** (Review & Release) = deliverable moves through `IN_REVIEW → STAGED → DONE` (or `→ UAT → STAGED → PROD` for projects with a release-pipeline workflow).
 
 ---
 
@@ -634,14 +735,18 @@ Add the following keys to all 4 language files and the `seedTranslations.js` see
       "PLANNING": "Planning",
       "IN_PROGRESS": "In Progress",
       "IN_REVIEW": "In Review",
+      "UAT": "UAT",
       "STAGED": "Staged",
+      "PROD": "Prod",
       "DONE": "Done"
     },
     "statusDescriptions": {
       "PLANNING": "DED and implementation plan being created or refined",
       "IN_PROGRESS": "Plan approved, tasks actively being worked",
       "IN_REVIEW": "PR created, awaiting human review",
-      "STAGED": "Merged to staging branch for integration testing",
+      "UAT": "User acceptance testing in integration environment",
+      "STAGED": "Deployed to staging for final validation",
+      "PROD": "Merged to main and deployed to production",
       "DONE": "Merged to main, deliverable complete"
     }
   },
@@ -668,6 +773,8 @@ Add to `seedStatusDefinitions.js`:
 
 ```javascript
 { code: 'STAGED', description: 'Merged to staging branch for integration testing' },
+{ code: 'UAT', description: 'User acceptance testing in integration environment' },
+{ code: 'PROD', description: 'Merged to main and deployed to production (terminal state)' },
 { code: 'QA', description: 'Task undergoing quality assurance and acceptance testing' },
 { code: 'COMPLETED', description: 'Task finished and verified against acceptance criteria' },
 ```
@@ -707,7 +814,7 @@ All projects use Zazz methodology defaults. The primary test project is renamed 
     leader_id: 3,
     next_deliverable_sequence: 3,  // 2 deliverables seeded
     status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
-    deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
+    deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'UAT', 'STAGED', 'PROD'],
     task_graph_layout_direction: 'LR',
     completion_criteria_status: 'COMPLETED',
     created_by: 3
@@ -845,14 +952,15 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
     name: 'Fix Auth Token Expiry',
     description: 'Tokens not expiring correctly under high concurrency',
     type: 'BUG_FIX',
-    status: 'DONE',
+    status: 'PROD',
     position: 20,
     status_history: JSON.stringify([
       { status: 'PLANNING', changedAt: '2026-01-28T10:00:00Z', changedBy: 3 },
       { status: 'IN_PROGRESS', changedAt: '2026-01-29T09:00:00Z', changedBy: 3 },
       { status: 'IN_REVIEW', changedAt: '2026-02-01T16:00:00Z', changedBy: null },
+      { status: 'UAT', changedAt: '2026-02-02T11:00:00Z', changedBy: 3 },
       { status: 'STAGED', changedAt: '2026-02-03T10:00:00Z', changedBy: 3 },
-      { status: 'DONE', changedAt: '2026-02-05T14:00:00Z', changedBy: 3 }
+      { status: 'PROD', changedAt: '2026-02-05T14:00:00Z', changedBy: 3 }
     ]),
     ded_file_path: 'docs/apimod-auth-token-fix-DED.md',
     plan_file_path: 'docs/apimod-auth-token-fix-plan.md',
@@ -1181,12 +1289,14 @@ Modify `reset-and-seed.js`:
 ### AC-13: Seed Data
 - [ ] Primary test project is "Zazz Board" with code `ZAZZ`
 - [ ] At least 6 deliverables seeded across 3 projects (ZAZZ, MOBDEV, APIMOD)
-- [ ] Deliverables have varied statuses (PLANNING, IN_PROGRESS, IN_REVIEW, DONE)
+- [ ] Deliverables have varied statuses (PLANNING, IN_PROGRESS, IN_REVIEW, PROD)
 - [ ] At least one deliverable has a `pull_request_url` set
 - [ ] Task seed data uses integer `id` only (no `task_id` varchar)
 - [ ] All tasks reference a deliverable via `deliverable_id` NOT NULL FK
-- [ ] New status definitions (STAGED, QA, COMPLETED) are seeded
-- [ ] All projects use Zazz methodology defaults for `status_workflow` and `deliverable_status_workflow`
+- [ ] New status definitions (STAGED, UAT, PROD, QA, COMPLETED) are seeded
+- [ ] ZAZZ and MOBDEV projects use default `deliverable_status_workflow` (PLANNING → DONE)
+- [ ] APIMOD project uses alternative release-pipeline workflow (PLANNING → IN_PROGRESS → IN_REVIEW → UAT → STAGED → PROD) to demonstrate workflow flexibility
+- [ ] All projects use Zazz methodology defaults for `status_workflow` (task columns)
 
 ### AC-14: Default Workflows for New Projects
 - [ ] When a new project is created, `status_workflow` defaults to `['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED']` (Zazz task methodology)

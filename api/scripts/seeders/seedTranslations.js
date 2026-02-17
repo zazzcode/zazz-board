@@ -54,6 +54,9 @@ export async function seedTranslations() {
     enTranslations.tasks.statuses.TESTING_DEV = 'Testing (Dev)';
     enTranslations.tasks.statuses.TESTING_STAGE = 'Testing (Stage)';
     enTranslations.tasks.statuses.PLANNING = 'Planning';
+    enTranslations.tasks.statuses.QA = 'QA';
+    enTranslations.tasks.statuses.COMPLETED = 'Completed';
+    enTranslations.deliverables = enTranslations.deliverables || {};
     
     esTranslations.tasks.statusDescriptions = {
       TO_DO: 'Tareas planificadas pero no iniciadas',
@@ -88,6 +91,9 @@ export async function seedTranslations() {
     esTranslations.tasks.statuses.TESTING_DEV = 'Pruebas (Dev)';
     esTranslations.tasks.statuses.TESTING_STAGE = 'Pruebas (Stage)';
     esTranslations.tasks.statuses.PLANNING = 'Planificación';
+    esTranslations.tasks.statuses.QA = 'QA';
+    esTranslations.tasks.statuses.COMPLETED = 'Completado';
+    esTranslations.deliverables = esTranslations.deliverables || {};
     
     frTranslations.tasks.statusDescriptions = {
       TO_DO: 'Tâches planifiées mais pas encore commencées',
@@ -122,6 +128,9 @@ export async function seedTranslations() {
     frTranslations.tasks.statuses.TESTING_DEV = 'Tests (Dev)';
     frTranslations.tasks.statuses.TESTING_STAGE = 'Tests (Stage)';
     frTranslations.tasks.statuses.PLANNING = 'Planification';
+    frTranslations.tasks.statuses.QA = 'QA';
+    frTranslations.tasks.statuses.COMPLETED = 'Terminé';
+    frTranslations.deliverables = frTranslations.deliverables || {};
     
     deTranslations.tasks.statusDescriptions = {
       TO_DO: 'Geplante, aber noch nicht begonnene Aufgaben',
@@ -156,6 +165,30 @@ export async function seedTranslations() {
     deTranslations.tasks.statuses.TESTING_DEV = 'Testen (Dev)';
     deTranslations.tasks.statuses.TESTING_STAGE = 'Testen (Stage)';
     deTranslations.tasks.statuses.PLANNING = 'Planung';
+    deTranslations.tasks.statuses.QA = 'QA';
+    deTranslations.tasks.statuses.COMPLETED = 'Abgeschlossen';
+    deTranslations.deliverables = deTranslations.deliverables || {};
+
+    enTranslations.deliverables = {
+      ...(enTranslations.deliverables || {}),
+      title: 'Deliverables',
+      statuses: { PLANNING: 'Planning', IN_PROGRESS: 'In Progress', IN_REVIEW: 'In Review', UAT: 'UAT', STAGED: 'Staged', PROD: 'Prod', DONE: 'Done' }
+    };
+    esTranslations.deliverables = {
+      ...(esTranslations.deliverables || {}),
+      title: 'Entregables',
+      statuses: { PLANNING: 'Planificación', IN_PROGRESS: 'En Progreso', IN_REVIEW: 'En Revisión', UAT: 'UAT', STAGED: 'Staged', PROD: 'Prod', DONE: 'Hecho' }
+    };
+    frTranslations.deliverables = {
+      ...(frTranslations.deliverables || {}),
+      title: 'Livrables',
+      statuses: { PLANNING: 'Planification', IN_PROGRESS: 'En cours', IN_REVIEW: 'En revue', UAT: 'UAT', STAGED: 'Staged', PROD: 'Prod', DONE: 'Terminé' }
+    };
+    deTranslations.deliverables = {
+      ...(deTranslations.deliverables || {}),
+      title: 'Lieferobjekte',
+      statuses: { PLANNING: 'Planung', IN_PROGRESS: 'In Bearbeitung', IN_REVIEW: 'In Prüfung', UAT: 'UAT', STAGED: 'Staged', PROD: 'Prod', DONE: 'Erledigt' }
+    };
     
     // Insert translations into database
     await db.insert(TRANSLATIONS).values([

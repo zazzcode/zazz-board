@@ -8,7 +8,6 @@ import { SYNC_NODE_SIZE } from '../../utils/graphLayoutUtils.js';
  */
 function SyncPointNodeComponent({ data }) {
   const size = SYNC_NODE_SIZE;
-  const half = size / 2;
 
   return (
     <div

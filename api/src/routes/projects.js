@@ -460,4 +460,88 @@ export default async function projectRoutes(fastify, options) {
       reply.code(500).send({ error: 'Failed to update project status workflow' });
     }
   });
+
+  // GET /projects/:code/deliverable-statuses - Get project's deliverable status workflow
+  fastify.get('/projects/:code/deliverable-statuses', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code } = request.params;
+      const project = await dbService.getProjectByCode(code);
+      if (!project) return reply.code(404).send({ error: 'Project not found' });
+      reply.send({ deliverableStatusWorkflow: project.deliverableStatusWorkflow || [] });
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(500).send({ error: 'Failed to fetch project deliverable workflow' });
+    }
+  });
+
+  // PUT /projects/:code/deliverable-statuses - Update deliverable status workflow (leaders only)
+  fastify.put('/projects/:code/deliverable-statuses', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['deliverableStatusWorkflow'],
+        properties: {
+          deliverableStatusWorkflow: {
+            type: 'array',
+            items: { type: 'string' },
+            minItems: 1
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code } = request.params;
+      const { deliverableStatusWorkflow } = request.body;
+      const project = await dbService.getProjectByCode(code);
+      if (!project) return reply.code(404).send({ error: 'Project not found' });
+      if (project.leaderId !== request.user.id) {
+        return reply.code(403).send({ error: 'Only project leaders can update deliverable workflow' });
+      }
+
+      const validStatuses = await dbService.getStatusDefinitions();
+      const validStatusCodes = validStatuses.map(s => s.code);
+      const invalidStatuses = deliverableStatusWorkflow.filter(status => !validStatusCodes.includes(status));
+      if (invalidStatuses.length > 0) {
+        return reply.code(400).send({ error: 'Invalid status codes', invalidStatuses });
+      }
+
+      const currentWorkflow = project.deliverableStatusWorkflow || [];
+      const removedStatuses = currentWorkflow.filter(status => !deliverableStatusWorkflow.includes(status));
+      for (const status of removedStatuses) {
+        const hasDeliverables = await dbService.hasDeliverablesWithStatus(project.id, status);
+        if (hasDeliverables) {
+          return reply.code(400).send({ error: `Cannot remove status '${status}' because deliverables exist with this status` });
+        }
+      }
+
+      const updatedProject = await dbService.updateProjectDeliverableStatusWorkflow(
+        project.id,
+        deliverableStatusWorkflow,
+        request.user.id
+      );
+
+      reply.send({ deliverableStatusWorkflow: updatedProject.deliverable_status_workflow });
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(500).send({ error: 'Failed to update deliverable status workflow' });
+    }
+  });
 }

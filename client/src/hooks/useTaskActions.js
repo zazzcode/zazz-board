@@ -19,7 +19,7 @@ export function useTaskActions({ refreshTasks, openDetailPanel, closeDetailPanel
         return;
       }
 
-      const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/tasks/${updatedTask.taskId}`, {
+      const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/tasks/${updatedTask.id}`, {
         method: 'PUT',
         headers: {
           'TB_TOKEN': token,
@@ -35,7 +35,7 @@ export function useTaskActions({ refreshTasks, openDetailPanel, closeDetailPanel
           isBlocked: updatedTask.isBlocked,
           blockedReason: updatedTask.blockedReason,
           gitWorktree: updatedTask.gitWorktree,
-          gitPullRequestUrl: updatedTask.gitPullRequestUrl,
+          deliverableId: updatedTask.deliverableId,
           tagNames: updatedTask.tagNames || []
         })
       });

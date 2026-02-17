@@ -3,19 +3,22 @@
  */
 
 export const expectedStatusCodes = [
+  'BACKLOG',
+  'COMPLETED',
+  'DONE',
+  'ICEBOX',
   'TO_DO',
+  'READY',
   'IN_PROGRESS',
   'IN_REVIEW',
-  'DONE',
-  'TESTING',
-  'AWAITING_APPROVAL',
+  'PLANNING',
+  'PROD',
+  'QA',
   'READY_FOR_DEPLOY',
-  'ICEBOX',
-  'READY',
-  'BACKLOG',
-  'TESTING_DEV',
-  'TESTING_STAGE',
-  'PLANNING'
+  'STAGED',
+  'TESTING',
+  'UAT',
+  'AWAITING_APPROVAL',
 ];
 
 export const statusDefinitionSchema = {

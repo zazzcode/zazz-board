@@ -10,7 +10,7 @@ import { TaskDetailsPanel } from '../components/TaskDetailPanel.jsx';
 
 import { useEffect } from 'react';
 
-export function KanbanPage({ selectedProject, onBackToProjects, refreshTrigger }) {
+export function KanbanPage({ selectedProject, refreshTrigger }) {
   const { t } = useTranslation();
   const { 
     tasks, 

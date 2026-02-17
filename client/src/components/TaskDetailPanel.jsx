@@ -35,8 +35,8 @@ export function TaskDetailsPanel({
   panelIndex = 0,
   initialClickPos = null
 }) {
-  const { t, translatePriority, translateStatus } = useTranslation();
-  const { tags = [] } = useTags();
+  const { t, translateStatus } = useTranslation();
+  useTags();
   const { users = [] } = useUsers();
   const [editedTask, setEditedTask] = useState(null);
 
@@ -106,15 +106,6 @@ export function TaskDetailsPanel({
     }
   }, [task, opened]);
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'CRITICAL': return 'red';
-      case 'HIGH': return 'orange';
-      case 'MEDIUM': return 'yellow';
-      case 'LOW': return 'blue';
-      default: return 'gray';
-    }
-  };
 
   const handleSave = () => {
     if (onSave && editedTask) {

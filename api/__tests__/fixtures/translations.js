@@ -7,9 +7,10 @@ export const expectedEnglishTranslations = {
   tasks: {
     statuses: {
       TO_DO: 'To Do',
+      READY: 'Ready To Start',
       IN_PROGRESS: 'In Progress',
-      IN_REVIEW: 'In Review',
-      DONE: 'Done'
+      QA: 'QA',
+      COMPLETED: 'Completed'
     }
   }
 };
@@ -18,9 +19,10 @@ export const expectedSpanishTranslations = {
   tasks: {
     statuses: {
       TO_DO: 'Por Hacer',
+      READY: 'Listo Para Comenzar',
       IN_PROGRESS: 'En Progreso',
-      IN_REVIEW: 'En Revisión',
-      DONE: 'Completado'  // Updated to match actual seeded data
+      QA: 'QA',
+      COMPLETED: 'Completado'
     }
   }
 };
