@@ -26,7 +26,7 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${taskA.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations`)
         .withJson({ relatedTaskId: taskB.id, relationType: 'DEPENDS_ON' })
         .expectStatus(401);
     });
@@ -35,7 +35,7 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${taskA.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ relatedTaskId: taskB.id, relationType: 'DEPENDS_ON' })
         .expectStatus(201)
@@ -46,7 +46,7 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${taskA.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ relatedTaskId: taskB.id, relationType: 'COORDINATES_WITH' })
         .expectStatus(201)
@@ -64,7 +64,7 @@ describe('Task Graph API', () => {
     it('should return 400 for self-referencing relation', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${task.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${task.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ relatedTaskId: task.id, relationType: 'DEPENDS_ON' })
         .expectStatus(400)
@@ -75,7 +75,7 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY); // Project 1
       const taskB = await createTestTask(2); // Project 2 (MOBDEV)
       await spec()
-        .post(`/tasks/${taskA.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ relatedTaskId: taskB.id, relationType: 'DEPENDS_ON' })
         .expectStatus(400)
@@ -94,7 +94,7 @@ describe('Task Graph API', () => {
 
       // C depends on A would create a cycle: A→B→C→A
       await spec()
-        .post(`/tasks/${taskC.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskC.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ relatedTaskId: taskA.id, relationType: 'DEPENDS_ON' })
         .expectStatus(400)
@@ -107,7 +107,7 @@ describe('Task Graph API', () => {
       await createTestRelation(taskA.id, taskB.id, 'DEPENDS_ON');
 
       await spec()
-        .post(`/tasks/${taskA.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ relatedTaskId: taskB.id, relationType: 'DEPENDS_ON' })
         .expectStatus(409);
@@ -116,7 +116,7 @@ describe('Task Graph API', () => {
     it('should return 400 for non-existent task', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${task.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${task.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ relatedTaskId: 99999, relationType: 'DEPENDS_ON' })
         .expectStatus(400);
@@ -126,7 +126,7 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .post(`/tasks/${taskA.id}/relations`)
+        .post(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ relatedTaskId: taskB.id, relationType: 'INVALID_TYPE' })
         .expectStatus(400);
@@ -137,14 +137,14 @@ describe('Task Graph API', () => {
     it('should return 401 without token', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .get(`/tasks/${task.id}/relations`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${task.id}/relations`)
         .expectStatus(401);
     });
 
     it('should return empty array for task with no relations', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .get(`/tasks/${task.id}/relations`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${task.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLength(0);
@@ -158,7 +158,7 @@ describe('Task Graph API', () => {
       await createTestRelation(taskA.id, taskC.id, 'DEPENDS_ON');
 
       await spec()
-        .get(`/tasks/${taskA.id}/relations`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLength(2);
@@ -166,7 +166,7 @@ describe('Task Graph API', () => {
 
     it('should return 404 for non-existent task', async () => {
       await spec()
-        .get('/tasks/99999/relations')
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/tasks/99999/relations`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(404);
     });
@@ -179,7 +179,7 @@ describe('Task Graph API', () => {
       await createTestRelation(taskA.id, taskB.id, 'DEPENDS_ON');
 
       await spec()
-        .delete(`/tasks/${taskA.id}/relations/${taskB.id}/DEPENDS_ON`)
+        .delete(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations/${taskB.id}/DEPENDS_ON`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLike({ message: 'Relation deleted successfully' });
@@ -196,7 +196,7 @@ describe('Task Graph API', () => {
       await createTestRelation(taskB.id, taskA.id, 'COORDINATES_WITH'); // mirror
 
       await spec()
-        .delete(`/tasks/${taskA.id}/relations/${taskB.id}/COORDINATES_WITH`)
+        .delete(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations/${taskB.id}/COORDINATES_WITH`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200);
 
@@ -211,7 +211,7 @@ describe('Task Graph API', () => {
       const taskA = await createTestTask(PROJECT_WITH_READY);
       const taskB = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .delete(`/tasks/${taskA.id}/relations/${taskB.id}/DEPENDS_ON`)
+        .delete(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${taskA.id}/relations/${taskB.id}/DEPENDS_ON`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(404);
     });
@@ -269,7 +269,7 @@ describe('Task Graph API', () => {
     it('should return ready=true for task with no dependencies', async () => {
       const task = await createTestTask(PROJECT_WITH_READY);
       await spec()
-        .get(`/tasks/${task.id}/readiness`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLike({ ready: true, blockedBy: [] });
@@ -281,7 +281,7 @@ describe('Task Graph API', () => {
       await createTestRelation(task.id, dep.id, 'DEPENDS_ON');
 
       const response = await spec()
-        .get(`/tasks/${task.id}/readiness`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .returns('res.body');
@@ -297,7 +297,7 @@ describe('Task Graph API', () => {
       await createTestRelation(task.id, dep.id, 'DEPENDS_ON');
 
       await spec()
-        .get(`/tasks/${task.id}/readiness`)
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLike({ ready: true, blockedBy: [] });
@@ -312,7 +312,7 @@ describe('Task Graph API', () => {
 
       // COMPLETED meets the criteria (>= COMPLETED position)
       await spec()
-        .get(`/tasks/${task.id}/readiness`)
+        .get(`/projects/${PROJECT_CODE_APIMOD}/tasks/${task.id}/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(200)
         .expectJsonLike({ ready: true, blockedBy: [] });
@@ -320,7 +320,7 @@ describe('Task Graph API', () => {
 
     it('should return 404 for non-existent task', async () => {
       await spec()
-        .get('/tasks/99999/readiness')
+        .get(`/projects/${PROJECT_CODE_ZAZZ}/tasks/99999/readiness`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .expectStatus(404);
     });

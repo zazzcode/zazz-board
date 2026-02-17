@@ -33,20 +33,26 @@ export default async function taskGraphRoutes(fastify, options) {
     }
   });
 
-  // GET /tasks/:id/relations - Get all relations for a task
-  fastify.get('/tasks/:id/relations', {
+  // GET /projects/:code/tasks/:taskId/relations - Get all relations for a task
+  fastify.get('/projects/:code/tasks/:taskId/relations', {
     schema: taskGraphSchemas.getTaskRelations
   }, async (request, reply) => {
     try {
-      const { id } = request.params;
-      const taskId = parseInt(id);
+      const { code, taskId } = request.params;
+      const taskIdNum = parseInt(taskId);
 
-      const task = await dbService.getTaskById(taskId);
-      if (!task) {
-        return reply.code(404).send({ error: 'Task not found' });
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
       }
 
-      const relations = await dbService.getTaskRelations(taskId);
+      const task = await dbService.getTaskById(taskIdNum);
+      if (!task || task.projectId !== project.id) {
+        return reply.code(404).send({ error: 'Task not found in this project' });
+      }
+
+      const relations = await dbService.getTaskRelations(taskIdNum);
       reply.send(relations);
     } catch (error) {
       request.log.error(error, 'Failed to fetch task relations');
@@ -54,23 +60,34 @@ export default async function taskGraphRoutes(fastify, options) {
     }
   });
 
-  // POST /tasks/:id/relations - Create a task relation
-  fastify.post('/tasks/:id/relations', {
+  // POST /projects/:code/tasks/:taskId/relations - Create a task relation
+  fastify.post('/projects/:code/tasks/:taskId/relations', {
     schema: taskGraphSchemas.createTaskRelation
   }, async (request, reply) => {
     try {
-      const { id } = request.params;
+      const { code, taskId } = request.params;
       const { relatedTaskId, relationType } = request.body;
-      const taskId = parseInt(id);
+      const taskIdNum = parseInt(taskId);
+
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const task = await dbService.getTaskById(taskIdNum);
+      if (!task || task.projectId !== project.id) {
+        return reply.code(404).send({ error: 'Task not found in this project' });
+      }
 
       const relations = await dbService.createTaskRelation(
-        taskId,
+        taskIdNum,
         relatedTaskId,
         relationType,
         request.user.id
       );
 
-      request.log.info(`Created ${relationType} relation: task ${taskId} -> ${relatedTaskId}`);
+      request.log.info(`Created ${relationType} relation: task ${taskIdNum} -> ${relatedTaskId}`);
       reply.code(201).send(relations);
     } catch (error) {
       // Return 400 for business logic errors (self-ref, cycle, cross-project, not found)
@@ -89,22 +106,33 @@ export default async function taskGraphRoutes(fastify, options) {
     }
   });
 
-  // DELETE /tasks/:id/relations/:relatedTaskId/:relationType - Delete a task relation
-  fastify.delete('/tasks/:id/relations/:relatedTaskId/:relationType', {
+  // DELETE /projects/:code/tasks/:taskId/relations/:relatedTaskId/:relationType - Delete a task relation
+  fastify.delete('/projects/:code/tasks/:taskId/relations/:relatedTaskId/:relationType', {
     schema: taskGraphSchemas.deleteTaskRelation
   }, async (request, reply) => {
     try {
-      const { id, relatedTaskId, relationType } = request.params;
-      const taskId = parseInt(id);
+      const { code, taskId, relatedTaskId, relationType } = request.params;
+      const taskIdNum = parseInt(taskId);
       const relatedId = parseInt(relatedTaskId);
 
-      const deleted = await dbService.deleteTaskRelation(taskId, relatedId, relationType);
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const task = await dbService.getTaskById(taskIdNum);
+      if (!task || task.projectId !== project.id) {
+        return reply.code(404).send({ error: 'Task not found in this project' });
+      }
+
+      const deleted = await dbService.deleteTaskRelation(taskIdNum, relatedId, relationType);
 
       if (!deleted) {
         return reply.code(404).send({ error: 'Relation not found' });
       }
 
-      request.log.info(`Deleted ${relationType} relation: task ${taskId} -> ${relatedId}`);
+      request.log.info(`Deleted ${relationType} relation: task ${taskIdNum} -> ${relatedId}`);
       reply.send({ message: 'Relation deleted successfully' });
     } catch (error) {
       request.log.error(error, 'Failed to delete task relation');
@@ -112,20 +140,26 @@ export default async function taskGraphRoutes(fastify, options) {
     }
   });
 
-  // GET /tasks/:id/readiness - Check if a task's dependencies are met
-  fastify.get('/tasks/:id/readiness', {
+  // GET /projects/:code/tasks/:taskId/readiness - Check if a task's dependencies are met
+  fastify.get('/projects/:code/tasks/:taskId/readiness', {
     schema: taskGraphSchemas.checkTaskReadiness
   }, async (request, reply) => {
     try {
-      const { id } = request.params;
-      const taskId = parseInt(id);
+      const { code, taskId } = request.params;
+      const taskIdNum = parseInt(taskId);
 
-      const task = await dbService.getTaskById(taskId);
-      if (!task) {
-        return reply.code(404).send({ error: 'Task not found' });
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
       }
 
-      const readiness = await dbService.checkTaskReadiness(taskId);
+      const task = await dbService.getTaskById(taskIdNum);
+      if (!task || task.projectId !== project.id) {
+        return reply.code(404).send({ error: 'Task not found in this project' });
+      }
+
+      const readiness = await dbService.checkTaskReadiness(taskIdNum);
       reply.send(readiness);
     } catch (error) {
       request.log.error(error, 'Failed to check task readiness');

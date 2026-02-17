@@ -219,14 +219,28 @@ export const taskGraphSchemas = {
     params: codeParam
   },
 
-  // GET /tasks/:id/relations
+  // GET /projects/:code/tasks/:taskId/relations
   getTaskRelations: {
-    params: idParam
+    params: {
+      type: 'object',
+      required: ['code', 'taskId'],
+      properties: {
+        code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        taskId: { type: 'string', pattern: '^\\d+$' }
+      }
+    }
   },
 
-  // POST /tasks/:id/relations
+  // POST /projects/:code/tasks/:taskId/relations
   createTaskRelation: {
-    params: idParam,
+    params: {
+      type: 'object',
+      required: ['code', 'taskId'],
+      properties: {
+        code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        taskId: { type: 'string', pattern: '^\\d+$' }
+      }
+    },
     body: {
       type: 'object',
       required: ['relatedTaskId', 'relationType'],
@@ -238,22 +252,30 @@ export const taskGraphSchemas = {
     }
   },
 
-  // DELETE /tasks/:id/relations/:relatedTaskId/:relationType
+  // DELETE /projects/:code/tasks/:taskId/relations/:relatedTaskId/:relationType
   deleteTaskRelation: {
     params: {
       type: 'object',
-      required: ['id', 'relatedTaskId', 'relationType'],
+      required: ['code', 'taskId', 'relatedTaskId', 'relationType'],
       properties: {
-        id: { type: 'string', pattern: '^\\d+$' },
+        code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        taskId: { type: 'string', pattern: '^\\d+$' },
         relatedTaskId: { type: 'string', pattern: '^\\d+$' },
         relationType: { type: 'string', enum: ['DEPENDS_ON', 'COORDINATES_WITH'] }
       }
     }
   },
 
-  // GET /tasks/:id/readiness
+  // GET /projects/:code/tasks/:taskId/readiness
   checkTaskReadiness: {
-    params: idParam
+    params: {
+      type: 'object',
+      required: ['code', 'taskId'],
+      properties: {
+        code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        taskId: { type: 'string', pattern: '^\\d+$' }
+      }
+    }
   },
 
   // GET /coordination-requirements
