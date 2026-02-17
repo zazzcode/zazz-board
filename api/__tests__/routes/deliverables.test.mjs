@@ -1,5 +1,5 @@
 import * as pactum from 'pactum';
-import { clearTaskData, createTestDeliverable, createTestTask } from '../helpers/testDatabase.js';
+import { clearTaskData, createTestDeliverable, createTestTask, resetProjectDefaults } from '../helpers/testDatabase.js';
 
 const { spec } = pactum;
 const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
@@ -7,6 +7,7 @@ const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
 describe('Deliverables API', () => {
   beforeEach(async () => {
     await clearTaskData();
+    await resetProjectDefaults();
   });
 
   it('should require authentication for listing project deliverables', async () => {

@@ -544,4 +544,386 @@ export default async function projectRoutes(fastify, options) {
       reply.code(500).send({ error: 'Failed to update deliverable status workflow' });
     }
   });
+
+  // ==================== DELIVERABLE-SCOPED TASK CRUD ====================
+  // All task CRUD operations are scoped to a deliverable within a project
+
+  // POST /projects/:code/deliverables/:delivId/tasks - Create task
+  fastify.post('/projects/:code/deliverables/:delivId/tasks', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code', 'delivId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title: { type: 'string', minLength: 1, maxLength: 255 },
+          description: { type: 'string', maxLength: 5000 },
+          status: { type: 'string', pattern: '^[A-Z_]+$' },
+          priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
+          assigneeId: { type: 'integer', minimum: 1 },
+          storyPoints: { type: 'integer', minimum: 1, maximum: 21 },
+          position: { type: 'integer', minimum: 0 },
+          prompt: { type: 'string', maxLength: 10000 },
+          gitWorktree: { type: 'string', maxLength: 255 }
+        },
+        additionalProperties: false
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId } = request.params;
+      const deliverableId = parseInt(delivId);
+
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      // Verify deliverable belongs to project
+      const deliverable = await dbService.getDeliverableById(deliverableId);
+      if (!deliverable || deliverable.projectId !== project.id) {
+        return reply.code(404).send({ error: 'Deliverable not found in this project' });
+      }
+
+      // Create task
+      const taskData = {
+        ...request.body,
+        projectId: project.id,
+        deliverableId,
+        status: request.body.status || 'TO_DO',
+        priority: request.body.priority || 'MEDIUM',
+        position: request.body.position || 10
+      };
+
+      const task = await dbService.createTask(taskData);
+      reply.code(201).send(task);
+    } catch (error) {
+      request.log.error(error, 'Failed to create task');
+      reply.code(500).send({ error: 'Failed to create task' });
+    }
+  });
+
+  // GET /projects/:code/deliverables/:delivId/tasks/:taskId - Get single task
+  fastify.get('/projects/:code/deliverables/:delivId/tasks/:taskId', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code', 'delivId', 'taskId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' },
+          taskId: { type: 'string', pattern: '^\\d+$' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId, taskId } = request.params;
+      const deliverableId = parseInt(delivId);
+      const taskIdNum = parseInt(taskId);
+
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      // Get task and verify it belongs to the deliverable and project
+      const task = await dbService.getTaskById(taskIdNum);
+      if (!task || task.projectId !== project.id || task.deliverableId !== deliverableId) {
+        return reply.code(404).send({ error: 'Task not found in this deliverable' });
+      }
+
+      reply.send(task);
+    } catch (error) {
+      request.log.error(error, 'Failed to fetch task');
+      reply.code(500).send({ error: 'Failed to fetch task' });
+    }
+  });
+
+  // PUT /projects/:code/deliverables/:delivId/tasks/:taskId - Update task
+  fastify.put('/projects/:code/deliverables/:delivId/tasks/:taskId', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code', 'delivId', 'taskId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' },
+          taskId: { type: 'string', pattern: '^\\d+$' }
+        }
+      },
+      body: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', minLength: 1, maxLength: 255 },
+          description: { type: 'string', maxLength: 5000 },
+          status: { type: 'string', pattern: '^[A-Z_]+$' },
+          priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
+          assigneeId: { type: 'integer', minimum: 1 },
+          storyPoints: { type: 'integer', minimum: 1, maximum: 21 },
+          prompt: { type: 'string', maxLength: 10000 },
+          isBlocked: { type: 'boolean' },
+          blockedReason: { type: 'string', maxLength: 1000 },
+          gitWorktree: { type: 'string', maxLength: 255 }
+        },
+        additionalProperties: false
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId, taskId } = request.params;
+      const deliverableId = parseInt(delivId);
+      const taskIdNum = parseInt(taskId);
+
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      // Get current task and verify it belongs to the deliverable and project
+      const currentTask = await dbService.getTaskById(taskIdNum);
+      if (!currentTask || currentTask.projectId !== project.id || currentTask.deliverableId !== deliverableId) {
+        return reply.code(404).send({ error: 'Task not found in this deliverable' });
+      }
+
+      // Update task
+      const updatedTask = await dbService.updateTask(taskIdNum, {
+        ...currentTask,
+        ...request.body
+      });
+
+      request.log.info(`Task ${taskId} updated in deliverable ${delivId}`);
+      reply.send(updatedTask);
+    } catch (error) {
+      request.log.error(error, 'Failed to update task');
+      reply.code(500).send({ error: 'Failed to update task' });
+    }
+  });
+
+  // DELETE /projects/:code/deliverables/:delivId/tasks/:taskId - Delete task
+  fastify.delete('/projects/:code/deliverables/:delivId/tasks/:taskId', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code', 'delivId', 'taskId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' },
+          taskId: { type: 'string', pattern: '^\\d+$' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId, taskId } = request.params;
+      const deliverableId = parseInt(delivId);
+      const taskIdNum = parseInt(taskId);
+
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      // Get current task and verify it belongs to the deliverable and project
+      const currentTask = await dbService.getTaskById(taskIdNum);
+      if (!currentTask || currentTask.projectId !== project.id || currentTask.deliverableId !== deliverableId) {
+        return reply.code(404).send({ error: 'Task not found in this deliverable' });
+      }
+
+      // Delete task
+      await dbService.deleteTask(taskIdNum);
+
+      request.log.info(`Task ${taskId} deleted from deliverable ${delivId}`);
+      reply.send({ message: 'Task deleted successfully' });
+    } catch (error) {
+      request.log.error(error, 'Failed to delete task');
+      reply.code(500).send({ error: 'Failed to delete task' });
+    }
+  });
+
+  // PATCH /projects/:code/deliverables/:delivId/tasks/:taskId/status - Change task status
+  fastify.patch('/projects/:code/deliverables/:delivId/tasks/:taskId/status', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code', 'delivId', 'taskId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' },
+          taskId: { type: 'string', pattern: '^\\d+$' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: { type: 'string', pattern: '^[A-Z_]+$' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId, taskId } = request.params;
+      const { status } = request.body;
+      const deliverableId = parseInt(delivId);
+      const taskIdNum = parseInt(taskId);
+
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      // Validate status exists
+      const statusDef = await dbService.getStatusDefinitionByCode(status);
+      if (!statusDef) {
+        return reply.code(400).send({ error: `Invalid status: ${status}` });
+      }
+
+      // Get current task and verify it belongs to the deliverable and project
+      const currentTask = await dbService.getTaskById(taskIdNum);
+      if (!currentTask || currentTask.projectId !== project.id || currentTask.deliverableId !== deliverableId) {
+        return reply.code(404).send({ error: 'Task not found in this deliverable' });
+      }
+
+      // Get tasks in target column to determine position
+      const targetColumnTasks = await dbService.getTasks({
+        projectId: project.id,
+        status
+      });
+
+      const newPosition = targetColumnTasks.length > 0 ?
+        Math.max(...targetColumnTasks.map(t => t.position || 0)) + 10 : 10;
+
+      // Update task
+      const updatedTask = await dbService.updateTask(taskIdNum, {
+        ...currentTask,
+        status,
+        position: newPosition,
+        updatedAt: new Date()
+      });
+
+      request.log.info(`Task ${taskId} status changed from ${currentTask.status} to ${status}`);
+      reply.send(updatedTask);
+    } catch (error) {
+      request.log.error(error, 'Failed to change task status');
+      reply.code(500).send({ error: 'Failed to change task status' });
+    }
+  });
+
+  // PATCH /projects/:code/deliverables/:delivId/tasks/:taskId/reorder - Reorder task position
+  fastify.patch('/projects/:code/deliverables/:delivId/tasks/:taskId/reorder', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code', 'delivId', 'taskId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' },
+          taskId: { type: 'string', pattern: '^\\d+$' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['position'],
+        properties: {
+          position: { type: 'integer', minimum: 0 }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId, taskId } = request.params;
+      const { position } = request.body;
+      const deliverableId = parseInt(delivId);
+      const taskIdNum = parseInt(taskId);
+
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      // Get current task and verify it belongs to the deliverable and project
+      const currentTask = await dbService.getTaskById(taskIdNum);
+      if (!currentTask || currentTask.projectId !== project.id || currentTask.deliverableId !== deliverableId) {
+        return reply.code(404).send({ error: 'Task not found in this deliverable' });
+      }
+
+      // Reorder task
+      const updatedTask = await dbService.reorderTask(taskIdNum, position);
+
+      request.log.info(`Task ${taskId} reordered to position ${position}`);
+      reply.send(updatedTask);
+    } catch (error) {
+      request.log.error(error, 'Failed to reorder task');
+      reply.code(500).send({ error: 'Failed to reorder task' });
+    }
+  });
+
+  // PUT /projects/:code/deliverables/:delivId/tasks/:taskId/tags - Set task tags
+  fastify.put('/projects/:code/deliverables/:delivId/tasks/:taskId/tags', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['code', 'delivId', 'taskId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' },
+          taskId: { type: 'string', pattern: '^\\d+$' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['tagIds'],
+        properties: {
+          tagIds: {
+            type: 'array',
+            items: { type: 'string' },
+            uniqueItems: true
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId, taskId } = request.params;
+      const { tagIds } = request.body;
+      const deliverableId = parseInt(delivId);
+      const taskIdNum = parseInt(taskId);
+
+      // Get project by code
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      // Get current task and verify it belongs to the deliverable and project
+      const currentTask = await dbService.getTaskById(taskIdNum);
+      if (!currentTask || currentTask.projectId !== project.id || currentTask.deliverableId !== deliverableId) {
+        return reply.code(404).send({ error: 'Task not found in this deliverable' });
+      }
+
+      // Set task tags
+      await dbService.setTaskTags(taskIdNum, tagIds);
+      const updatedTags = await dbService.getTagsForTask(taskIdNum);
+
+      request.log.info(`Task ${taskId} tags updated`);
+      reply.send({ message: 'Task tags updated successfully', tags: updatedTags });
+    } catch (error) {
+      request.log.error(error, 'Failed to update task tags');
+      reply.code(500).send({ error: 'Failed to update task tags' });
+    }
+  });
 }

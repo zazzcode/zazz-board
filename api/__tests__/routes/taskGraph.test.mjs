@@ -1,5 +1,5 @@
 import * as pactum from 'pactum';
-import { clearTaskData, createTestTask, createTestRelation, getTaskById, getRelationsForTask, resetProjectDefaults } from '../helpers/testDatabase.js';
+import { clearTaskData, createTestTask, createTestRelation, getTaskById, getRelationsForTask, resetProjectDefaults, createTestDeliverable } from '../helpers/testDatabase.js';
 
 const { spec } = pactum;
 
@@ -329,15 +329,22 @@ describe('Task Graph API', () => {
   // ==================== AUTO-PROMOTION ====================
 
   describe('Auto-promotion TO_DO → READY', () => {
+    let deliverableId;
+
+    beforeEach(async () => {
+      const deliverable = await createTestDeliverable(PROJECT_WITH_READY);
+      deliverableId = deliverable.id;
+    });
+
     it('should auto-promote dependent task when dependency status reaches COMPLETED', async () => {
       // Setup: depTask (IN_PROGRESS) ← task (TO_DO, depends on depTask)
-      const depTask = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS' });
-      const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO' });
+      const depTask = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS', deliverableId });
+      const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO', deliverableId });
       await createTestRelation(task.id, depTask.id, 'DEPENDS_ON');
 
       // Move depTask to COMPLETED — should trigger auto-promotion of task
       await spec()
-        .patch(`/tasks/${depTask.id}/status`)
+        .patch(`/projects/${PROJECT_CODE_ZAZZ}/deliverables/${deliverableId}/tasks/${depTask.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ status: 'COMPLETED' })
         .expectStatus(200);
@@ -348,15 +355,15 @@ describe('Task Graph API', () => {
     });
 
     it('should NOT promote if not all dependencies are met', async () => {
-      const dep1 = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS' });
-      const dep2 = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO' });
-      const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO' });
+      const dep1 = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS', deliverableId });
+      const dep2 = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO', deliverableId });
+      const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO', deliverableId });
       await createTestRelation(task.id, dep1.id, 'DEPENDS_ON');
       await createTestRelation(task.id, dep2.id, 'DEPENDS_ON');
 
       // Move dep1 to COMPLETED — dep2 is still TO_DO
       await spec()
-        .patch(`/tasks/${dep1.id}/status`)
+        .patch(`/projects/${PROJECT_CODE_ZAZZ}/deliverables/${deliverableId}/tasks/${dep1.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ status: 'COMPLETED' })
         .expectStatus(200);
@@ -367,15 +374,15 @@ describe('Task Graph API', () => {
     });
 
     it('should promote when all dependencies are met', async () => {
-      const dep1 = await createTestTask(PROJECT_WITH_READY, { status: 'COMPLETED' });
-      const dep2 = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS' });
-      const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO' });
+      const dep1 = await createTestTask(PROJECT_WITH_READY, { status: 'COMPLETED', deliverableId });
+      const dep2 = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS', deliverableId });
+      const task = await createTestTask(PROJECT_WITH_READY, { status: 'TO_DO', deliverableId });
       await createTestRelation(task.id, dep1.id, 'DEPENDS_ON');
       await createTestRelation(task.id, dep2.id, 'DEPENDS_ON');
 
       // Now move dep2 to COMPLETED — both deps met
       await spec()
-        .patch(`/tasks/${dep2.id}/status`)
+        .patch(`/projects/${PROJECT_CODE_ZAZZ}/deliverables/${deliverableId}/tasks/${dep2.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ status: 'COMPLETED' })
         .expectStatus(200);
@@ -385,12 +392,12 @@ describe('Task Graph API', () => {
     });
 
     it('should NOT promote task that is not in TO_DO status', async () => {
-      const dep = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS' });
-      const task = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS' }); // Already past TO_DO
+      const dep = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS', deliverableId });
+      const task = await createTestTask(PROJECT_WITH_READY, { status: 'IN_PROGRESS', deliverableId }); // Already past TO_DO
       await createTestRelation(task.id, dep.id, 'DEPENDS_ON');
 
       await spec()
-        .patch(`/tasks/${dep.id}/status`)
+        .patch(`/projects/${PROJECT_CODE_ZAZZ}/deliverables/${deliverableId}/tasks/${dep.id}/status`)
         .withHeaders('TB_TOKEN', VALID_TOKEN)
         .withJson({ status: 'COMPLETED' })
         .expectStatus(200);
