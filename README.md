@@ -64,54 +64,49 @@ Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliv
 
 ## Quick start
 
-### Prerequisites
+Prerequisites: Node.js 22+, Docker Desktop. All commands assume the terminal is in the project root (directory containing `api/`, `client/`, `package.json`).
 
-- Node.js 22+ and npm  
-- Docker Desktop (PostgreSQL 15 on host port 5433)
-
-### Setup
+### 1. Install dependencies
 
 ```bash
 npm install
 npm install --workspace=api
 cd client && npm install && cd ..
+```
 
+### 2. Configure environment
+
+```bash
 cp api/.env.example api/.env
-# Edit api/.env: set both DATABASE_URL and DATABASE_URL_TEST with password 'password' and port 5433
+```
 
+Edit `api/.env`: set `DATABASE_URL` and `DATABASE_URL_TEST` to use password `password` and port `5433`:
+
+```
+DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_dev
+DATABASE_URL_TEST=postgres://postgres:password@localhost:5433/task_blaster_test
+```
+
+### 3. Start PostgreSQL
+
+```bash
 npm run docker:up:db
+```
+
+### 4. Create and seed database
+
+```bash
 cd api && npm run db:reset && cd ..
 ```
 
-### Run
+### 5. Run the app
 
 ```bash
 npm run dev
 ```
 
-- **Client**: http://localhost:3001  
-- **API**: http://localhost:3030  
-
-Optional: run API and client separately with `npm run dev:api` and `npm run dev:client`.
-
-### Database
-
-```bash
-cd api
-npm run db:reset   # Drop, recreate from schema, seed
-npm run db:seed   # Seed only (tables must exist)
-```
-
-### Tests
-
-API integration tests (Vitest + PactumJS) — **150+ tests** across deliverables, project statuses, task graph, task status, translations, and more.
-
-```bash
-cd api
-set -a && source .env && set +a && NODE_ENV=test npm run test
-```
-
-Test DB must exist and be seeded; see [AGENTS.md](./AGENTS.md) for creating/resetting `task_blaster_test`. Full test guide: [api/__tests__/README.md](./api/__tests__/README.md).
+- API: http://localhost:3030  
+- Client: http://localhost:3001  
 
 ---
 
@@ -171,6 +166,21 @@ For **Swagger UI**, see [How to access the docs with your access token](#how-to-
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test server).
 - **drizzle-kit** “please install drizzle-orm”: From repo root, `ln -sf ./api/node_modules/drizzle-orm ./node_modules/drizzle-orm`.
 - **Tests**: Always source `api/.env` and set `NODE_ENV=test`; see [AGENTS.md](./AGENTS.md) and [api/__tests__/README.md](./api/__tests__/README.md).
+
+---
+
+## Reference
+
+| Action | Command (project root unless noted) |
+|--------|-------------------------------------|
+| Run API + client | `npm run dev` |
+| Run API only | `npm run dev:api` |
+| Run client only | `npm run dev:client` |
+| Reset dev DB (from `api/`) | `npm run db:reset` |
+| Seed only (from `api/`) | `npm run db:seed` |
+| Run tests (from `api/`) | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
+
+Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/__tests__/README.md](./api/__tests__/README.md).
 
 ---
 

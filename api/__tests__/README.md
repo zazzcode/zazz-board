@@ -1,17 +1,20 @@
 # API Integration Tests
 
-This directory contains API integration tests for Task Blaster using **Vitest** and **PactumJS**.
+This directory contains API integration tests for Zazz Board using **Vitest** and **PactumJS**.
 
-## Quick Start
+**To install and run the app first**, see the [Quick start](../../README.md#quick-start) in the project README (`README.md` at the worktree root). Then set up the test database (see [Environment Setup](#environment-setup) below) and run the commands in this file.
+
+---
+
+## Quick Start: Run tests
 
 ### Prerequisites
 - Node.js 22+ and npm
-- Docker Desktop running (PostgreSQL 15 container on port 5433)
-- Database container running: `npm run docker:up:db` from project root
-- Test database created and seeded (see Environment Setup below)
-- `api/.env` configured with correct `DATABASE_URL_TEST` (see [AGENTS.md](../../AGENTS.md) for setup)
+- Docker Desktop running (PostgreSQL 15 on port 5433)
+- Test database created and seeded (see [Environment Setup](#environment-setup))
+- `api/.env` with `DATABASE_URL_TEST` set (see [AGENTS.md](../../AGENTS.md))
 
-### Run Tests
+### Run tests
 
 ```bash
 # From api/ directory - MUST source .env first
