@@ -9,6 +9,7 @@ let testApp = null;
 /**
  * Create a Fastify test server instance
  * Does NOT start an HTTP server - uses inject() for testing
+ * Swagger is not registered here; tests only need the API routes.
  */
 export async function createTestServer() {
   const app = Fastify({
@@ -27,14 +28,12 @@ export async function createTestServer() {
     return payload;
   });
 
-  // Register CORS
   await app.register(cors, {
     origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
   });
 
-  // Register routes
   await app.register(routes);
 
   // Initialize token service

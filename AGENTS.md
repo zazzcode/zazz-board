@@ -46,7 +46,7 @@ The `main` branch worktree is read-only. Do all work in a feature worktree (e.g.
 
 ## API routes (full list)
 
-All routes require `TB_TOKEN` header (or `Authorization: Bearer <token>`) unless noted.
+**Auth**: All routes require `TB_TOKEN` header or `Authorization: Bearer <token>` **except** `GET /health`, `GET /`, `GET /db-test`, `GET /token-info`. For `/docs` you can also pass `?token=<uuid>` in the URL so the docs page loads in a browser; then use the UI’s **Authorize** to set the token for try-it-out.
 
 ### Core (`index.js`)
 | Method | Path | Description |
@@ -55,6 +55,8 @@ All routes require `TB_TOKEN` header (or `Authorization: Bearer <token>`) unless
 | GET | `/` | API info and endpoint list |
 | GET | `/db-test` | DB connectivity check |
 | GET | `/token-info` | Token cache debug (no auth) |
+| GET | `/docs` | Swagger UI (OpenAPI 3.1). **Auth required** (TB_TOKEN or Bearer). |
+| GET | `/docs/json` | OpenAPI 3.1 spec as JSON. **Auth required**. |
 
 ### Users (`users.js`)
 | Method | Path |
