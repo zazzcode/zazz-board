@@ -52,7 +52,7 @@ So: **Project → Deliverable → Tasks**. You track *what* (deliverables and th
 ### Tech notes
 
 - **API**: Fastify, `TB_TOKEN` (or Bearer) auth, JSON Schema validation. All DB access via `databaseService`; schema in `api/lib/db/schema.js` (Drizzle). See [AGENTS.md](./AGENTS.md) for full route list.
-- **API docs**: OpenAPI 3.1 (Swagger UI) at **/docs** when the API is running. The spec is generated from Fastify route schemas. **Access is protected**: only requests with a valid `TB_TOKEN` (or `Authorization: Bearer`) can load the docs, so in production only authenticated users and agents can view them.
+- **API docs**: OpenAPI 3.1 (Swagger UI) at **/docs** — see [API docs (Swagger)](#api-docs-swagger) below.
 - **Client**: React, Vite, Mantine, react-router-dom v7, @dnd-kit, react-i18next. Token in localStorage.
 - **DB**: Schema-first; no migrations in this phase — `npm run db:reset` drops and recreates from schema then seeds. Separate dev and test DBs.
 
@@ -104,6 +104,8 @@ npm run db:seed   # Seed only (tables must exist)
 
 ### Tests
 
+API integration tests (Vitest + PactumJS) — **150+ tests** across deliverables, project statuses, task graph, task status, translations, and more.
+
 ```bash
 cd api
 set -a && source .env && set +a && NODE_ENV=test npm run test
@@ -113,23 +115,54 @@ Test DB must exist and be seeded; see [AGENTS.md](./AGENTS.md) for creating/rese
 
 ---
 
+## API docs (Swagger)
+
+The API serves **OpenAPI 3.1** interactive docs (Swagger UI) at **http://localhost:3030/docs** when the API is running. The spec is **generated from Fastify route schemas** (single source of truth; no separate YAML to maintain). It includes all routes, request/response shapes, and security: **TB_TOKEN** (header) and **Bearer** (Authorization header). Access to `/docs` is **token-protected** so only authenticated users and agents can view it in production.
+
+### What’s in the docs
+
+- **Tags**: core, users, projects, deliverables, task-graph, tags, translations, status-definitions, images.
+- **Security**: Global auth via `TB_TOKEN` or Bearer; the UI has an **Authorize** button to set your token for “Try it out” requests.
+- **Try it out**: You can run requests from the browser; once authorized, the token is sent automatically and persisted for the session.
+
+### How to access the docs with your access token
+
+You need a valid **access token** (UUID from `USERS.access_token`; seed example: `550e8400-e29b-41d4-a716-446655440000`).
+
+**Option A — Browser (easiest)**  
+1. Start the API (`npm run dev` or `npm run dev:api`).  
+2. Open: **http://localhost:3030/docs?token=550e8400-e29b-41d4-a716-446655440000** (replace with your token).  
+3. The docs page loads. Click **Authorize**, enter the same token in the **TB_TOKEN** field, then **Authorize** → **Close**.  
+4. Use “Try it out” on any route; the token is sent on every request.
+
+**Option B — Browser (no token in URL)**  
+If you can send a header with the first request (e.g. a REST client or extension), open `http://localhost:3030/docs` with header `TB_TOKEN: <your-uuid>`. Then use **Authorize** in the UI as above for try-it-out.
+
+**Option C — Raw OpenAPI JSON**  
+Fetch the spec with your token (e.g. for codegen or tooling):
+
+```bash
+curl -H "TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000" http://localhost:3030/docs/json
+```
+
+**Security**: Don’t share URLs that contain `?token=...`; use that pattern only in trusted environments.
+
+---
+
 ## API authentication
 
 **Which routes require a token?**  
 All API routes except: `GET /health`, `GET /`, `GET /db-test`, `GET /token-info`. The docs at `GET /docs` (and `/docs/*`) also require a valid token.
 
-**How is the access token set?**  
+**How is the access token set for API calls?**  
 Send one of:
 
-- **Header**: `TB_TOKEN: <uuid>` (e.g. from `USERS.access_token` in the DB).
+- **Header**: `TB_TOKEN: <uuid>` (from `USERS.access_token`).
 - **Header**: `Authorization: Bearer <uuid>`.
-- **Docs only (browser)**: open `/docs?token=<uuid>` so the first request includes the token in the query string (use only in trusted environments; avoid sharing the URL).
 
-Example (seed user):  
-`TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000`
+Example (seed user): `TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000`
 
-**Does Swagger UI let you set the token?**  
-Yes. After the docs page loads, use **Authorize** (top of the page). Enter your UUID in the `TB_TOKEN` field (or use Bearer). Swagger UI will send that token on every “Try it out” request. Authorization is persisted in the browser for the session (`persistAuthorization: true`).
+For **Swagger UI**, see [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token) above.
 
 ---
 
@@ -144,6 +177,6 @@ Yes. After the docs page loads, use **Authorize** (top of the page). Enter your 
 ## Documentation
 
 - **[AGENTS.md](./AGENTS.md)** — Primary reference for agents and developers: repo layout, full API route list, DB setup, test strategy (Vitest + PactumJS + test DB), troubleshooting.
-- **API docs (Swagger UI)**: Run the API and open **http://localhost:3030/docs** for interactive OpenAPI 3.1 docs. Docs are token-protected (see [API authentication](#api-authentication) below).
+- **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
 - **docs/deliverables_feature_DED.md** — Full Deliverable Expectations Document (DED) for the deliverables feature: problem statement, definitions, schema, API, UI, seed data, acceptance criteria, and Zazz lifecycle in detail.

@@ -294,36 +294,28 @@ describe('PATCH /tasks/:id/status', () => {
 
 ## Current Test Coverage
 
-**File**: `routes/tasks.status.test.mjs`
+**150+ tests** across 10 route test files:
 
-Tests for `PATCH /tasks/:id/status` endpoint:
+| File | Focus |
+|------|--------|
+| `deliverables.test.mjs` | Deliverable CRUD, list, filters |
+| `deliverables.tasks.test.mjs` | Deliverable tasks list |
+| `deliverables.status.test.mjs` | Deliverable status transitions |
+| `deliverables.approval.test.mjs` | Plan approval |
+| `projectStatuses.test.mjs` | Project task status workflow (GET/PUT) |
+| `projectDeliverableStatuses.test.mjs` | Project deliverable status workflow |
+| `tasks.status.test.mjs` | Task status changes, positions (15 tests) |
+| `taskGraph.test.mjs` | Relations, graph, readiness, coordination |
+| `translations.test.mjs` | Translations by language |
+| `statusDefinitions.test.mjs` | Status definitions list |
 
-### Authentication (3 tests)
-- ✅ Requires authentication (401 without token)
-- ✅ Rejects invalid token (401)
-- ✅ Accepts valid token in header
+Example — **`tasks.status.test.mjs`** (15 tests for `PATCH /projects/:code/tasks/:taskId/status`):
 
-### Validation (3 tests)
-- ✅ Returns 404 for non-existent task
-- ✅ Returns 400 for invalid status value
-- ✅ Requires status in request body
-
-### Status Changes (3 tests)
-- ✅ Changes TO_DO → IN_PROGRESS
-- ✅ Changes IN_PROGRESS → DONE
-- ✅ Changes TO_DO → REVIEW
-
-### Position Calculation (3 tests)
-- ✅ Places task at bottom of empty column
-- ✅ Places task at bottom of non-empty column
-- ✅ Maintains correct position across multiple moves
-
-### Data Integrity (3 tests)
-- ✅ Preserves other task fields (title, priority, assignee, etc.)
-- ✅ Updates `updatedAt` timestamp
-- ✅ Returns complete task object
-
-**Total**: 15 tests, all passing ✅
+- Authentication (3): 401 without token, invalid token, valid token
+- Validation (3): 404, 400 invalid status, body required
+- Status changes (3): TO_DO→IN_PROGRESS, IN_PROGRESS→DONE, TO_DO→REVIEW
+- Position (3): empty column, non-empty column, multiple moves
+- Data integrity (3): preserves fields, updatedAt, full response
 
 ## Database & Seeded Data
 
@@ -472,15 +464,10 @@ Future phases will add:
 
 ## Performance
 
-Current baseline (15 tests):
+Current baseline (150+ tests):
 - **Setup**: ~290ms (token init, Fastify startup)
-- **Tests**: ~230ms
-- **Total**: ~580ms
-
-Benchmarks:
-- Per-test average: ~15ms
-- Database operations: <5ms per operation
-- Network I/O: ~10-20ms per request
+- **Tests**: run sequentially (fileParallelism: false); total time depends on suite size
+- Per-test: DB and HTTP; typical single request ~10–20ms
 
 ## Resources
 
