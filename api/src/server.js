@@ -28,6 +28,7 @@ app.addHook('onSend', async (request, reply, payload) => {
 
 const PORT = process.env.PORT || 3030;
 const BASE_URL = `http://localhost:${PORT}`;
+const API_BASE_URL = process.env.API_BASE_URL || BASE_URL;
 
 const start = async () => {
   try {
@@ -43,10 +44,10 @@ const start = async () => {
         openapi: '3.1.0',
         info: {
           title: 'Zazz Board API',
-          description: 'Kanban-style orchestration API for coordinating AI agents and humans. All routes require `TB_TOKEN` header (or Authorization: Bearer).',
+          description: 'Kanban-style orchestration API for coordinating AI agents and humans. All routes require `TB_TOKEN` header (or Authorization: Bearer) except /health, /, /db-test, /token-info, /docs/json.',
           version: '1.0.0'
         },
-        servers: [{ url: BASE_URL, description: 'Local' }],
+        servers: [{ url: API_BASE_URL, description: API_BASE_URL === BASE_URL ? 'Local' : 'API server' }],
         tags: [
           { name: 'core', description: 'Health and info' },
           { name: 'users', description: 'User management' },
@@ -80,7 +81,15 @@ const start = async () => {
 
     await app.register(routes);
 
-    // Docs: only authenticated users/agents can view. Token via header (TB_TOKEN/Bearer) or query (?token=) for browser
+    // OpenAPI JSON spec — public so agents can fetch without auth
+    app.get('/docs/json', {
+      schema: { hide: true }
+    }, async (request, reply) => {
+      reply.type('application/json');
+      return app.swagger();
+    });
+
+    // Docs UI: only authenticated users/agents can view. Token via header (TB_TOKEN/Bearer) or query (?token=) for browser
     await app.register(async (docsApp) => {
       docsApp.addHook('preHandler', async (request, reply) => {
         if (request.query?.token) {

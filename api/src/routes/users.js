@@ -8,7 +8,7 @@ export default async function userRoutes(fastify, options) {
   fastify.addHook('preHandler', authMiddleware);
 
   // GET /users/me - Get authenticated user details
-  fastify.get('/users/me', async (request, reply) => {
+  fastify.get('/users/me', { schema: userSchemas.getCurrentUser }, async (request, reply) => {
     try {
       // request.user is populated by authMiddleware
       if (!request.user) {
