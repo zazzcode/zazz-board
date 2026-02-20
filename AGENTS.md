@@ -42,6 +42,46 @@ Reference for AI agents and developers: structure, setup, DB, tests, and API. **
 
 The `main` branch worktree is read-only. Do all work in a feature worktree (e.g. `add-docs-swagger`). Changes reach main only via merge.
 
+### Creating a new worktree
+
+The repo uses a bare repository (`.bare`) to manage multiple worktrees.
+
+**Create a new worktree:**
+
+```bash
+cd /Users/michael/Dev/task-blaster
+GIT_DIR=.bare git worktree add -b <branch-name> ../<worktree-name> main
+```
+
+For example, to create a worktree for a dynamic graph feature:
+
+```bash
+GIT_DIR=.bare git worktree add -b dynamic-task-graph-mvp ../dynamic-task-graph-mvp main
+```
+
+This creates a new worktree at `../dynamic-task-graph-mvp` and checks out the `main` branch with a new branch named `dynamic-task-graph-mvp`.
+
+**Copy environment files:**
+
+After creating the worktree, copy `.env` files from the main worktree:
+
+```bash
+cp main/.env dynamic-task-graph-mvp/
+cp main/api/.env dynamic-task-graph-mvp/api/
+```
+
+**List worktrees:**
+
+```bash
+GIT_DIR=.bare git worktree list
+```
+
+**Remove a worktree:**
+
+```bash
+GIT_DIR=.bare git worktree remove <worktree-name>
+```
+
 ---
 
 ## API routes (full list)
