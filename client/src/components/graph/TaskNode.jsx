@@ -83,17 +83,20 @@ function TaskNodeComponent({ data }) {
           overflow: 'hidden',
         }}
       >
-        {/* Top row: task ID + priority */}
+        {/* Top row: phaseTaskId centered + priority right */}
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: 4,
+            position: 'relative',
+            minHeight: 18,
           }}
         >
           <span
             style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
               fontSize: 11,
               fontWeight: 700,
               color: statusColor,
@@ -101,11 +104,12 @@ function TaskNodeComponent({ data }) {
               whiteSpace: 'nowrap',
             }}
           >
-            {task.taskId}
+            {task.phaseTaskId || `#${task.id}`}
           </span>
           {task.priority && (
             <span
               style={{
+                marginLeft: 'auto',
                 fontSize: 10,
                 fontWeight: 700,
                 color: priorityColors[task.priority] || '#868e96',
@@ -159,7 +163,7 @@ function TaskNodeComponent({ data }) {
           >
             {task.status.replace(/_/g, ' ')}
           </span>
-          {task.assigneeName && (
+          {task.agentName && (
             <span
               style={{
                 fontSize: 9,
@@ -169,9 +173,9 @@ function TaskNodeComponent({ data }) {
                 whiteSpace: 'nowrap',
                 maxWidth: 80,
               }}
-              title={task.assigneeName}
+              title={task.agentName}
             >
-              {task.assigneeName}
+              {task.agentName}
             </span>
           )}
         </div>

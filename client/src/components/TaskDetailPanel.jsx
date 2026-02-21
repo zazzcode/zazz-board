@@ -24,7 +24,6 @@ import {
 } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useTags } from '../hooks/useTags.js';
-import { useUsers } from '../hooks/useUsers.js';
 
 export function TaskDetailsPanel({ 
   task, 
@@ -37,7 +36,6 @@ export function TaskDetailsPanel({
 }) {
   const { t, translateStatus } = useTranslation();
   useTags();
-  const { users = [] } = useUsers();
   const [editedTask, setEditedTask] = useState(null);
 
   // --- Drag state ---
@@ -346,28 +344,13 @@ export function TaskDetailsPanel({
                 leftSection={<IconGitPullRequest size={16} />}
               />
               
-              {/* Assignee */}
-              <Select
-                label={t('tasks.assignee')}
-                placeholder={t('tasks.selectAssignee')}
-                data={[
-                  { value: '', label: t('tasks.unassigned') },
-                  ...(Array.isArray(users) ? users.map(user => ({ 
-                    value: user.id.toString(), 
-                    label: user.fullName 
-                  })) : [])
-                ]}
-                value={editedTask?.assigneeId?.toString() || ''}
-                onChange={(value) => {
-                  const selectedUser = users.find(u => u.id.toString() === value);
-                  setEditedTask({ 
-                    ...editedTask, 
-                    assigneeId: value ? parseInt(value) : null,
-                    assigneeName: selectedUser ? selectedUser.fullName : ''
-                  });
-                }}
+              {/* Agent (read-only — set by the agent claiming the task) */}
+              <TextInput
+                label="Agent"
+                value={editedTask?.agentName || ''}
+                readOnly
                 leftSection={<IconUser size={16} />}
-                clearable
+                styles={{ input: { cursor: 'default' } }}
               />
               
               {/* Blocked toggle and reason on same line */}
@@ -400,6 +383,23 @@ export function TaskDetailsPanel({
                 onChange={(e) => setEditedTask({ ...editedTask, prompt: e.target.value })}
                 rows={8}
               />
+
+              {/* Agent Notes - read-only append-only log written by agents */}
+              {editedTask?.notes && (
+                <Textarea
+                  label="Agent Notes"
+                  value={editedTask.notes}
+                  readOnly
+                  rows={6}
+                  styles={{
+                    input: {
+                      cursor: 'default',
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    },
+                  }}
+                />
+              )}
             </Stack>
         </Box>
         

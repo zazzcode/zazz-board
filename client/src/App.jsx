@@ -37,6 +37,7 @@ import { TaskGraphPage } from './pages/TaskGraphPage.jsx';
 import { DeliverableKanbanPage } from './pages/DeliverableKanbanPage.jsx';
 import { DeliverableListPage } from './pages/DeliverableListPage.jsx';
 import { useTranslation } from './hooks/useTranslation.js';
+import { useDeliverables } from './hooks/useDeliverables.js';
 import logger from './utils/logger.js';
 import '@mantine/core/styles.css';
 
@@ -64,6 +65,8 @@ function AppContent() {
   const [currentUser, setCurrentUser] = useState(null);
   const [createTaskModalOpened, setCreateTaskModalOpened] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedDeliverableId, setSelectedDeliverableId] = useState(null);
+  const { deliverables } = useDeliverables(selectedProject);
   const [newTask, setNewTask] = useState({
     title: '',
     prompt: '',
@@ -569,25 +572,41 @@ function AppContent() {
               )}
             </Group>
             
-            {/* Center: Project Title */}
+            {/* Center: Project Title or Deliverable Filter */}
             {isProjectPage && selectedProject && (
-              <Text 
-                size="md" 
-                fw={500} 
-                c="dimmed"
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  maxWidth: '300px',
-                  whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
-                  overflow: 'hidden',
-                  margin: '0 auto'
-                }}
-                title={selectedProject.title}
-              >
-                {selectedProject.title}
-              </Text>
+              isTaskGraphPage ? (
+                <Select
+                  placeholder="All tasks (project-wide)"
+                  data={[
+                    { value: '', label: 'All tasks (project-wide)' },
+                    ...deliverables.map(d => ({ value: String(d.id), label: d.name }))
+                  ]}
+                  value={selectedDeliverableId ?? ''}
+                  onChange={(val) => setSelectedDeliverableId(val || null)}
+                  size="sm"
+                  style={{ minWidth: 240 }}
+                  withCheckIcon={false}
+                  clearable
+                />
+              ) : (
+                <Text
+                  size="md"
+                  fw={500}
+                  c="dimmed"
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    maxWidth: '300px',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    margin: '0 auto'
+                  }}
+                  title={selectedProject.title}
+                >
+                  {selectedProject.title}
+                </Text>
+              )
             )}
             
             {/* Right: Navigation and Theme Toggle */}
@@ -657,8 +676,9 @@ function AppContent() {
               />
             } />
             <Route path="/projects/:projectCode/task-graph" element={
-              <TaskGraphPage 
+              <TaskGraphPage
                 selectedProject={selectedProject}
+                selectedDeliverableId={selectedDeliverableId}
               />
             } />
             <Route path="/projects/:projectCode/deliverables" element={

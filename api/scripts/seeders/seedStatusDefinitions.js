@@ -5,6 +5,7 @@ export async function seedStatusDefinitions() {
   console.log('  📝 Seeding status definitions...');
   try {
     await db.insert(STATUS_DEFINITIONS).values([
+      { code: 'PENDING', description: 'Tasks waiting for upstream dependencies to complete' },
       { code: 'TO_DO', description: 'Tasks that are planned but not yet started' },
       { code: 'READY', description: 'Tasks that are ready to be started' },
       { code: 'IN_PROGRESS', description: 'Tasks currently being worked on' },

@@ -212,7 +212,7 @@ class DatabaseService {
         code: projectData.code,
         description: projectData.description,
         leader_id: projectData.leaderId,
-        status_workflow: projectData.statusWorkflow || ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+        status_workflow: projectData.statusWorkflow || ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
         deliverable_status_workflow: projectData.deliverableStatusWorkflow || ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']
       })
       .returning();
@@ -588,9 +588,7 @@ class DatabaseService {
       projectId: TASKS.project_id,
       deliverableId: TASKS.deliverable_id,
       deliverableName: DELIVERABLES.name,
-      assigneeId: TASKS.assignee_id,
-      assigneeName: USERS.full_name,
-      assigneeEmail: USERS.email,
+      agentName: TASKS.agent_name,
       prompt: TASKS.prompt,
       isBlocked: TASKS.is_blocked,
       blockedReason: TASKS.blocked_reason,
@@ -603,7 +601,6 @@ class DatabaseService {
     })
     .from(TASKS)
     .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id))
-    .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
     .where(eq(TASKS.project_id, projectId))
     .orderBy(asc(TASKS.status), asc(TASKS.position));
 
@@ -625,6 +622,8 @@ class DatabaseService {
     let query = db.select({
       id: TASKS.id,
       taskId: TASKS.id,
+      phase: TASKS.phase,
+      phaseTaskId: TASKS.phase_task_id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -634,12 +633,12 @@ class DatabaseService {
       projectName: PROJECTS.title,
       deliverableId: TASKS.deliverable_id,
       deliverableName: DELIVERABLES.name,
-      assigneeId: TASKS.assignee_id,
-      assigneeName: USERS.full_name,
-      assigneeEmail: USERS.email,
+      agentName: TASKS.agent_name,
       prompt: TASKS.prompt,
+      notes: TASKS.notes,
       isBlocked: TASKS.is_blocked,
       blockedReason: TASKS.blocked_reason,
+      isCancelled: TASKS.is_cancelled,
       gitWorktree: TASKS.git_worktree,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
@@ -649,8 +648,7 @@ class DatabaseService {
     })
     .from(TASKS)
     .leftJoin(PROJECTS, eq(TASKS.project_id, PROJECTS.id))
-    .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id))
-    .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id));
+    .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id));
 
     // Apply filters
     const conditions = [];
@@ -660,8 +658,8 @@ class DatabaseService {
     if (filters.status) {
       conditions.push(eq(TASKS.status, filters.status));
     }
-    if (filters.assigneeId) {
-      conditions.push(eq(TASKS.assignee_id, filters.assigneeId));
+    if (filters.agentName) {
+      conditions.push(eq(TASKS.agent_name, filters.agentName));
     }
     if (filters.deliverableId) {
       conditions.push(eq(TASKS.deliverable_id, filters.deliverableId));
@@ -699,6 +697,8 @@ class DatabaseService {
     const [task] = await db.select({
       id: TASKS.id,
       taskId: TASKS.id,
+      phase: TASKS.phase,
+      phaseTaskId: TASKS.phase_task_id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -708,12 +708,12 @@ class DatabaseService {
       projectName: PROJECTS.title,
       deliverableId: TASKS.deliverable_id,
       deliverableName: DELIVERABLES.name,
-      assigneeId: TASKS.assignee_id,
-      assigneeName: USERS.full_name,
-      assigneeEmail: USERS.email,
+      agentName: TASKS.agent_name,
       prompt: TASKS.prompt,
+      notes: TASKS.notes,
       isBlocked: TASKS.is_blocked,
       blockedReason: TASKS.blocked_reason,
+      isCancelled: TASKS.is_cancelled,
       gitWorktree: TASKS.git_worktree,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
@@ -724,7 +724,6 @@ class DatabaseService {
     .from(TASKS)
     .leftJoin(PROJECTS, eq(TASKS.project_id, PROJECTS.id))
     .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id))
-    .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
     .where(eq(TASKS.id, id))
     .limit(1);
 
@@ -741,6 +740,8 @@ class DatabaseService {
     const [task] = await db.select({
       id: TASKS.id,
       taskId: TASKS.id,
+      phase: TASKS.phase,
+      phaseTaskId: TASKS.phase_task_id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -750,12 +751,12 @@ class DatabaseService {
       projectName: PROJECTS.title,
       deliverableId: TASKS.deliverable_id,
       deliverableName: DELIVERABLES.name,
-      assigneeId: TASKS.assignee_id,
-      assigneeName: USERS.full_name,
-      assigneeEmail: USERS.email,
+      agentName: TASKS.agent_name,
       prompt: TASKS.prompt,
+      notes: TASKS.notes,
       isBlocked: TASKS.is_blocked,
       blockedReason: TASKS.blocked_reason,
+      isCancelled: TASKS.is_cancelled,
       gitWorktree: TASKS.git_worktree,
       startedAt: TASKS.started_at,
       completedAt: TASKS.completed_at,
@@ -766,7 +767,6 @@ class DatabaseService {
     .from(TASKS)
     .leftJoin(PROJECTS, eq(TASKS.project_id, PROJECTS.id))
     .leftJoin(DELIVERABLES, eq(TASKS.deliverable_id, DELIVERABLES.id))
-    .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
     .where(eq(TASKS.id, parseInt(taskId)))
     .limit(1);
 
@@ -777,14 +777,15 @@ class DatabaseService {
   }
 
   /**
-   * Create new task with auto-generated task_id and proper positioning
+   * Create new task with phase_task_id generation, dependency wiring, and auto-promotion.
+   * Leader provides phase + optional dependencies array; system handles the rest.
    */
   async createTask(taskData) {
-    const task = await db.transaction(async (tx) => {
-      if (!taskData.deliverableId) {
-        throw new Error('deliverableId is required');
-      }
+    if (!taskData.deliverableId) {
+      throw new Error('deliverableId is required');
+    }
 
+    const task = await db.transaction(async (tx) => {
       const [deliverable] = await tx.select().from(DELIVERABLES).where(eq(DELIVERABLES.id, taskData.deliverableId)).limit(1);
       if (!deliverable) throw new Error('Deliverable not found');
       if (taskData.projectId && taskData.projectId !== deliverable.project_id) {
@@ -792,14 +793,47 @@ class DatabaseService {
       }
 
       const projectId = deliverable.project_id;
-      const status = taskData.status || 'TO_DO';
-      const [maxPosition] = await tx.select({
+      const status = taskData.status || 'READY';
+
+      // --- Kanban position: sparse numbering within status column ---
+      const [maxPos] = await tx.select({
         max: sql`COALESCE(MAX(${TASKS.position}), 0)`.as('max')
       })
       .from(TASKS)
       .where(and(eq(TASKS.project_id, projectId), eq(TASKS.status, status)));
-      const nextPosition = Math.floor(maxPosition.max / 10) * 10 + 10;
+      const nextPosition = Math.floor(maxPos.max / 10) * 10 + 10;
 
+      // --- phase_task_id generation ---
+      // Format: "{phase}.{seq}" e.g. "1.1", "1.2"
+      // Rework tasks can be created with explicit phaseTaskId like "1.2.1"
+      let phaseTaskId = taskData.phaseTaskId || null;
+      const phase = taskData.phase ?? null;
+
+      if (phase !== null && !phaseTaskId) {
+        // Find all existing phase_task_ids for this deliverable+phase to determine next seq
+        // Match format "{phase}.{digits}" (direct children only, not rework like "1.2.1")
+        const existing = await tx.select({ phaseTaskId: TASKS.phase_task_id })
+          .from(TASKS)
+          .where(
+            and(
+              eq(TASKS.deliverable_id, taskData.deliverableId),
+              eq(TASKS.phase, phase)
+            )
+          );
+
+        // Find highest sequence number for direct phase tasks (e.g. "1.3" → seq 3)
+        let maxSeq = 0;
+        const directPattern = new RegExp(`^${phase}\\.(\\d+)$`);
+        for (const row of existing) {
+          if (row.phaseTaskId) {
+            const m = row.phaseTaskId.match(directPattern);
+            if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+          }
+        }
+        phaseTaskId = `${phase}.${maxSeq + 1}`;
+      }
+
+      // --- Insert task ---
       const [newTask] = await tx.insert(TASKS).values({
         title: taskData.title,
         status,
@@ -808,25 +842,41 @@ class DatabaseService {
         story_points: taskData.storyPoints,
         project_id: projectId,
         deliverable_id: taskData.deliverableId,
-        assignee_id: taskData.assigneeId,
+        agent_name: taskData.agentName || null,
         prompt: taskData.prompt,
+        notes: taskData.notes || null,
+        phase,
+        phase_task_id: phaseTaskId,
         is_blocked: taskData.isBlocked || false,
         blocked_reason: taskData.blockedReason,
+        is_cancelled: taskData.isCancelled || false,
         git_worktree: taskData.gitWorktree,
         started_at: taskData.startedAt,
         completed_at: taskData.completedAt,
-        coordination_code: taskData.coordinationCode || null
+        coordination_code: taskData.coordinationCode || null,
+        created_by: taskData.createdBy || null,
+        updated_by: taskData.updatedBy || null
       }).returning();
+
+      // --- Wire DEPENDS_ON relations from dependencies array ---
+      // Leader is responsible for DAG ordering; no cycle check on creation
+      if (taskData.dependencies && taskData.dependencies.length > 0) {
+        const depValues = taskData.dependencies.map(depId => ({
+          task_id: newTask.id,
+          related_task_id: depId,
+          relation_type: 'DEPENDS_ON'
+        }));
+        await tx.insert(TASK_RELATIONS).values(depValues);
+      }
 
       return newTask;
     });
 
-    // Add tags if provided (outside transaction to avoid deadlocks)
+    // Add tags if provided
     if (taskData.tags && taskData.tags.length > 0) {
       await this.setTaskTags(task.id, taskData.tags);
     }
 
-    // Return the full task object in camelCase format
     return await this.getTaskById(task.id);
   }
 
@@ -834,9 +884,22 @@ class DatabaseService {
    * Update task
    */
   async updateTask(id, taskData) {
-    // Read current status to detect transitions
-    const [current] = await db.select({ status: TASKS.status }).from(TASKS).where(eq(TASKS.id, id)).limit(1);
+    // Read current state including cancellation flag
+    const [current] = await db.select({
+      status: TASKS.status,
+      isCancelled: TASKS.is_cancelled
+    }).from(TASKS).where(eq(TASKS.id, id)).limit(1);
     const beforeStatus = current?.status;
+
+    // Immutability: cancelled tasks cannot be uncancelled or have their status changed
+    if (current?.isCancelled) {
+      if (taskData.isCancelled === false) {
+        throw Object.assign(new Error('Cannot uncancel a task'), { isImmutable: true });
+      }
+      if (taskData.status !== undefined && taskData.status !== 'COMPLETED') {
+        throw Object.assign(new Error('Cannot change status of a cancelled task'), { isImmutable: true });
+      }
+    }
 
     const updateData = {};
     if (taskData.title !== undefined) updateData.title = taskData.title;
@@ -846,7 +909,7 @@ class DatabaseService {
     if (taskData.storyPoints !== undefined) updateData.story_points = taskData.storyPoints;
     if (taskData.projectId !== undefined) updateData.project_id = taskData.projectId;
     if (taskData.deliverableId !== undefined) updateData.deliverable_id = taskData.deliverableId;
-    if (taskData.assigneeId !== undefined) updateData.assignee_id = taskData.assigneeId;
+    if (taskData.agentName !== undefined) updateData.agent_name = taskData.agentName;
     if (taskData.prompt !== undefined) updateData.prompt = taskData.prompt;
     if (taskData.isBlocked !== undefined) updateData.is_blocked = taskData.isBlocked;
     if (taskData.blockedReason !== undefined) updateData.blocked_reason = taskData.blockedReason;
@@ -854,20 +917,19 @@ class DatabaseService {
     if (taskData.startedAt !== undefined) updateData.started_at = taskData.startedAt;
     if (taskData.completedAt !== undefined) updateData.completed_at = taskData.completedAt;
     if (taskData.coordinationCode !== undefined) updateData.coordination_code = taskData.coordinationCode;
+    if (taskData.notes !== undefined) updateData.notes = taskData.notes;
+    if (taskData.isCancelled !== undefined) updateData.is_cancelled = taskData.isCancelled;
+    if (taskData.updatedBy !== undefined) updateData.updated_by = taskData.updatedBy;
+
+    // Cancellation always forces COMPLETED — override any status in the payload
+    if (taskData.isCancelled === true) {
+      updateData.status = 'COMPLETED';
+    }
     
     const [task] = await db.update(TASKS)
       .set(updateData)
       .where(eq(TASKS.id, id))
       .returning();
-
-    // If status changed, run auto-promotion centrally
-    if (taskData.status !== undefined && beforeStatus && taskData.status !== beforeStatus) {
-      try {
-        await this.checkAndPromoteDependents(id);
-      } catch (e) {
-        // Swallow to avoid masking the primary update; routes also log promotions
-      }
-    }
 
     // Update tags if provided
     if (taskData.tagNames !== undefined) {
@@ -1525,21 +1587,25 @@ class DatabaseService {
    * Get the full task graph for a project: all tasks + all relations
    */
   async getProjectTaskGraph(projectId) {
-    // Get all tasks for the project (lightweight — id, taskId, title, status, coordinationCode)
     const tasks = await db.select({
       id: TASKS.id,
       taskId: TASKS.id,
+      phase: TASKS.phase,
+      phaseTaskId: TASKS.phase_task_id,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
-      assigneeId: TASKS.assignee_id,
-      assigneeName: USERS.full_name,
+      deliverableId: TASKS.deliverable_id,
+      agentName: TASKS.agent_name,
+      prompt: TASKS.prompt,
+      notes: TASKS.notes,
+      isBlocked: TASKS.is_blocked,
+      isCancelled: TASKS.is_cancelled,
       coordinationCode: TASKS.coordination_code
     })
     .from(TASKS)
-    .leftJoin(USERS, eq(TASKS.assignee_id, USERS.id))
     .where(eq(TASKS.project_id, projectId))
-    .orderBy(asc(TASKS.id));
+    .orderBy(asc(TASKS.phase), asc(TASKS.id));
 
     if (tasks.length === 0) return { tasks: [], relations: [] };
 
@@ -1553,6 +1619,53 @@ class DatabaseService {
     })
     .from(TASK_RELATIONS)
     .where(inArray(TASK_RELATIONS.task_id, taskIds));
+
+    return { tasks, relations };
+  }
+
+  /**
+   * Get the task graph for a single deliverable: tasks + relations scoped to that deliverable.
+   * Only returns relations where BOTH task endpoints belong to this deliverable.
+   */
+  async getDeliverableTaskGraph(deliverableId) {
+    const tasks = await db.select({
+      id: TASKS.id,
+      taskId: TASKS.id,
+      phase: TASKS.phase,
+      phaseTaskId: TASKS.phase_task_id,
+      title: TASKS.title,
+      status: TASKS.status,
+      priority: TASKS.priority,
+      deliverableId: TASKS.deliverable_id,
+      projectId: TASKS.project_id,
+      agentName: TASKS.agent_name,
+      prompt: TASKS.prompt,
+      notes: TASKS.notes,
+      isBlocked: TASKS.is_blocked,
+      isCancelled: TASKS.is_cancelled,
+      coordinationCode: TASKS.coordination_code,
+      createdAt: TASKS.created_at,
+      updatedAt: TASKS.updated_at
+    })
+    .from(TASKS)
+    .where(eq(TASKS.deliverable_id, deliverableId))
+    .orderBy(asc(TASKS.phase), asc(TASKS.id));
+
+    if (tasks.length === 0) return { tasks: [], relations: [] };
+
+    const taskIds = tasks.map(t => t.id);
+
+    // Only include relations where BOTH endpoints are within this deliverable
+    const allRelations = await db.select({
+      taskId: TASK_RELATIONS.task_id,
+      relatedTaskId: TASK_RELATIONS.related_task_id,
+      relationType: TASK_RELATIONS.relation_type
+    })
+    .from(TASK_RELATIONS)
+    .where(inArray(TASK_RELATIONS.task_id, taskIds));
+
+    const taskIdSet = new Set(taskIds);
+    const relations = allRelations.filter(r => taskIdSet.has(r.relatedTaskId));
 
     return { tasks, relations };
   }

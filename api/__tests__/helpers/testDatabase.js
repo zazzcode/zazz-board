@@ -73,7 +73,7 @@ export async function clearTaskData() {
 export async function resetProjectDefaults() {
   await db.update(PROJECTS)
     .set({
-      status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+      status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
       deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
       completion_criteria_status: null,
       task_graph_layout_direction: 'LR'
@@ -117,15 +117,21 @@ export async function createTestTask(projectId, overrides = {}) {
     project_id: projectId,
     deliverable_id: deliverableId,
     title: overrides.title || 'Test Task',
-    status: overrides.status || 'TO_DO',
+    status: overrides.status || 'READY',
     priority: overrides.priority || 'MEDIUM',
     position: overrides.position !== undefined ? overrides.position : 10,
-    assignee_id: overrides.assigneeId || null,
+    agent_name: overrides.agentName || null,
     prompt: overrides.prompt || 'Test prompt',
     is_blocked: overrides.isBlocked || false,
     blocked_reason: overrides.blockedReason || null,
     story_points: overrides.storyPoints || null,
-    git_worktree: overrides.gitWorktree || null
+    git_worktree: overrides.gitWorktree || null,
+    phase: overrides.phase || null,
+    phase_task_id: overrides.phaseTaskId || null,
+    notes: overrides.notes || null,
+    is_cancelled: overrides.isCancelled || false,
+    created_by: overrides.createdBy || 1,
+    updated_by: overrides.updatedBy || 1
   }).returning();
   return task;
 }
@@ -148,7 +154,7 @@ export async function getDeliverableById(id) {
 /**
  * Get all tasks for a project with a specific status
  * @param {number} projectId - Project ID
- * @param {string} status - Task status (TO_DO, IN_PROGRESS, etc.)
+ * @param {string} status - Task status (READY, IN_PROGRESS, etc.)
  * @returns {Promise<Array>} Array of tasks
  */
 export async function getTasksByStatus(projectId, status) {

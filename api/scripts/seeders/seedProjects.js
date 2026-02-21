@@ -11,7 +11,7 @@ export async function seedProjects() {
         description: 'Zazz-Board application development — primary test project',
         leader_id: 5,
         next_deliverable_sequence: 4,
-        status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
         deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
         task_graph_layout_direction: 'LR',
         completion_criteria_status: 'COMPLETED',
@@ -23,7 +23,7 @@ export async function seedProjects() {
         description: 'Native mobile app for iOS and Android platforms',
         leader_id: 2,
         next_deliverable_sequence: 2,
-        status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
         deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
         created_by: 2
       },
@@ -33,7 +33,7 @@ export async function seedProjects() {
         description: 'Migrate legacy APIs to modern REST architecture',
         leader_id: 3,
         next_deliverable_sequence: 3,
-        status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
         deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'UAT', 'STAGED', 'PROD'],
         task_graph_layout_direction: 'LR',
         completion_criteria_status: 'COMPLETED',
@@ -45,7 +45,7 @@ export async function seedProjects() {
         description: 'Migrate all customer data to new clustered database',
         leader_id: 5,
         next_deliverable_sequence: 1,
-        status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
         deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
         created_by: 5
       },
@@ -55,7 +55,7 @@ export async function seedProjects() {
         description: 'Annual security audit and compliance updates',
         leader_id: 4,
         next_deliverable_sequence: 1,
-        status_workflow: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
         deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
         created_by: 4
       }

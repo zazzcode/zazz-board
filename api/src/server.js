@@ -80,22 +80,13 @@ const start = async () => {
 
     await app.register(routes);
 
-    // Docs: only authenticated users/agents can view. Token via header (TB_TOKEN/Bearer) or query (?token=) for browser
-    await app.register(async (docsApp) => {
-      docsApp.addHook('preHandler', async (request, reply) => {
-        if (request.query?.token) {
-          request.headers['tb_token'] = request.headers['tb_token'] || request.query.token;
-        }
-        return authMiddleware(request, reply);
-      });
-      await docsApp.register(swaggerUi, {
-        routePrefix: '/docs',
-        uiConfig: {
-          docExpansion: 'list',
-          filter: true,
-          persistAuthorization: true
-        }
-      });
+    await app.register(swaggerUi, {
+      routePrefix: '/docs',
+      uiConfig: {
+        docExpansion: 'list',
+        filter: true,
+        persistAuthorization: true
+      }
     });
 
     await tokenService.initialize();

@@ -19,6 +19,7 @@ export const Y_GAP = 130;   // vertical gap between rows (LR) or columns (TB)
 
 // ── Status colours (mirrors TaskCard / Kanban) ────────────────────
 const STATUS_COLORS = {
+  PENDING: '#868e96',     // gray (waiting on deps)
   TO_DO: '#868e96',       // gray
   READY: '#228be6',       // blue
   IN_PROGRESS: '#fab005', // yellow

@@ -307,13 +307,20 @@ describe('PATCH /projects/:code/tasks/:taskId/status', () => {
 });
 ```
 
+### Test file naming convention
+
+- **API (`__tests__/routes/`)**: kebab-case prefix + `.test.mjs` — e.g. `deliverables-approval.test.mjs`, `project-statuses.test.mjs`
+- **Client component tests**: PascalCase matching the component — e.g. `KanbanBoard.test.jsx`
+- **Client hook/utility tests**: kebab-case — e.g. `use-tasks.test.js`
+- The `.test.` separator is Vitest convention and must be kept.
+
 ### Current test files
 
-- `translations.test.mjs`, `statusDefinitions.test.mjs`
-- `tasks.status.test.mjs` (task status changes, positions)
-- `taskGraph.test.mjs` (relations, graph, readiness, coordination)
-- `projectStatuses.test.mjs`, `projectDeliverableStatuses.test.mjs`
-- `deliverables.test.mjs`, `deliverables.tasks.test.mjs`, `deliverables.status.test.mjs`, `deliverables.approval.test.mjs`
+- `translations.test.mjs`, `status-definitions.test.mjs`
+- `project-statuses.test.mjs`, `project-deliverable-statuses.test.mjs`
+- `deliverables.test.mjs`, `deliverables-status.test.mjs`, `deliverables-approval.test.mjs`
+- `task-graph.test.mjs` (relations, graph, readiness, coordination)
+- `agent-workflow.test.mjs` (end-to-end agent simulation: linear pipeline, parallel convergence, cancellation, notes audit trail)
 
 ---
 

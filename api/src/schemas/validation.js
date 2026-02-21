@@ -110,7 +110,7 @@ export const taskSchemas = {
         projectId: { type: 'string', pattern: '^[0-9]+$' },
         status: { type: 'string', pattern: '^[A-Z_]+$' },
         priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
-        assigneeId: { type: 'string', pattern: '^[0-9]+$' },
+        agentName: { type: 'string', maxLength: 50 },
         search: { type: 'string', minLength: 1, maxLength: 255 }
       }
     }
@@ -130,10 +130,10 @@ export const taskSchemas = {
         description: { type: 'string', maxLength: 5000 },
         projectId: { type: 'integer', minimum: 1 },
         deliverableId: { type: 'integer', minimum: 1 },
-        status: { type: 'string', pattern: '^[A-Z_]+$', default: 'TO_DO' },
+        status: { type: 'string', pattern: '^[A-Z_]+$', default: 'READY' },
         priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], default: 'MEDIUM' },
         dueDate: { type: 'string', format: 'date-time', nullable: true },
-        assigneeId: { type: 'integer', minimum: 1, nullable: true },
+        agentName: { type: 'string', maxLength: 50, nullable: true },
         position: { type: 'integer', minimum: 0 },
         git_worktree: { type: 'string', maxLength: 255 },
       },
@@ -153,8 +153,8 @@ export const taskSchemas = {
         status: { type: 'string', pattern: '^[A-Z_]+$' },
         priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
         storyPoints: { type: 'integer', minimum: 1, maximum: 21, nullable: true },
-        assigneeId: { type: 'integer', minimum: 1, nullable: true },
-        deliverableId: { type: 'integer', minimum: 1 },
+        agentName: { type: 'string', maxLength: 50, nullable: true },
+        deliverableId: { type: 'integer', minimum: 1, nullable: true },
         prompt: { type: 'string', maxLength: 10000 },
         isBlocked: { type: 'boolean' },
         blockedReason: { type: 'string', maxLength: 1000 },
@@ -212,15 +212,63 @@ export const taskSchemas = {
   }
 };
 
+// Reusable task item shape for graph response schemas
+const graphTaskItem = {
+  type: 'object',
+  properties: {
+    id: { type: 'integer', description: 'Integer primary key' },
+    taskId: { type: 'integer', description: 'Same as id' },
+    phase: { type: 'integer', description: 'Phase number (e.g. 1, 2, 3)' },
+    phaseTaskId: { type: 'string', description: 'Human-readable ID within a deliverable, e.g. "1.2". Rework tasks use "1.2.1" format.' },
+    title: { type: 'string' },
+    status: { type: 'string' },
+    priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
+    deliverableId: { type: 'integer' },
+    agentName: { type: 'string', description: 'Agent that claimed this task' },
+    prompt: { type: 'string', description: 'Task instructions written by the project leader' },
+    notes: { type: 'string', description: 'Append-only agent progress log: "[ISO timestamp] [agent]: message"' },
+    isBlocked: { type: 'boolean' },
+    isCancelled: { type: 'boolean' },
+    coordinationCode: { type: 'string' }
+  }
+};
+
+const graphRelationItem = {
+  type: 'object',
+  properties: {
+    taskId: { type: 'integer' },
+    relatedTaskId: { type: 'integer' },
+    relationType: { type: 'string', enum: ['DEPENDS_ON', 'COORDINATES_WITH'] }
+  }
+};
+
 // Task Graph / Relation schemas
 export const taskGraphSchemas = {
   // GET /projects/:code/graph
   getProjectGraph: {
-    params: codeParam
+    tags: ['task-graph'],
+    summary: 'Get full task graph for a project',
+    description: 'Returns all tasks and intra-project relations. Polled every 3 s by the UI for live updates.',
+    params: codeParam,
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'integer' },
+          projectCode: { type: 'string' },
+          taskGraphLayoutDirection: { type: 'string', enum: ['LR', 'TB'] },
+          completionCriteriaStatus: { type: 'string' },
+          tasks: { type: 'array', items: graphTaskItem },
+          relations: { type: 'array', items: graphRelationItem }
+        }
+      }
+    }
   },
 
   // GET /projects/:code/tasks/:taskId/relations
   getTaskRelations: {
+    tags: ['task-graph'],
+    summary: 'Get all relations for a task',
     params: {
       type: 'object',
       required: ['code', 'taskId'],
@@ -228,11 +276,17 @@ export const taskGraphSchemas = {
         code: { type: 'string', pattern: '^[A-Z0-9]+$' },
         taskId: { type: 'string', pattern: '^\\d+$' }
       }
+    },
+    response: {
+      200: { type: 'array', items: graphRelationItem }
     }
   },
 
   // POST /projects/:code/tasks/:taskId/relations
   createTaskRelation: {
+    tags: ['task-graph'],
+    summary: 'Create a task relation',
+    description: 'Create a DEPENDS_ON or COORDINATES_WITH relation. Cycle detection is enforced for DEPENDS_ON. Returns 400 for cycles/self-refs, 409 for duplicates.',
     params: {
       type: 'object',
       required: ['code', 'taskId'],
@@ -254,6 +308,8 @@ export const taskGraphSchemas = {
 
   // DELETE /projects/:code/tasks/:taskId/relations/:relatedTaskId/:relationType
   deleteTaskRelation: {
+    tags: ['task-graph'],
+    summary: 'Delete a task relation',
     params: {
       type: 'object',
       required: ['code', 'taskId', 'relatedTaskId', 'relationType'],
@@ -268,6 +324,9 @@ export const taskGraphSchemas = {
 
   // GET /projects/:code/tasks/:taskId/readiness
   checkTaskReadiness: {
+    tags: ['task-graph'],
+    summary: 'Check if a task\'s dependencies are met',
+    description: 'Returns ready=true when all DEPENDS_ON prerequisites have reached the project\'s completionCriteriaStatus (default DONE). Agents poll this before claiming a task.',
     params: {
       type: 'object',
       required: ['code', 'taskId'],
@@ -275,11 +334,60 @@ export const taskGraphSchemas = {
         code: { type: 'string', pattern: '^[A-Z0-9]+$' },
         taskId: { type: 'string', pattern: '^\\d+$' }
       }
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          ready: { type: 'boolean' },
+          blockedBy: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                taskId: { type: 'integer' },
+                status: { type: 'string' }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  // GET /projects/:code/deliverables/:delivId/graph
+  getDeliverableGraph: {
+    tags: ['task-graph'],
+    summary: 'Get task graph scoped to a deliverable',
+    description: 'Returns tasks and relations for one deliverable. Cross-deliverable relations are excluded. Primary endpoint for agents monitoring their own work. Polled every 3 s.',
+    params: {
+      type: 'object',
+      required: ['code', 'delivId'],
+      properties: {
+        code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        delivId: { type: 'string', pattern: '^\\d+$' }
+      }
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          deliverableId: { type: 'integer' },
+          projectCode: { type: 'string' },
+          taskGraphLayoutDirection: { type: 'string', enum: ['LR', 'TB'] },
+          tasks: { type: 'array', items: graphTaskItem },
+          relations: { type: 'array', items: graphRelationItem }
+        }
+      }
     }
   },
 
   // GET /coordination-types
-  getCoordinationTypes: {},
+  getCoordinationTypes: {
+    tags: ['task-graph'],
+    summary: 'List all coordination types'
+  },
 };
 
 // Project schemas
@@ -394,7 +502,7 @@ export const projectSchemas = {
         status: { type: 'string', pattern: '^[A-Z_]+$' },
         priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
         storyPoints: { type: 'number', nullable: true },
-        assigneeId: { type: 'number', nullable: true },
+        agentName: { type: 'string', maxLength: 50, nullable: true },
         prompt: { type: 'string', nullable: true },
         isBlocked: { type: 'boolean' },
         blockedReason: { type: 'string', nullable: true },

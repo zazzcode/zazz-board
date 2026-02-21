@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index, unique } from 'drizzle-orm/pg-core';
 import { pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
@@ -71,7 +71,7 @@ export const PROJECTS = pgTable('PROJECTS', {
   description: text('description'),
   leader_id: integer('leader_id').notNull().references(() => USERS.id, { onDelete: 'restrict' }),
   next_deliverable_sequence: integer('next_deliverable_sequence').notNull().default(1),
-  status_workflow: varchar('status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED']::varchar[]`),
+  status_workflow: varchar('status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['READY', 'IN_PROGRESS', 'QA', 'COMPLETED']::varchar[]`),
   deliverable_status_workflow: varchar('deliverable_status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']::varchar[]`),
   completion_criteria_status: varchar('completion_criteria_status', { length: 25 })
     .references(() => STATUS_DEFINITIONS.code, { onDelete: 'set null' }),
@@ -109,26 +109,56 @@ export const DELIVERABLES = pgTable('DELIVERABLES', {
 
 // Tasks table
 export const TASKS = pgTable('TASKS', {
+  // --- Identity & relationships ---
   id: serial('id').primaryKey(),
   project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
   deliverable_id: integer('deliverable_id').notNull().references(() => DELIVERABLES.id, { onDelete: 'cascade' }),
+
+  // --- Dynamic graph execution fields ---
+  // Phase number (e.g. 1, 2, 3) — null for legacy/unphased tasks
+  phase: integer('phase'),
+  // Human-readable display ID within a deliverable: "1.1", "1.2", "1.2.1" (rework)
+  // Unique per deliverable — enforced by constraint below
+  phase_task_id: varchar('phase_task_id', { length: 20 }),
+
+  // --- Core task fields ---
   title: varchar('title', { length: 255 }).notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('TO_DO'),
-  position: integer('position').notNull().default(0), // Position within the column for ordering
-  story_points: integer('story_points'),
-  priority: varchar('priority', { length: 20 }).notNull().default('MEDIUM'), // 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
-  assignee_id: integer('assignee_id').references(() => USERS.id, { onDelete: 'set null' }),
+  status: varchar('status', { length: 20 }).notNull().default('READY'),
+  priority: varchar('priority', { length: 20 }).notNull().default('MEDIUM'), // LOW, MEDIUM, HIGH, CRITICAL
+  // Agent that claimed/worked this task (e.g. "worker-1", "qa-agent-2")
+  agent_name: varchar('agent_name', { length: 50 }),
+  // Leader writes the task goal, acceptance criteria, and context
   prompt: text('prompt'),
+  // Append-only agent log: "[ISO timestamp] [agent name]: message"
+  notes: text('notes'),
+
+  // --- Estimation & ordering ---
+  story_points: integer('story_points'),
+  position: integer('position').notNull().default(0), // Kanban column ordering
+
+  // --- State flags ---
   is_blocked: boolean('is_blocked').default(false),
   blocked_reason: text('blocked_reason'),
+  // Cancelled is a flag, NOT a workflow status — the status field stays a clean
+  // workflow state; dependents of a cancelled task can still be promoted normally
+  is_cancelled: boolean('is_cancelled').default(false),
+
+  // --- Tracking ---
   git_worktree: varchar('git_worktree'),
   started_at: timestamp('started_at', { withTimezone: true }),
   completed_at: timestamp('completed_at', { withTimezone: true }),
   coordination_code: varchar('coordination_code', { length: 25 })
     .references(() => COORDINATION_TYPES.code, { onDelete: 'set null' }),
+
+  // --- Audit (always last) ---
+  created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  // phase_task_id must be unique within a deliverable (e.g. "1.1" unique per deliverable)
+  unique('uq_tasks_deliverable_phase_task_id').on(table.deliverable_id, table.phase_task_id),
+]);
 
 // Task-Tags junction table
 export const TASK_TAGS = pgTable('TASK_TAGS', {
@@ -170,7 +200,6 @@ export const IMAGE_DATA = pgTable('IMAGE_DATA', {
 
 // Relations
 export const usersRelations = relations(USERS, ({ many }) => ({
-  assignedTasks: many(TASKS),
 }));
 
 export const projectsRelations = relations(PROJECTS, ({ one, many }) => ({
@@ -206,10 +235,6 @@ export const tasksRelations = relations(TASKS, ({ one, many }) => ({
   deliverable: one(DELIVERABLES, {
     fields: [TASKS.deliverable_id],
     references: [DELIVERABLES.id],
-  }),
-  assignee: one(USERS, {
-    fields: [TASKS.assignee_id],
-    references: [USERS.id],
   }),
   taskTags: many(TASK_TAGS),
   images: many(IMAGE_METADATA),

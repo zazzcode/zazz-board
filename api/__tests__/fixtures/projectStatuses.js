@@ -2,13 +2,14 @@
  * Expected project status workflow structures for testing
  */
 
-export const defaultStatusWorkflow = ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'];  // ZAZZ project default workflow
+export const defaultStatusWorkflow = ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'];  // ZAZZ project default workflow (no TO_DO — tasks are always created READY)
 
 export const allAvailableStatuses = [
   'BACKLOG',
   'COMPLETED',
   'DONE',
   'ICEBOX',
+  'PENDING',
   'TO_DO',
   'READY',
   'IN_PROGRESS', 

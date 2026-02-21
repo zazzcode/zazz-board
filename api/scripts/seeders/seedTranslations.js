@@ -41,6 +41,7 @@ export async function seedTranslations() {
     if (!enTranslations.tasks.statuses) enTranslations.tasks.statuses = {};
     
     // Add new statuses to existing status labels
+    enTranslations.tasks.statuses.PENDING = 'Pending';
     enTranslations.tasks.statuses.TO_DO = 'To Do';
     enTranslations.tasks.statuses.IN_PROGRESS = 'In Progress';
     enTranslations.tasks.statuses.IN_REVIEW = 'In Review';
@@ -78,6 +79,7 @@ export async function seedTranslations() {
     if (!esTranslations.tasks.statuses) esTranslations.tasks.statuses = {};
     
     // Add all statuses
+    esTranslations.tasks.statuses.PENDING = 'Pendiente';
     esTranslations.tasks.statuses.TO_DO = 'Por Hacer';
     esTranslations.tasks.statuses.IN_PROGRESS = 'En Progreso';
     esTranslations.tasks.statuses.IN_REVIEW = 'En Revisión';
@@ -115,6 +117,7 @@ export async function seedTranslations() {
     if (!frTranslations.tasks.statuses) frTranslations.tasks.statuses = {};
     
     // Add all statuses
+    frTranslations.tasks.statuses.PENDING = 'En attente';
     frTranslations.tasks.statuses.TO_DO = 'À Faire';
     frTranslations.tasks.statuses.IN_PROGRESS = 'En Cours';
     frTranslations.tasks.statuses.IN_REVIEW = 'En Révision';
@@ -152,6 +155,7 @@ export async function seedTranslations() {
     if (!deTranslations.tasks.statuses) deTranslations.tasks.statuses = {};
     
     // Add all statuses
+    deTranslations.tasks.statuses.PENDING = 'Ausstehend';
     deTranslations.tasks.statuses.TO_DO = 'Zu Erledigen';
     deTranslations.tasks.statuses.IN_PROGRESS = 'In Bearbeitung';
     deTranslations.tasks.statuses.IN_REVIEW = 'In Überprüfung';

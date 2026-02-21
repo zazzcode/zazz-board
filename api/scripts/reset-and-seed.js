@@ -82,7 +82,7 @@ async function resetAndSeed() {
     console.log('   • 5 users created');
     console.log('   • 5 projects created');
     console.log('   • 6 deliverables created');
-    console.log('   • 16 tasks created across deliverables');
+    console.log('   • 0 tasks (task model refactor in progress — tasks are created via API)');
     console.log('   • status definitions + translations seeded');
     process.exit(0);
   } catch (error) {

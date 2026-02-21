@@ -7,6 +7,7 @@ export const expectedStatusCodes = [
   'COMPLETED',
   'DONE',
   'ICEBOX',
+  'PENDING',
   'TO_DO',
   'READY',
   'IN_PROGRESS',

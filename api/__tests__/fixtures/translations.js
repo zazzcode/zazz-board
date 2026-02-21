@@ -6,6 +6,7 @@
 export const expectedEnglishTranslations = {
   tasks: {
     statuses: {
+      PENDING: 'Pending',
       TO_DO: 'To Do',
       READY: 'Ready To Start',
       IN_PROGRESS: 'In Progress',
@@ -18,6 +19,7 @@ export const expectedEnglishTranslations = {
 export const expectedSpanishTranslations = {
   tasks: {
     statuses: {
+      PENDING: 'Pendiente',
       TO_DO: 'Por Hacer',
       READY: 'Listo Para Comenzar',
       IN_PROGRESS: 'En Progreso',

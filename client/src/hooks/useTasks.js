@@ -9,7 +9,7 @@ export function useTasks(selectedProject, deliverables = []) {
   const [loading, setLoading] = useState(false);
 
   // Task statuses from project workflow, fallback to default statuses
-  const taskStatuses = selectedProject?.statusWorkflow || ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'];
+  const taskStatuses = selectedProject?.statusWorkflow || ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'];
 
   // Fetch tasks from all deliverables in the project
   useEffect(() => {

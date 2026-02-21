@@ -567,11 +567,22 @@ export default async function projectRoutes(fastify, options) {
           description: { type: 'string', maxLength: 5000 },
           status: { type: 'string', pattern: '^[A-Z_]+$' },
           priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
-          assigneeId: { type: 'integer', minimum: 1 },
+          agentName: { type: 'string', maxLength: 50 },
           storyPoints: { type: 'integer', minimum: 1, maximum: 21 },
           position: { type: 'integer', minimum: 0 },
+          phaseTaskId: {
+            type: 'string',
+            maxLength: 20,
+            description: 'Explicit phase task ID (e.g. "1.2"). Auto-generated from phase if omitted. Use "1.2.1" format for rework tasks.'
+          },
           prompt: { type: 'string', maxLength: 10000 },
-          gitWorktree: { type: 'string', maxLength: 255 }
+          gitWorktree: { type: 'string', maxLength: 255 },
+          phase: { type: 'integer', minimum: 1 },
+          dependencies: {
+            type: 'array',
+            items: { type: 'integer', minimum: 1 },
+            uniqueItems: true
+          }
         },
         additionalProperties: false
       }
@@ -598,9 +609,11 @@ export default async function projectRoutes(fastify, options) {
         ...request.body,
         projectId: project.id,
         deliverableId,
-        status: request.body.status || 'TO_DO',
+        status: request.body.status || 'READY',
         priority: request.body.priority || 'MEDIUM',
-        position: request.body.position || 10
+        position: request.body.position || 10,
+        createdBy: request.user.id,
+        updatedBy: request.user.id
       };
 
       const task = await dbService.createTask(taskData);
@@ -668,7 +681,7 @@ export default async function projectRoutes(fastify, options) {
           description: { type: 'string', maxLength: 5000 },
           status: { type: 'string', pattern: '^[A-Z_]+$' },
           priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
-          assigneeId: { type: 'integer', minimum: 1 },
+          agentName: { type: 'string', maxLength: 50 },
           storyPoints: { type: 'integer', minimum: 1, maximum: 21 },
           prompt: { type: 'string', maxLength: 10000 },
           isBlocked: { type: 'boolean' },
@@ -752,9 +765,75 @@ export default async function projectRoutes(fastify, options) {
     }
   });
 
+  // PATCH /projects/:code/deliverables/:delivId/tasks/:taskId/notes - Append a note to a task
+  fastify.patch('/projects/:code/deliverables/:delivId/tasks/:taskId/notes', {
+    schema: {
+      tags: ['projects'],
+      summary: 'Append a note to a task',
+      description: 'Append-only audit log. Each entry is formatted as "[ISO timestamp] [agent/user]: message". Agents use this to record progress without overwriting earlier entries.',
+      params: {
+        type: 'object',
+        required: ['code', 'delivId', 'taskId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' },
+          taskId: { type: 'string', pattern: '^\\d+$' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['note'],
+        properties: {
+          note: { type: 'string', minLength: 1, maxLength: 5000 },
+          agentName: { type: 'string', maxLength: 255 }
+        },
+        additionalProperties: false
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId, taskId } = request.params;
+      const { note, agentName } = request.body;
+      const deliverableId = parseInt(delivId);
+      const taskIdNum = parseInt(taskId);
+
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const currentTask = await dbService.getTaskById(taskIdNum);
+      if (!currentTask || currentTask.projectId !== project.id || currentTask.deliverableId !== deliverableId) {
+        return reply.code(404).send({ error: 'Task not found in this deliverable' });
+      }
+
+      const author = agentName || request.user.fullName || request.user.email;
+      const timestamp = new Date().toISOString();
+      const newEntry = `[${timestamp}] [${author}]: ${note}`;
+      const updatedNotes = currentTask.notes
+        ? `${currentTask.notes}\n${newEntry}`
+        : newEntry;
+
+      const updatedTask = await dbService.updateTask(taskIdNum, {
+        ...currentTask,
+        notes: updatedNotes,
+        updatedBy: request.user.id
+      });
+
+      request.log.info(`Note appended to task ${taskId} in deliverable ${delivId}`);
+      reply.send(updatedTask);
+    } catch (error) {
+      request.log.error(error, 'Failed to append note to task');
+      reply.code(500).send({ error: 'Failed to append note to task' });
+    }
+  });
+
   // PATCH /projects/:code/deliverables/:delivId/tasks/:taskId/status - Change task status
   fastify.patch('/projects/:code/deliverables/:delivId/tasks/:taskId/status', {
     schema: {
+      tags: ['projects'],
+      summary: 'Change task status (agent claim)',
+      description: 'Change task status. Include agentName to claim the task: { status: "IN_PROGRESS", agentName: "worker-1" }. Returns 409 if task is cancelled.',
       params: {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
@@ -768,14 +847,15 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['status'],
         properties: {
-          status: { type: 'string', pattern: '^[A-Z_]+$' }
+          status: { type: 'string', pattern: '^[A-Z_]+$' },
+          agentName: { type: 'string', maxLength: 50 }
         }
       }
     }
   }, async (request, reply) => {
     try {
       const { code, delivId, taskId } = request.params;
-      const { status } = request.body;
+      const { status, agentName } = request.body;
       const deliverableId = parseInt(delivId);
       const taskIdNum = parseInt(taskId);
 
@@ -797,6 +877,11 @@ export default async function projectRoutes(fastify, options) {
         return reply.code(404).send({ error: 'Task not found in this deliverable' });
       }
 
+      // Cancelled tasks are immutable
+      if (currentTask.isCancelled) {
+        return reply.code(409).send({ error: 'Cannot change status of a cancelled task' });
+      }
+
       // Get tasks in target column to determine position
       const targetColumnTasks = await dbService.getTasks({
         projectId: project.id,
@@ -806,11 +891,12 @@ export default async function projectRoutes(fastify, options) {
       const newPosition = targetColumnTasks.length > 0 ?
         Math.max(...targetColumnTasks.map(t => t.position || 0)) + 10 : 10;
 
-      // Update task
+      // Update task — agent claims by setting agentName alongside status
       const updatedTask = await dbService.updateTask(taskIdNum, {
         ...currentTask,
         status,
         position: newPosition,
+        ...(agentName !== undefined && { agentName }),
         updatedAt: new Date()
       });
 
@@ -819,6 +905,55 @@ export default async function projectRoutes(fastify, options) {
     } catch (error) {
       request.log.error(error, 'Failed to change task status');
       reply.code(500).send({ error: 'Failed to change task status' });
+    }
+  });
+
+  // PATCH /projects/:code/deliverables/:delivId/tasks/:taskId/cancel - Cancel a task (irreversible)
+  fastify.patch('/projects/:code/deliverables/:delivId/tasks/:taskId/cancel', {
+    schema: {
+      tags: ['projects'],
+      summary: 'Cancel a task (irreversible)',
+      description: 'Sets is_cancelled=true and forces status to COMPLETED. Cannot be undone. Dependents are still eligible for promotion. Returns 409 if already cancelled.',
+      params: {
+        type: 'object',
+        required: ['code', 'delivId', 'taskId'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+          delivId: { type: 'string', pattern: '^\\d+$' },
+          taskId: { type: 'string', pattern: '^\\d+$' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { code, delivId, taskId } = request.params;
+      const deliverableId = parseInt(delivId);
+      const taskIdNum = parseInt(taskId);
+
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const currentTask = await dbService.getTaskById(taskIdNum);
+      if (!currentTask || currentTask.projectId !== project.id || currentTask.deliverableId !== deliverableId) {
+        return reply.code(404).send({ error: 'Task not found in this deliverable' });
+      }
+
+      if (currentTask.isCancelled) {
+        return reply.code(409).send({ error: 'Task is already cancelled' });
+      }
+
+      const updatedTask = await dbService.updateTask(taskIdNum, {
+        isCancelled: true,
+        updatedBy: request.user.id
+      });
+
+      request.log.info(`Task ${taskId} cancelled in deliverable ${delivId}`);
+      reply.send(updatedTask);
+    } catch (error) {
+      request.log.error(error, 'Failed to cancel task');
+      reply.code(500).send({ error: 'Failed to cancel task' });
     }
   });
 

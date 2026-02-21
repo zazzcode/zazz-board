@@ -1,5 +1,5 @@
 import * as pactum from 'pactum';
-import { clearTaskData, createTestDeliverable } from '../helpers/testDatabase.js';
+import { clearTaskData, createTestDeliverable, resetProjectDefaults } from '../helpers/testDatabase.js';
 
 const { spec } = pactum;
 const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
@@ -7,6 +7,7 @@ const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
 describe('Deliverables Plan Approval', () => {
   beforeEach(async () => {
     await clearTaskData();
+    await resetProjectDefaults();
   });
 
   it('should require plan_file_path to be set before approval', async () => {

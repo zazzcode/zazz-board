@@ -167,6 +167,37 @@ export default async function taskGraphRoutes(fastify, options) {
     }
   });
 
+  // GET /projects/:code/deliverables/:delivId/graph - Get task graph scoped to a deliverable
+  fastify.get('/projects/:code/deliverables/:delivId/graph', {
+    schema: taskGraphSchemas.getDeliverableGraph
+  }, async (request, reply) => {
+    try {
+      const { code, delivId } = request.params;
+      const deliverableId = parseInt(delivId);
+
+      const project = await dbService.getProjectByCode(code);
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const deliverable = await dbService.getDeliverableById(deliverableId);
+      if (!deliverable || deliverable.projectId !== project.id) {
+        return reply.code(404).send({ error: 'Deliverable not found in this project' });
+      }
+
+      const graph = await dbService.getDeliverableTaskGraph(deliverableId);
+      reply.send({
+        deliverableId,
+        projectCode: project.code,
+        taskGraphLayoutDirection: project.taskGraphLayoutDirection,
+        ...graph
+      });
+    } catch (error) {
+      request.log.error(error, 'Failed to fetch deliverable task graph');
+      reply.code(500).send({ error: 'Failed to fetch deliverable task graph' });
+    }
+  });
+
   // GET /coordination-types - List all coordination types
   fastify.get('/coordination-types', {
     schema: taskGraphSchemas.getCoordinationTypes
