@@ -1,5 +1,5 @@
 /**
- * JSON Schema validation definitions for Task Blaster API
+ * JSON Schema validation definitions for Zazz Board API
  * Uses Fastify's built-in AJV for maximum performance
  */
 

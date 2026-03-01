@@ -17,7 +17,7 @@ export default async function (app, opts) {
   // Root endpoint
   app.get('/', async (request, reply) => {
     reply.send({ 
-      message: 'Task Blaster API', 
+      message: 'Zazz Board API', 
       version: '1.0.0',
       endpoints: ['/health', '/users', '/projects', '/tasks', '/tags']
     });

@@ -526,7 +526,7 @@ These tests are designed to run in CI pipelines:
 - **API Documentation**: `api/src/routes/` (route files contain inline docs)
 - **Test Helpers**: `api/__tests__/helpers/testDatabase.js`
 - **Test Setup**: `api/__tests__/README.md`
-- **Feature Spec**: `~/Dev/task-blaster/user-defined-status-columns.md`
+- **Feature Spec**: `~/Dev/zazz-board/main/user-defined-status-columns.md`
 
 ---
 

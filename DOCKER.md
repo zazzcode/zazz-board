@@ -133,9 +133,9 @@ All services communicate through the `task_blaster_network` bridge network.
 ### Volume Issues
 ```bash
 # Remove volumes if you need a fresh database
-docker volume rm task-blaster_postgres_data
+docker volume rm zazz-board_postgres_data
 # or for production
-docker volume rm task-blaster_postgres_prod_data
+docker volume rm zazz-board_postgres_prod_data
 ```
 
 ### Container Issues

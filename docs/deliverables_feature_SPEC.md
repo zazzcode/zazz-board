@@ -1,6 +1,6 @@
 # Deliverable Specification (SPEC): Deliverables Feature
 
-**Project**: Zazz Board (Task Blaster)
+**Project**: Zazz Board
 **Branch**: `deliverables-mvp`
 **Created**: 2026-02-16
 **Status**: Implemented
@@ -903,7 +903,7 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
     approved_at: '2026-02-02T09:00:00Z',
     git_worktree: 'fix-tag-validation',
     git_branch: 'fix-tag-validation',
-    pull_request_url: 'https://github.com/michaelwitz/task-blaster/pull/12',
+    pull_request_url: 'https://github.com/zazzcode/zazz-board/pull/12',
     created_by: 5
   },
   {
@@ -968,7 +968,7 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
     approved_at: '2026-01-29T09:00:00Z',
     git_worktree: 'fix-auth-token-expiry',
     git_branch: 'fix-auth-token-expiry',
-    pull_request_url: 'https://github.com/michaelwitz/task-blaster/pull/8',
+    pull_request_url: 'https://github.com/zazzcode/zazz-board/pull/8',
     created_by: 3
   }
 ]
@@ -1452,7 +1452,7 @@ In the Zazz methodology, each deliverable is scoped to a single Git worktree:
 
 The repo structure with worktrees:
 ```
-task-blaster/
+zazz-board/
 ├── main/                    ← main branch worktree
 ├── homepage-redesign/       ← deliverable branch worktree
 ├── fix-auth-token-expiry/   ← another deliverable branch

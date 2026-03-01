@@ -1,17 +1,17 @@
 # React + Vite
 
-## Task Blaster Client — Quick Commands
+## Zazz Board Client — Quick Commands
 
 Start the client (from anywhere):
 
 ```
-npm --prefix /Users/michael/Dev/task-blaster/task-graph-mvp/client run dev
+npm --prefix /Users/michael/Dev/zazz-board/main/client run dev
 ```
 
 Alternative using cd:
 
 ```
-cd /Users/michael/Dev/task-blaster/task-graph-mvp/client && npm run dev
+cd /Users/michael/Dev/zazz-board/main/client && npm run dev
 ```
 
 ---

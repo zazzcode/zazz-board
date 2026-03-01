@@ -56,7 +56,7 @@ export async function seedDeliverables() {
         approved_at: new Date('2026-02-02T09:00:00Z'),
         git_worktree: 'fix-tag-validation',
         git_branch: 'fix-tag-validation',
-        pull_request_url: 'https://github.com/michaelwitz/task-blaster/pull/12',
+        pull_request_url: 'https://github.com/zazzcode/zazz-board/pull/12',
         created_by: 5
       },
       {
@@ -121,7 +121,7 @@ export async function seedDeliverables() {
         approved_at: new Date('2026-01-29T09:00:00Z'),
         git_worktree: 'fix-auth-token-expiry',
         git_branch: 'fix-auth-token-expiry',
-        pull_request_url: 'https://github.com/michaelwitz/task-blaster/pull/8',
+        pull_request_url: 'https://github.com/zazzcode/zazz-board/pull/8',
         created_by: 3
       }
     ]);

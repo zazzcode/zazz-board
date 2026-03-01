@@ -32,7 +32,7 @@ export default async function routes(fastify, options) {
   // Root endpoint (public)
   fastify.get('/', { schema: coreSchemas.getRoot }, async (request, reply) => {
     reply.send({ 
-      message: 'Task Blaster API', 
+      message: 'Zazz Board API', 
       version: '1.0.0',
       endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/images', '/translations', '/status-definitions', '/coordination-types']
     });
