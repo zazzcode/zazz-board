@@ -1,53 +1,44 @@
 # Zazz Board
 
-**Zazz Board** is a Kanban-style orchestration app for coordinating **AI agents** and **humans** on software development. Work is organized as **deliverables** (features, bug fixes, refactors) that group **tasks**. Humans own specs and deliverable flow; agents own task execution and QA. Only deliverables are PR’d — never individual tasks.
+**Zazz Board** is a Kanban-style orchestration app for coordinating **AI agents** and **owners** — the people who define what to build, approve PLANs, and review results. Work is organized by **project**; each project contains **deliverables** (features, bug fixes, refactors) that group **tasks**. Owners manage SPECs and deliverable flow; agents handle task execution and QA. Only deliverables are PR’d — never individual tasks.
 
 **Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
 
----
-
-## What is the Zazz methodology?
-
-The **Zazz methodology** is a way of working with AI agents on software projects:
-
-1. **Spec-driven**: Each unit of work is a **deliverable** with a **DED** (Deliverable Expectations Document) and an **implementation plan** (markdown). Requirements and acceptance criteria live in the DED; tests are derived from AC.
-2. **Deliverable = branch**: One Git worktree/branch per deliverable. Tasks live under that deliverable; agents implement tasks in that worktree.
-3. **PR at deliverable level**: Tasks are never opened as PRs. When all tasks for a deliverable are done, a **single PR** is created for the deliverable’s branch. Humans review and merge the deliverable.
-4. **Clear roles**: **Humans** create deliverables, write DEDs and plans, approve plans, and review/merge PRs. **Agents** create tasks from plans, implement tasks, run QA, and (when ready) create the deliverable PR. Task cards are for visibility; task execution is agent-managed.
-
-So: **Project → Deliverable → Tasks**. You track *what* (deliverables and their status) and *how* (tasks and dependencies) in one place.
-
-### Mandatory requirements
-
-- **Git worktrees**: Each deliverable must use a **Git worktree** (one working directory + branch per deliverable). Worktrees give agents a single, unambiguous working context: no branch switching and no ambiguity about which branch or directory to use. Tooling and agents always operate in the correct place without inferring from branch names or history.
-- **API-level testing**: Behavior and validation are exercised heavily via **API integration tests** (e.g. Vitest + PactumJS against the real API). Those tests validate functionality and **drive acceptance criteria** — AC is expressed and verified at the API boundary.
-- **Language-neutral**: The methodology does not depend on a specific programming language or framework. Specs, DEDs, and plans are markdown; deliverables and tasks are generic work units.
+**Framework:** Zazz Board is the tool that enables teams to practice the [Zazz Framework](docs/ZAZZ-FRAMEWORK.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners (Project Owners and Deliverable Owners) and agents collaborate.
 
 ---
 
-## How it’s implemented
+## Table of contents
 
-### Hierarchy and IDs
+- [Main views and features](#main-views-and-features)
+- [Quick start](#quick-start)
+- [Running in the cloud](#running-in-the-cloud)
+- [Running tests](#running-tests)
+- [API docs (Swagger)](#api-docs-swagger)
+- [API authentication](#api-authentication)
+- [Common issues](#common-issues)
+- [Reference](#reference)
+- [About this repository](#about-this-repository)
+- [Documentation](#documentation)
 
-- **Projects** have a `code` (e.g. `ZAZZ`, `APIMOD`) and two workflows: one for **task** columns (Kanban), one for **deliverable** columns.
-- **Deliverables** are the human-facing unit: human-readable ID `{PROJECT_CODE}-{n}` (e.g. `ZAZZ-1`), type (FEATURE, BUG_FIX, REFACTOR, etc.), DED/plan file paths, plan approval, Git worktree/branch, PR URL. Each deliverable has a status (Planning → In Progress → In Review → Staged → Done, or project-specific).
-- **Tasks** belong to exactly one deliverable, identified by integer `id` (agent-facing). They use the Zazz task workflow: **To Do → Ready → In Progress → QA → Completed**. Dependencies and coordination are modeled in the task graph (DEPENDS_ON, COORDINATES_WITH); readiness and auto-promotion (e.g. TO_DO → READY when deps are met) are supported.
+---
 
-### Main views and features
+## Main views and features
 
 | View | Purpose |
 |------|--------|
 | **Project list** | Create/edit projects; configure task and deliverable workflows. |
-| **Deliverable list** | Sortable table of deliverables per project; DED/plan/PRD paths with copy-to-clipboard; PR links. |
+| **Deliverable list** | Sortable table of deliverables per project; SPEC/PLAN/PRD paths with copy-to-clipboard; PR links. |
 | **Deliverable Kanban** | Columns from project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done). Drag-and-drop deliverable cards; task progress and PR URL on cards. |
 | **Task Kanban** | Columns from project’s task workflow (To Do, Ready, In Progress, QA, Completed). Tasks show deliverable name in card footer. Drag-and-drop. |
 | **Task graph** | Dependency graph with **swim lanes per deliverable**; each lane is one deliverable’s sub-graph; edges can cross lanes. Readiness and coordination types (e.g. TEST_TOGETHER, DEPLOY_TOGETHER) supported. |
 
 ### Deliverable lifecycle (high level)
 
-1. **Planning**: Human creates deliverable, sets DED/plan paths and worktree/branch. Human approves plan (sets `approved_by` / `approved_at`). Human or system moves deliverable to **In Progress** (guard: plan approved + plan path set).
-2. **Execution**: Agents create tasks from the plan, work them through To Do → Ready → In Progress → QA → Completed. When all tasks are completed, agent (or human) creates PR and sets `pull_request_url` on the deliverable, then moves deliverable to **In Review**.
-3. **Review & release**: Human reviews PR, merges to staging (**Staged**) then to main (**Done** or **Prod** for projects with a release-pipeline workflow). Status history is stored for lead-time and reporting.
+1. **Deliverable creation**: Owner works with the **spec builder agent** to create the deliverable specification (SPEC). During that dialogue, the agent drafts the SPEC document and creates the deliverable card on the Kanban board via the API — both with sufficient clarity and correct metadata (SPEC path, worktree, branch).
+2. **Planning**: The **Planner agent** decomposes the SPEC into the PLAN — phased sequence of tasks with per-task acceptance criteria, test requirements, and file assignments. Owner approves PLAN (sets `approved_by` / `approved_at`), sets PLAN path. Owner or system moves deliverable to **In Progress** (guard: PLAN approved + PLAN path set).
+3. **Execution**: **Coordinator** creates tasks from the PLAN via the API; **Workers** implement tasks; **QA** validates against acceptance criteria. When all tasks are complete, QA creates PR and sets `pull_request_url` on the deliverable, then moves deliverable to **In Review**.
+4. **Review & release**: Owner reviews PR, merges to staging (**Staged**) then to main (**Done** or **Prod** for projects with a release-pipeline workflow). Status history is stored for lead-time and reporting.
 
 ### Tech notes
 
@@ -58,7 +49,7 @@ So: **Project → Deliverable → Tasks**. You track *what* (deliverables and th
 
 ### Sample project (seed data)
 
-Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. The primary project is intended to have an overarching **Technical Architecture** document that applies to all deliverables: **TECH_ARCHITECTURE.md** (at repo root or in `docs/`). That doc describes the system-wide architecture; individual deliverables reference it and add deliverable-specific design in their DEDs and plans.
+Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. The primary project is intended to have an overarching **Technical Architecture** document that applies to all deliverables: **TECH_ARCHITECTURE.md** (at repo root or in `docs/`). That doc describes the system-wide architecture; individual deliverables reference it and add deliverable-specific design in their SPECs and PLANs.
 
 ---
 
@@ -293,9 +284,16 @@ Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433
 
 ---
 
+## About this repository
+
+This repository is developed using the Zazz framework (dogfooding). Zazz Board is built with Zazz Board — we use our own deliverables, SPECs, PLANs, and workflow to evolve the product.
+
+---
+
 ## Documentation
 
+- **[docs/ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md)** — Full framework overview: terminology (SPEC, PLAN), workflow stages, agent roles, two kanban boards, TDD, and how to follow the methodology.
 - **[AGENTS.md](./AGENTS.md)** — Primary reference for agents and developers: repo layout, full API route list, DB setup, test strategy (Vitest + PactumJS + test DB), troubleshooting.
 - **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
-- **docs/deliverables_feature_DED.md** — Full Deliverable Expectations Document (DED) for the deliverables feature: problem statement, definitions, schema, API, UI, seed data, acceptance criteria, and Zazz lifecycle in detail.
+- **docs/deliverables_feature_SPEC.md** — Full Deliverable Specification (SPEC) for the deliverables feature: problem statement, definitions, schema, API, UI, seed data, acceptance criteria, and Zazz lifecycle in detail.
