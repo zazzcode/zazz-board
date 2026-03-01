@@ -2,6 +2,15 @@
 
 Reference for AI agents and developers: structure, setup, DB, tests, and API. **App name is changing from "Task Blaster" to "Zazz Board"** — code and docs may still reference the old name until the rename is complete.
 
+## CRITICAL — Worktree Workflow (MANDATORY)
+
+- **Main worktree is read-only.** Never edit or merge in main.
+- **Work only in feature worktrees.** Create a worktree per branch.
+- **Flow:** Work in feature worktree → push branch to GitHub → merge on GitHub → pull main locally.
+- **Never merge into main locally.** Main must reflect GitHub after pull.
+
+---
+
 ## Overview
 
 **Zazz Board** (formerly Task Blaster) is a Kanban-style orchestration app for coordinating AI agents and humans on software work.

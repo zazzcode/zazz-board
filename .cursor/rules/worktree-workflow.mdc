@@ -1,0 +1,11 @@
+---
+description: Git worktree workflow — never work in main (Cursor always-apply backup)
+alwaysApply: true
+---
+
+# Worktree Workflow (MANDATORY)
+
+- **Main worktree is read-only.** Never edit or merge in main.
+- **Work only in feature worktrees.** Create a worktree per branch.
+- **Flow:** Work in feature worktree → push branch to GitHub → merge on GitHub → pull main locally.
+- **Never merge into main locally.** Main must reflect GitHub after pull.

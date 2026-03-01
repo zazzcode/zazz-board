@@ -110,6 +110,115 @@ npm run dev
 
 ---
 
+## Running in the cloud
+
+### Option 1: Docker Compose (self-hosted)
+
+For a single-node deployment, use `docker-compose.prod.yml`:
+
+```bash
+export POSTGRES_PASSWORD=your_secure_password
+docker compose -f docker-compose.prod.yml up -d
+```
+
+- **Postgres**: port 5432 (internal)
+- **API**: http://localhost:3030
+- **Client**: http://localhost:80 (Nginx)
+
+Set `API_BASE_URL` in the API container if the client needs to reach the API at a different host (e.g. a public URL).
+
+---
+
+### Option 2: AWS (RDS + ECS)
+
+| Component | AWS service |
+|-----------|-------------|
+| Database | **RDS** PostgreSQL 15 |
+| API | **ECS Fargate** (container from `api/Dockerfile`) |
+| Client | **S3** + **CloudFront** (static build) |
+| Task images | **S3** (in work — see [Cloud deployment notes](#cloud-deployment-notes-in-work)) |
+
+**Flow:** Create RDS instance → build and push API image to ECR → deploy ECS task with `DATABASE_URL` pointing at RDS → build client with `VITE_API_URL` set to your API URL → upload to S3, configure CloudFront. Use **Application Load Balancer** in front of ECS for the API.
+
+---
+
+### Option 3: GCP (Cloud SQL + Cloud Run)
+
+| Component | GCP service |
+|-----------|-------------|
+| Database | **Cloud SQL** (PostgreSQL 15) |
+| API | **Cloud Run** (container from `api/Dockerfile`) |
+| Client | **Cloud Storage** + **Cloud CDN** (or Firebase Hosting) |
+| Task images | **Cloud Storage** (in work — see [Cloud deployment notes](#cloud-deployment-notes-in-work)) |
+
+**Step 1 — Cloud SQL**
+
+1. Create a Cloud SQL instance (PostgreSQL 15).
+2. Create database `task_blaster_db` and user.
+3. Enable **Cloud SQL Admin API** and (optionally) **Private IP** for VPC connectivity.
+
+**Step 2 — API on Cloud Run**
+
+1. Build and push the API image to **Artifact Registry**:
+   ```bash
+   gcloud builds submit --tag gcr.io/YOUR_PROJECT/zazz-board-api ./api
+   ```
+2. Deploy to Cloud Run:
+   ```bash
+   gcloud run deploy zazz-board-api \
+     --image gcr.io/YOUR_PROJECT/zazz-board-api \
+     --platform managed \
+     --region us-central1 \
+     --set-env-vars "DATABASE_URL=postgres://USER:PASS@/task_blaster_db?host=/cloudsql/PROJECT:REGION:INSTANCE" \
+     --add-cloudsql-instances PROJECT:REGION:INSTANCE
+   ```
+3. Use **Cloud SQL Auth Proxy** connection name in `DATABASE_URL` when using Unix socket, or configure **VPC connector** for private IP.
+
+**Step 3 — Client**
+
+1. Build the client with the API URL:
+   ```bash
+   cd client && VITE_API_URL=https://your-api-url.run.app npm run build
+   ```
+2. Upload `dist/` to a **Cloud Storage** bucket and enable static website hosting, or use **Firebase Hosting**.
+3. Optionally put **Cloud CDN** in front for caching.
+
+**Step 4 — Seed the database**
+
+Run the seed script once against Cloud SQL (e.g. from Cloud Shell or a one-off Cloud Run job with `npm run db:reset`), or use a local connection through the Cloud SQL Auth Proxy.
+
+---
+
+### Cloud deployment notes (in work)
+
+**Image storage:** For cloud deployments, task images should be stored in object storage rather than the database:
+
+- **AWS:** **S3** — upload images to a bucket; store metadata and object keys in the DB.
+- **GCP:** **Cloud Storage** — same pattern; store metadata and `gs://` URLs or object names in the DB.
+
+**Configuration:** The API will need environment or config to distinguish cloud vs local (e.g. `STORAGE_BACKEND=s3` or `STORAGE_BACKEND=gcs` vs database). This allows the image service to route uploads and serves to the correct backend. *This functionality is in work.*
+
+---
+
+## Running tests
+
+Tests use a separate database (`task_blaster_test`). One-time setup:
+
+```bash
+docker exec task_blaster_postgres psql -U postgres -c "CREATE DATABASE task_blaster_test;" 2>/dev/null || true
+cd api && DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_test npm run db:reset
+```
+
+Then run tests (from `api/`):
+
+```bash
+set -a && source .env && set +a && NODE_ENV=test npm run test
+```
+
+See [api/__tests__/README.md](./api/__tests__/README.md) for details.
+
+---
+
 ## API docs (Swagger)
 
 The API serves **OpenAPI 3.1** interactive docs (Swagger UI) at **http://localhost:3030/docs** when the API is running. The spec is **generated from Fastify route schemas** (single source of truth; no separate YAML to maintain). It includes all routes, request/response shapes, and security: **TB_TOKEN** (header) and **Bearer** (Authorization header). Access to `/docs` is **token-protected** so only authenticated users and agents can view it in production.
