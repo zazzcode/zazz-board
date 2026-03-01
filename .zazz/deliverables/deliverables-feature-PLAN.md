@@ -1,6 +1,6 @@
 # Implementation Plan: Deliverables MVP
 
-**SPEC Reference**: `docs/deliverables_feature_SPEC.md`
+**SPEC Reference**: `.zazz/deliverables/deliverables-feature-SPEC.md`
 **Branch**: `deliverables-mvp`
 **Created**: 2026-02-17
 

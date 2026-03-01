@@ -49,7 +49,7 @@
 
 ### Sample project (seed data)
 
-Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. The primary project is intended to have an overarching **Technical Architecture** document that applies to all deliverables: **TECH_ARCHITECTURE.md** (at repo root or in `docs/`). That doc describes the system-wide architecture; individual deliverables reference it and add deliverable-specific design in their SPECs and PLANs.
+Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See [docs/ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md) for the full structure.
 
 ---
 
@@ -296,4 +296,6 @@ This repository is developed using the Zazz framework (dogfooding). Zazz Board i
 - **[AGENTS.md](./AGENTS.md)** — Primary reference for agents and developers: repo layout, full API route list, DB setup, test strategy (Vitest + PactumJS + test DB), troubleshooting.
 - **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
-- **docs/deliverables_feature_SPEC.md** — Full Deliverable Specification (SPEC) for the deliverables feature: problem statement, definitions, schema, API, UI, seed data, acceptance criteria, and Zazz lifecycle in detail.
+- **`.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md) Repository Structure.
+- **`.agents/skills/`** — Agent skills (spec-builder, planner, coordinator, worker, qa, zazz-board-api). Developed here; synced to zazz-skills repo when stable.
+- **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).

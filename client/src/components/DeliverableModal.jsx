@@ -115,7 +115,7 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable, selec
 
           <TextInput
             label={t('deliverables.dedFilePath')}
-            placeholder="path/to/DED.md"
+            placeholder="path/to/SPEC.md"
             value={formData.dedFilePath}
             onChange={(e) => setFormData({ ...formData, dedFilePath: e.target.value })}
           />

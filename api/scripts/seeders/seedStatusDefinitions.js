@@ -13,7 +13,7 @@ export async function seedStatusDefinitions() {
       { code: 'QA', description: 'Task undergoing quality assurance and acceptance testing' },
       { code: 'COMPLETED', description: 'Task finished and verified against acceptance criteria' },
       { code: 'DONE', description: 'Merged to main, deliverable complete' },
-      { code: 'PLANNING', description: 'DED and implementation plan being created or refined' },
+      { code: 'PLANNING', description: 'SPEC and implementation plan being created or refined' },
       { code: 'STAGED', description: 'Merged to staging branch for integration testing' },
       { code: 'UAT', description: 'User acceptance testing in integration environment' },
       { code: 'PROD', description: 'Merged to main and deployed to production (terminal state)' },

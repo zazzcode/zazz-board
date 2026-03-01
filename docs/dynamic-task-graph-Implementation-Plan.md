@@ -1,7 +1,7 @@
 # Dynamic Task Graph Execution — Implementation Plan
 
 ## Problem Summary
-This is a **major refactor** of the task model. The existing task functionality (schema, seed data, service functions, routes, and tests) is being torn down and rebuilt to support dynamic, phase-by-phase task graph execution per the DED (`DYNAMIC_TASK_GRAPH_EXECUTION_DED.md`).
+This is a **major refactor** of the task model. The existing task functionality (schema, seed data, service functions, routes, and tests) is being torn down and rebuilt to support dynamic, phase-by-phase task graph execution per the SPEC (`DYNAMIC_TASK_GRAPH_EXECUTION_SPEC.md`).
 
 **What does NOT change:** Projects, deliverables, users, tags, translations, status definitions, coordination types, and the Kanban board task routes are untouched.
 

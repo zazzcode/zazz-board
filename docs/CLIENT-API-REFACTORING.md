@@ -50,7 +50,7 @@ The Task Blaster MVP has undergone a major refactoring to support **Deliverables
 | Update deliverable | `PUT /projects/:code/deliverables/:id` | PUT | Update name, description, file paths, etc. |
 | Delete deliverable | `DELETE /projects/:code/deliverables/:id` | DELETE | Delete deliverable (CASCADE deletes tasks) |
 | Change status | `PATCH /projects/:code/deliverables/:id/status` | PATCH | Transition to new status in workflow |
-| Approve plan | `PATCH /projects/:code/deliverables/:id/approve` | PATCH | Approve DED/plan and set approval metadata |
+| Approve plan | `PATCH /projects/:code/deliverables/:id/approve` | PATCH | Approve SPEC/plan and set approval metadata |
 | Get tasks in deliverable | `GET /projects/:code/deliverables/:id/tasks` | GET | Fetch tasks for this deliverable |
 
 ### Project Status Workflow (New)
@@ -199,7 +199,7 @@ The TaskCard footer displays:
     { status: "PLANNING", changedAt: "2026-02-17T...", changedBy: 1 },
     { status: "IN_PROGRESS", changedAt: "2026-02-17T...", changedBy: 1 }
   ],
-  dedFilePath: "/path/to/DED.md",
+  dedFilePath: "/path/to/SPEC.md",
   planFilePath: "/path/to/PLAN.md",
   prdFilePath: "/path/to/PRD.md",
   pullRequestUrl: "https://github.com/.../pull/123",
@@ -399,7 +399,7 @@ The client now supports **two distinct Kanban boards**, each with its own column
 **Columns**: Planning | In Progress | In Review | Staged | Done (configurable per project)  
 **Cards**: Deliverable cards with name, type, task progress bar, PR link, approval status  
 **Flow**:
-- Deliverables start in Planning (DED + plan creation)
+- Deliverables start in Planning (SPEC + plan creation)
 - Move to In Progress when plan is approved
 - Move to In Review when PR is created
 - Move to Staged when merged to staging

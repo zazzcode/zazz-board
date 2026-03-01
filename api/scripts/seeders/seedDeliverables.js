@@ -17,8 +17,8 @@ export async function seedDeliverables() {
           { status: 'PLANNING', changedAt: '2026-01-15T10:00:00Z', changedBy: 5 },
           { status: 'IN_PROGRESS', changedAt: '2026-01-20T14:30:00Z', changedBy: 5 }
         ],
-        ded_file_path: 'docs/deliverables_feature_DED.md',
-        plan_file_path: 'docs/deliverables_feature_plan.md',
+        ded_file_path: '.zazz/deliverables/deliverables-feature-SPEC.md',
+        plan_file_path: '.zazz/deliverables/deliverables-feature-PLAN.md',
         approved_by: 5,
         approved_at: new Date('2026-01-20T14:30:00Z'),
         git_worktree: 'deliverables-mvp',
@@ -34,7 +34,7 @@ export async function seedDeliverables() {
         status: 'PLANNING',
         position: 20,
         status_history: [{ status: 'PLANNING', changedAt: '2026-02-10T09:00:00Z', changedBy: 5 }],
-        ded_file_path: 'docs/agent-skills-DED.md',
+        ded_file_path: 'docs/agent-skills-SPEC.md',
         created_by: 5
       },
       {
@@ -50,7 +50,7 @@ export async function seedDeliverables() {
           { status: 'IN_PROGRESS', changedAt: '2026-02-02T09:00:00Z', changedBy: 5 },
           { status: 'IN_REVIEW', changedAt: '2026-02-05T16:00:00Z', changedBy: null }
         ],
-        ded_file_path: 'docs/fix-tag-validation-DED.md',
+        ded_file_path: 'docs/fix-tag-validation-SPEC.md',
         plan_file_path: 'docs/fix-tag-validation-plan.md',
         approved_by: 5,
         approved_at: new Date('2026-02-02T09:00:00Z'),
@@ -71,7 +71,7 @@ export async function seedDeliverables() {
           { status: 'PLANNING', changedAt: '2026-01-20T08:00:00Z', changedBy: 2 },
           { status: 'IN_PROGRESS', changedAt: '2026-01-25T10:00:00Z', changedBy: 2 }
         ],
-        ded_file_path: 'docs/mobdev-auth-screens-DED.md',
+        ded_file_path: 'docs/mobdev-auth-screens-SPEC.md',
         plan_file_path: 'docs/mobdev-auth-screens-plan.md',
         approved_by: 2,
         approved_at: new Date('2026-01-25T10:00:00Z'),
@@ -91,7 +91,7 @@ export async function seedDeliverables() {
           { status: 'PLANNING', changedAt: '2026-01-05T08:00:00Z', changedBy: 3 },
           { status: 'IN_PROGRESS', changedAt: '2026-01-12T11:00:00Z', changedBy: 3 }
         ],
-        ded_file_path: 'docs/apimod-rest-migration-DED.md',
+        ded_file_path: 'docs/apimod-rest-migration-SPEC.md',
         plan_file_path: 'docs/apimod-rest-migration-plan.md',
         approved_by: 3,
         approved_at: new Date('2026-01-12T11:00:00Z'),
@@ -115,7 +115,7 @@ export async function seedDeliverables() {
           { status: 'STAGED', changedAt: '2026-02-03T10:00:00Z', changedBy: 3 },
           { status: 'PROD', changedAt: '2026-02-05T14:00:00Z', changedBy: 3 }
         ],
-        ded_file_path: 'docs/apimod-auth-token-fix-DED.md',
+        ded_file_path: 'docs/apimod-auth-token-fix-SPEC.md',
         plan_file_path: 'docs/apimod-auth-token-fix-plan.md',
         approved_by: 3,
         approved_at: new Date('2026-01-29T09:00:00Z'),

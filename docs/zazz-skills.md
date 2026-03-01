@@ -17,7 +17,7 @@ Methodology for agents (manager, worker, QA) to interact with the Zazz Board API
 ## 2. Workflow Overview
 
 1. Manager selects approved deliverable (API or human prompt)
-2. Manager retrieves DED + plan docs, analyzes them
+2. Manager retrieves SPEC + plan docs, analyzes them
 3. Manager (or delegated agent) creates tasks from plan via API with dependencies and collaboration rules → task graph
 4. Worker(s) pick up tasks, respect dependencies, reference local AGENTS.md + tech specs
 5. Manager polls API until all tasks are COMPLETED
@@ -40,12 +40,12 @@ Methodology for agents (manager, worker, QA) to interact with the Zazz Board API
 - **Option B**: Manager calls API to get next approved deliverable (future: polling endpoint)
 - **API**: List deliverables filtered by status; find one with approved plan (deliverable status/approval fields)
 
-### Step 2: Retrieve and Analyze DED + Plan
+### Step 2: Retrieve and Analyze SPEC + Plan
 
-Deliverable has `dedFilePath`, `planFilePath`, `prdFilePath` (local paths or URLs).
+Deliverable has `dedFilePath` (path to deliverable specification), `planFilePath`, `prdFilePath` (local paths or URLs).
 
 - Manager fetches those docs (file read or URL fetch)
-- Analyzes DED and implementation plan to understand scope, dependencies, acceptance criteria
+- Analyzes SPEC and implementation plan to understand scope, dependencies, acceptance criteria
 - Uses this to craft tasks in Step 3
 
 ### Step 3: Create Task Graph
@@ -69,7 +69,7 @@ Deliverable has `dedFilePath`, `planFilePath`, `prdFilePath` (local paths or URL
 
 - Call API to update task status when picking up
 - Reference: **local AGENTS.md** (project conventions) + **tech specs** for the deliverable
-- Task prompt should be sufficient; workers generally do **not** need DED or full plan
+- Task prompt should be sufficient; workers generally do **not** need SPEC or full plan
 - Respect dependency graph: only pick up tasks whose dependencies are COMPLETED
 - After completing work: update task status to COMPLETED, commit to worktree/branch
 
@@ -143,7 +143,7 @@ Each task created via the API should have a `prompt` field containing:
 [Step-by-step implementation guidance]
 
 ## Tech Spec
-[Relevant snippets from DED/plan for this task; file paths, interfaces, constraints]
+[Relevant snippets from SPEC/plan for this task; file paths, interfaces, constraints]
 
 ## Acceptance Criteria
 - [ ] Criterion 1
@@ -154,7 +154,7 @@ Each task created via the API should have a `prompt` field containing:
 [Tests that must pass for AC; file paths, test names]
 ```
 
-Task should be **self-contained** so a worker can execute without re-reading DED or full plan.
+Task should be **self-contained** so a worker can execute without re-reading SPEC or full plan.
 
 ---
 
@@ -166,7 +166,7 @@ Agents infer routes from the OpenAPI spec at `{API_BASE_URL}/docs/json`. Key ope
 |--------|-------------------|
 | List projects | GET projects |
 | List deliverables | GET projects/:projectCode/deliverables |
-| Get deliverable (DED, plan paths) | GET projects/:projectCode/deliverables/:id |
+| Get deliverable (SPEC, plan paths) | GET projects/:projectCode/deliverables/:id |
 | Create tasks | POST projects/:code/deliverables/:delivId/tasks |
 | Set task relations | POST projects/:code/tasks/:taskId/relations |
 | List deliverable tasks | GET projects/:projectCode/deliverables/:id/tasks |

@@ -56,7 +56,7 @@ app.get('/docs/json', {
 |--------|-----------|
 | List projects | `GET /projects` |
 | List deliverables | `GET /projects/:projectCode/deliverables` |
-| Get deliverable (DED, plan paths) | `GET /projects/:projectCode/deliverables/:id` |
+| Get deliverable (SPEC, plan paths) | `GET /projects/:projectCode/deliverables/:id` |
 | List tasks | `GET /projects/:projectCode/deliverables/:id/tasks` |
 | Create task | `POST /projects/:code/deliverables/:delivId/tasks` |
 | Set task relations | `POST /projects/:code/tasks/:taskId/relations` |
@@ -92,7 +92,7 @@ app.get('/docs/json', {
 {
   tags: ['deliverables'],
   summary: 'Get deliverable by ID',
-  description: 'Returns deliverable with dedFilePath, planFilePath, prdFilePath for document retrieval. Use projectCode (e.g. ZAZZ) and numeric deliverable id.',
+  description: 'Returns deliverable with path to deliverable specification (dedFilePath), planFilePath, prdFilePath for document retrieval. Use projectCode (e.g. ZAZZ) and numeric deliverable id.',
   params: { ... },
   body: { ... },
   response: { ... }

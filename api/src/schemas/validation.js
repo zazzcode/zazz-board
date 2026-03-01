@@ -60,7 +60,7 @@ const deliverableResponseSchema = {
     description: { type: 'string', nullable: true },
     type: { type: 'string', enum: ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION'] },
     status: { type: 'string' },
-    dedFilePath: { type: 'string', nullable: true, description: 'Path or URL to DED document' },
+    dedFilePath: { type: 'string', nullable: true, description: 'Path or URL to deliverable specification (SPEC)' },
     planFilePath: { type: 'string', nullable: true, description: 'Path or URL to implementation plan' },
     prdFilePath: { type: 'string', nullable: true, description: 'Path or URL to PRD document' },
     gitWorktree: { type: 'string', nullable: true },
@@ -709,7 +709,7 @@ export const deliverableSchemas = {
   getDeliverableById: {
     tags: ['deliverables'],
     summary: 'Get deliverable by ID',
-    description: 'Returns deliverable with dedFilePath, planFilePath, prdFilePath for document retrieval. Use projectCode (e.g. ZAZZ) and numeric deliverable id.',
+    description: 'Returns deliverable with path to deliverable specification (dedFilePath), planFilePath, prdFilePath for document retrieval. Use projectCode (e.g. ZAZZ) and numeric deliverable id.',
     params: {
       type: 'object',
       required: ['projectCode', 'id'],
@@ -725,7 +725,7 @@ export const deliverableSchemas = {
   createDeliverable: {
     tags: ['deliverables'],
     summary: 'Create deliverable',
-    description: 'Creates a deliverable in the project. Include dedFilePath, planFilePath for document links.',
+    description: 'Creates a deliverable in the project. Include dedFilePath (path to SPEC), planFilePath for document links.',
     params: {
       type: 'object',
       required: ['projectCode'],
@@ -754,7 +754,7 @@ export const deliverableSchemas = {
   updateDeliverable: {
     tags: ['deliverables'],
     summary: 'Update deliverable',
-    description: 'Updates deliverable including dedFilePath, planFilePath, prdFilePath for document paths.',
+    description: 'Updates deliverable including dedFilePath (path to SPEC), planFilePath, prdFilePath for document paths.',
     params: {
       type: 'object',
       required: ['projectCode', 'id'],
