@@ -1,0 +1,8 @@
+# .zazz/deliverables/index.yaml
+# Index of deliverables. Zazz Board is source of truth for workflow state.
+deliverables:
+  - id: ZAZZ-1
+    name: deliverables-feature
+    spec: deliverables-feature-SPEC.md
+    plan: deliverables-feature-PLAN.md
+    # status: IN_PROGRESS (Zazz Board is source of truth)

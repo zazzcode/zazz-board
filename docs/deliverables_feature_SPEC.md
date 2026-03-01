@@ -1,10 +1,10 @@
-# Deliverable Expectations Document (DED): Deliverables Feature
+# Deliverable Specification (SPEC): Deliverables Feature
 
-**Project**: Zazz-Board (Task Blaster)
+**Project**: Zazz Board (Task Blaster)
 **Branch**: `deliverables-mvp`
 **Created**: 2026-02-16
-**Status**: Draft — Awaiting Review
-**Author**: Michael Woytowitz + Warp Agent
+**Status**: Implemented
+**Author**: Michael Woytowitz
 
 ---
 
@@ -13,7 +13,7 @@
 Zazz-Board currently manages work at the **task** level only. There is no macro-level concept that groups tasks into a cohesive work product — a feature, bug fix, refactor, or other deliverable. Without this, there is:
 
 - No way to track the lifecycle of a body of work from planning → implementation → PR → merge.
-- No connection between a specification (DED), an implementation plan, and the tasks that execute it.
+- No connection between a specification (SPEC), an implementation plan, and the tasks that execute it.
 - No mechanism for agents to know when all tasks for a deliverable are complete and a PR should be created.
 - No swim lane organization on the Task Graph to visually group tasks by deliverable.
 - No dedicated Kanban board for tracking deliverable-level workflow.
@@ -25,19 +25,19 @@ This feature introduces **Deliverables** as a first-class entity that sits above
 ## 2. Definitions
 
 - **Deliverable**: A discrete work product (feature, bug fix, refactor, or other) that provides value or resolves an issue. A deliverable is scoped to a single repo/monorepo and lives within a single Git worktree/branch.
-- **DED (Deliverable Expectations Document)**: A markdown document that defines the requirements, scope, and acceptance criteria for a deliverable.
-- **Implementation Plan**: A markdown document with detailed technical steps for implementing the deliverable. Derived from the DED.
+- **Deliverable Specification (SPEC)**: A markdown document that defines the requirements, scope, and acceptance criteria for a deliverable.
+- **Implementation Plan (PLAN)**: A markdown document with detailed technical steps for implementing the deliverable. Derived from the SPEC.
 - **Deliverable Kanban Board**: A board tracking deliverable-level workflow (Planning → In Progress → In Review → Staged → Done).
 - **Task Kanban Board**: The existing board, now with columns aligned to the Zazz methodology (To Do → Ready → In Progress → QA → Completed).
 - **Task Graph (with Swim Lanes)**: The existing task dependency graph view, now organized into swim lanes per deliverable so each deliverable's sub-graph is visually separated.
-- **Zazz Methodology**: Spec-driven development (DED) + test-driven development (tests derived from AC). Tasks are never PR'd individually — only deliverables are PR'd as a branch.
-- **Task Ownership**: Tasks are created, worked on, and QA'd by agents. Humans work with DEDs, implementation plans, and deliverable cards. Tasks are displayed for work progress visibility but are agent-managed. Every task belongs to exactly one deliverable.
+- **Zazz Methodology**: Spec-driven development (SPEC) + test-driven development (tests derived from AC). Tasks are never PR'd individually — only deliverables are PR'd as a branch.
+- **Task Ownership**: Tasks are created, worked on, and QA'd by agents. Humans work with SPECs, implementation plans, and deliverable cards. Tasks are displayed for work progress visibility but are agent-managed. Every task belongs to exactly one deliverable.
 
 ---
 
 ## 3. Scope
 
-### 3.1 In Scope (This DED)
+### 3.1 In Scope (This SPEC)
 
 - `DELIVERABLES` database table and schema changes
 - `deliverable_id` FK added to `TASKS` table
@@ -61,10 +61,10 @@ This feature introduces **Deliverables** as a first-class entity that sits above
 - Agent skill for creating PRs when all tasks are complete
 - Agent QA workflow (automated QA pass, rework task creation)
 - Slack/Teams integration for AC clarification with human PM
-- Updating DED or plan markdown documents programmatically
+- Updating SPEC or plan markdown documents programmatically
 - Multi-repo deliverables (MVP assumes single repo/monorepo)
 - PRD (Product Requirements Document) management — field is optional, just a path
-- `USERS` table columns for Slack/Teams handles (noted for future DED)
+- `USERS` table columns for Slack/Teams handles (noted for future SPEC)
 
 ### 3.3 Future Considerations (Noted, Not Specified)
 
@@ -101,7 +101,7 @@ Default workflow for new projects (and seed data):
 
 | Order | ENUM Value | Display (en) | Description |
 |---|---|---|---|
-| 1 | `PLANNING` | Planning | DED and plan being created/refined |
+| 1 | `PLANNING` | Planning | SPEC and plan being created/refined |
 | 2 | `IN_PROGRESS` | In Progress | Plan approved, tasks being worked |
 | 3 | `IN_REVIEW` | In Review | PR created, awaiting human review |
 | 4 | `STAGED` | Staged | Merged to staging branch |
@@ -115,7 +115,7 @@ The deliverable workflow array is stored on the `PROJECTS` table as `deliverable
 
 | Order | ENUM Value | Display (en) | Description |
 |---|---|---|---|
-| 1 | `PLANNING` | Planning | DED and plan being created/refined |
+| 1 | `PLANNING` | Planning | SPEC and plan being created/refined |
 | 2 | `IN_PROGRESS` | In Progress | Plan approved, tasks being worked |
 | 3 | `IN_REVIEW` | In Review | PR created, awaiting human review |
 | 4 | `UAT` | UAT | User acceptance testing in integration environment |
@@ -140,7 +140,7 @@ stateDiagram-v2
     STAGED --> DONE : Merged to main
 ```
 
-> **Key detail**: Approving a plan (`PATCH /deliverables/:id/approve`) is a distinct action from transitioning status. Approval sets `approved_by` and `approved_at` but does **not** change the status — the deliverable remains in `PLANNING` until explicitly moved to `IN_PROGRESS`. The `IN_PROGRESS` transition guard validates that both conditions are met.
+> **Key detail**: Approving a plan (`PATCH /projects/:code/deliverables/:id/approve`) is a distinct action from transitioning status. Approval sets `approved_by` and `approved_at` but does **not** change the status — the deliverable remains in `PLANNING` until explicitly moved to `IN_PROGRESS`. The `IN_PROGRESS` transition guard validates that both conditions are met.
 
 ### 5.2 Task Statuses (Task Kanban Columns — Zazz Methodology)
 
@@ -203,7 +203,7 @@ sequenceDiagram
     note over H,S: Phase 1 — Planning (PLANNING status)
     H->>S: Create deliverable
     S-->>H: Status = PLANNING
-    H->>S: Set DED + Plan file paths
+    H->>S: Set SPEC + Plan file paths
     H->>S: Approve plan
     S-->>H: approved_by / approved_at set (status stays PLANNING)
     H->>S: Transition → IN_PROGRESS
@@ -238,7 +238,7 @@ sequenceDiagram
 ```
 
 **Phase ↔ Status mapping**:
-- **Phase 1** (Planning) = deliverable in `PLANNING`. Human authors the DED, writes the plan, and approves it. The deliverable stays in `PLANNING` until explicitly transitioned.
+- **Phase 1** (Planning) = deliverable in `PLANNING`. Owner creates the SPEC, derives the plan, and approves it. The deliverable stays in `PLANNING` until explicitly transitioned.
 - **Phase 2** (Execution) = deliverable in `IN_PROGRESS`. Agents create tasks, implement them, and run QA. Each task cycles through `TO_DO → READY → IN_PROGRESS → QA → COMPLETED`.
 - **Phase 3** (Review & Release) = deliverable moves through `IN_REVIEW → STAGED → DONE` (or `→ UAT → STAGED → PROD` for projects with a release-pipeline workflow).
 
@@ -260,7 +260,7 @@ CREATE TABLE DELIVERABLES (
   status_history  JSONB NOT NULL DEFAULT '[]',   -- Array of {status, changedAt, changedBy}
 
   -- Document paths (markdown files)
-  ded_file_path   VARCHAR(500),                  -- Path to DED markdown (repo-relative or shared drive URL)
+  ded_file_path   VARCHAR(500),                  -- Path to deliverable specification (SPEC) markdown (repo-relative or shared drive URL)
   plan_file_path  VARCHAR(500),                  -- Path to implementation plan markdown (REQUIRED for approval)
   prd_file_path   VARCHAR(500),                  -- Path to PRD markdown (optional)
 
@@ -417,7 +417,7 @@ All routes require `TB_TOKEN` authentication header (existing `authMiddleware`).
 
 ### 7.1 Deliverable CRUD
 
-#### GET /projects/:projectId/deliverables
+#### GET /projects/:code/deliverables
 List all deliverables for a project.
 
 **Query parameters:**
@@ -435,7 +435,7 @@ List all deliverables for a project.
     "type": "FEATURE",
     "status": "IN_PROGRESS",
     "statusHistory": [...],
-    "dedFilePath": "docs/deliverables_feature_DED.md",
+    "dedFilePath": "docs/deliverables_feature_SPEC.md",
     "planFilePath": "docs/deliverables_feature_plan.md",
     "prdFilePath": null,
     "approvedBy": 5,
@@ -455,13 +455,13 @@ List all deliverables for a project.
 ]
 ```
 
-#### GET /deliverables/:id
+#### GET /projects/:code/deliverables/:id
 Get a single deliverable by its serial `id`.
 
 **Response** `200`: Full deliverable object (same shape as list item above).
 **Response** `404`: `{ "error": "Deliverable not found" }`
 
-#### POST /projects/:projectId/deliverables
+#### POST /projects/:code/deliverables
 Create a new deliverable for a project.
 
 **Request body:**
@@ -470,7 +470,7 @@ Create a new deliverable for a project.
   "name": "Homepage Redesign",
   "description": "Full redesign of the homepage with modern components",
   "type": "FEATURE",
-  "dedFilePath": "docs/homepage-redesign-DED.md",
+  "dedFilePath": "docs/homepage-redesign-SPEC.md",
   "planFilePath": "docs/homepage-redesign-plan.md",
   "prdFilePath": "docs/homepage-redesign-PRD.md",
   "gitWorktree": "homepage-redesign",
@@ -483,7 +483,7 @@ Create a new deliverable for a project.
 
 **Response** `201`: Created deliverable object.
 
-#### PUT /deliverables/:id
+#### PUT /projects/:code/deliverables/:id
 Update a deliverable.
 
 **Request body** (all fields optional):
@@ -492,7 +492,7 @@ Update a deliverable.
   "name": "Homepage Redesign v2",
   "description": "Updated description...",
   "type": "FEATURE",
-  "dedFilePath": "docs/homepage-redesign-DED.md",
+  "dedFilePath": "docs/homepage-redesign-SPEC.md",
   "planFilePath": "docs/homepage-redesign-plan.md",
   "prdFilePath": "docs/homepage-redesign-PRD.md",
   "gitWorktree": "homepage-redesign",
@@ -504,7 +504,7 @@ Update a deliverable.
 **Response** `200`: Updated deliverable object.
 **Response** `404`: `{ "error": "Deliverable not found" }`
 
-#### DELETE /deliverables/:id
+#### DELETE /projects/:code/deliverables/:id
 Delete a deliverable. CASCADE deletes all associated tasks (tasks cannot exist without a deliverable).
 
 **Response** `200`: `{ "message": "Deliverable deleted successfully" }`
@@ -512,7 +512,7 @@ Delete a deliverable. CASCADE deletes all associated tasks (tasks cannot exist w
 
 ### 7.2 Deliverable Status Transitions
 
-#### PATCH /deliverables/:id/status
+#### PATCH /projects/:code/deliverables/:id/status
 Change a deliverable's status. Appends to `status_history`.
 
 **Request body:**
@@ -532,7 +532,7 @@ Change a deliverable's status. Appends to `status_history`.
 
 ### 7.3 Plan Approval
 
-#### PATCH /deliverables/:id/approve
+#### PATCH /projects/:code/deliverables/:id/approve
 Approve the implementation plan for a deliverable. Sets `approved_by` to the authenticated user and `approved_at` to the current timestamp.
 
 **Validation:**
@@ -559,7 +559,7 @@ Approve the implementation plan for a deliverable. Sets `approved_by` to the aut
 
 ### 7.4 Deliverable Tasks
 
-#### GET /deliverables/:id/tasks
+#### GET /projects/:code/deliverables/:id/tasks
 Get all tasks linked to a deliverable.
 
 **Response** `200`: Array of task objects (same shape as existing `GET /projects/:id/tasks`).
@@ -620,7 +620,7 @@ A sortable table listing all deliverables for the selected project.
 | Type | Yes | FEATURE, BUG_FIX, etc. (translated) |
 | Status | Yes | Current status (translated, color-coded badge) |
 | Status Changed | Yes | Datetime of last status change |
-| DED Path | No | File path with copy-to-clipboard icon button |
+| SPEC Path | No | File path with copy-to-clipboard icon button |
 | Plan Path | No | File path with copy-to-clipboard icon button |
 | PRD Path | No | File path with copy-to-clipboard icon button (if set) |
 | PR URL | No | Link to PR (if set) |
@@ -710,7 +710,7 @@ Add the following keys to all 4 language files and the `seedTranslations.js` see
     "description": "Description",
     "type": "Type",
     "status": "Status",
-    "dedFilePath": "DED File Path",
+    "dedFilePath": "SPEC Path",
     "planFilePath": "Plan File Path",
     "prdFilePath": "PRD File Path",
     "pullRequestUrl": "Pull Request URL",
@@ -741,7 +741,7 @@ Add the following keys to all 4 language files and the `seedTranslations.js` see
       "DONE": "Done"
     },
     "statusDescriptions": {
-      "PLANNING": "DED and implementation plan being created or refined",
+      "PLANNING": "SPEC and implementation plan being created or refined",
       "IN_PROGRESS": "Plan approved, tasks actively being worked",
       "IN_REVIEW": "PR created, awaiting human review",
       "UAT": "User acceptance testing in integration environment",
@@ -862,7 +862,7 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
       { status: 'PLANNING', changedAt: '2026-01-15T10:00:00Z', changedBy: 5 },
       { status: 'IN_PROGRESS', changedAt: '2026-01-20T14:30:00Z', changedBy: 5 }
     ]),
-    ded_file_path: 'docs/deliverables_feature_DED.md',
+    ded_file_path: 'docs/deliverables_feature_SPEC.md',
     plan_file_path: 'docs/deliverables_feature_plan.md',
     approved_by: 5,
     approved_at: '2026-01-20T14:30:00Z',
@@ -881,7 +881,7 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
     status_history: JSON.stringify([
       { status: 'PLANNING', changedAt: '2026-02-10T09:00:00Z', changedBy: 5 }
     ]),
-    ded_file_path: 'docs/agent-skills-DED.md',
+    ded_file_path: 'docs/agent-skills-SPEC.md',
     created_by: 5
   },
   {
@@ -897,7 +897,7 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
       { status: 'IN_PROGRESS', changedAt: '2026-02-02T09:00:00Z', changedBy: 5 },
       { status: 'IN_REVIEW', changedAt: '2026-02-05T16:00:00Z', changedBy: null }
     ]),
-    ded_file_path: 'docs/fix-tag-validation-DED.md',
+    ded_file_path: 'docs/fix-tag-validation-SPEC.md',
     plan_file_path: 'docs/fix-tag-validation-plan.md',
     approved_by: 5,
     approved_at: '2026-02-02T09:00:00Z',
@@ -918,7 +918,7 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
       { status: 'PLANNING', changedAt: '2026-01-20T08:00:00Z', changedBy: 2 },
       { status: 'IN_PROGRESS', changedAt: '2026-01-25T10:00:00Z', changedBy: 2 }
     ]),
-    ded_file_path: 'docs/mobdev-auth-screens-DED.md',
+    ded_file_path: 'docs/mobdev-auth-screens-SPEC.md',
     plan_file_path: 'docs/mobdev-auth-screens-plan.md',
     approved_by: 2,
     approved_at: '2026-01-25T10:00:00Z',
@@ -938,7 +938,7 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
       { status: 'PLANNING', changedAt: '2026-01-05T08:00:00Z', changedBy: 3 },
       { status: 'IN_PROGRESS', changedAt: '2026-01-12T11:00:00Z', changedBy: 3 }
     ]),
-    ded_file_path: 'docs/apimod-rest-migration-DED.md',
+    ded_file_path: 'docs/apimod-rest-migration-SPEC.md',
     plan_file_path: 'docs/apimod-rest-migration-plan.md',
     approved_by: 3,
     approved_at: '2026-01-12T11:00:00Z',
@@ -962,7 +962,7 @@ Deliverables span multiple projects and statuses. ZAZZ is the primary test proje
       { status: 'STAGED', changedAt: '2026-02-03T10:00:00Z', changedBy: 3 },
       { status: 'PROD', changedAt: '2026-02-05T14:00:00Z', changedBy: 3 }
     ]),
-    ded_file_path: 'docs/apimod-auth-token-fix-DED.md',
+    ded_file_path: 'docs/apimod-auth-token-fix-SPEC.md',
     plan_file_path: 'docs/apimod-auth-token-fix-plan.md',
     approved_by: 3,
     approved_at: '2026-01-29T09:00:00Z',
@@ -1050,7 +1050,7 @@ Modify `reset-and-seed.js`:
 **Precondition**: Deliverable exists in PLANNING status.
 **Flow**:
 1. User opens the deliverable (edit modal or detail view).
-2. User sets `ded_file_path`, `plan_file_path`, and optionally `prd_file_path`.
+2. User sets the spec file path (`ded_file_path`), `plan_file_path`, and optionally `prd_file_path`.
 3. User sets `git_worktree` and `git_branch` (typically identical values).
 4. System saves the updated deliverable.
 
@@ -1067,7 +1067,7 @@ Modify `reset-and-seed.js`:
 **Actor**: Human PM or System (after agent creates tasks from plan)
 **Precondition**: Deliverable is in `PLANNING`, plan is approved.
 **Flow**:
-1. User (or system) sends `PATCH /deliverables/:id/status` with `{ "status": "IN_PROGRESS" }`.
+1. User (or system) sends `PATCH /projects/:code/deliverables/:id/status` with `{ "status": "IN_PROGRESS" }`.
 2. System validates plan is approved and plan_file_path is set.
 3. System updates status, appends to status_history.
 4. Deliverable card moves to "In Progress" column on Deliverable Kanban.
@@ -1095,8 +1095,8 @@ Modify `reset-and-seed.js`:
 **Precondition**: All tasks for the deliverable are in `COMPLETED` status.
 **Flow**:
 1. Agent/user creates a PR for the deliverable's branch.
-2. Agent/user updates the deliverable: `PATCH /deliverables/:id` with `{ "pullRequestUrl": "https://github.com/..." }`.
-3. Agent/user transitions status: `PATCH /deliverables/:id/status` with `{ "status": "IN_REVIEW" }`.
+2. Agent/user updates the deliverable: `PUT /projects/:code/deliverables/:id` with `{ "pullRequestUrl": "https://github.com/..." }`.
+3. Agent/user transitions status: `PATCH /projects/:code/deliverables/:id/status` with `{ "status": "IN_REVIEW" }`.
 4. Deliverable card moves to "In Review" column. PR URL is visible on the card and in the list view.
 
 ### UC-8: Deliverable Merged and Done
@@ -1117,7 +1117,7 @@ Modify `reset-and-seed.js`:
 4. When all rework tasks are `COMPLETED`, QA agent re-analyzes.
 5. Cycle repeats until AC is met, then PR is created.
 
-**Note**: The data model supports this flow (tasks link to deliverables, status tracking is in place). The agent skills and automation are out of scope for this DED.
+**Note**: The data model supports this flow (tasks link to deliverables, status tracking is in place). The agent skills and automation are out of scope for this SPEC.
 
 ---
 
@@ -1130,7 +1130,7 @@ Modify `reset-and-seed.js`:
 
 ### US-2: Attach Specification Documents
 **As a** project lead,
-**I want to** set file paths for the DED, implementation plan, and optional PRD on a deliverable,
+**I want to** set file paths for the SPEC, implementation plan, and optional PRD on a deliverable,
 **So that** team members and agents can find and reference the specification documents.
 
 ### US-3: Approve Plan
@@ -1155,7 +1155,7 @@ Modify `reset-and-seed.js`:
 
 ### US-7: Copy File Path to Clipboard
 **As a** developer,
-**I want to** click a copy icon next to a DED or plan file path in the deliverable list,
+**I want to** click a copy icon next to a SPEC or plan file path in the deliverable list,
 **So that** I can quickly open the document in my IDE or terminal without manually typing the path.
 
 ### US-8: See Deliverable Name on Task Cards
@@ -1218,20 +1218,20 @@ Modify `reset-and-seed.js`:
 - [ ] `deliverable_status_workflow` default is `['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']`
 
 ### AC-4: Deliverable CRUD API
-- [ ] `GET /projects/:projectId/deliverables` returns all deliverables for a project
-- [ ] `GET /projects/:projectId/deliverables` supports `status` and `type` query filters
-- [ ] `GET /deliverables/:id` returns a single deliverable with all fields
-- [ ] `POST /projects/:projectId/deliverables` creates a deliverable, auto-generates `deliverable_id`, sets initial status history
-- [ ] `POST` increments `next_deliverable_sequence` on the project
-- [ ] `PUT /deliverables/:id` updates deliverable fields
-- [ ] `DELETE /deliverables/:id` deletes the deliverable and CASCADE deletes all associated tasks
+- [x] `GET /projects/:code/deliverables` returns all deliverables for a project (uses project code, e.g. ZAZZ)
+- [x] `GET /projects/:code/deliverables` supports `status` and `type` query filters
+- [x] `GET /projects/:code/deliverables/:id` returns a single deliverable with all fields
+- [x] `POST /projects/:code/deliverables` creates a deliverable, auto-generates `deliverable_id`, sets initial status history
+- [x] `POST` increments `next_deliverable_sequence` on the project
+- [x] `PUT /projects/:code/deliverables/:id` updates deliverable fields
+- [x] `DELETE /projects/:code/deliverables/:id` deletes the deliverable and CASCADE deletes all associated tasks
 - [ ] All routes require `TB_TOKEN` authentication
 - [ ] All routes return 404 for non-existent resources
 - [ ] `name` is required and max 30 characters on create
 - [ ] `type` is required and must be a valid deliverable type enum value
 
 ### AC-5: Status Transition API
-- [ ] `PATCH /deliverables/:id/status` changes status and appends to `status_history`
+- [x] `PATCH /projects/:code/deliverables/:id/status` changes status and appends to `status_history`
 - [ ] Status must exist in `STATUS_DEFINITIONS`
 - [ ] Status must be in the project's `deliverable_status_workflow`
 - [ ] Transitioning to `IN_PROGRESS` requires `approved_at` to be non-null (plan must be approved)
@@ -1239,7 +1239,7 @@ Modify `reset-and-seed.js`:
 - [ ] Response includes full updated deliverable with new status_history entry
 
 ### AC-6: Plan Approval API
-- [ ] `PATCH /deliverables/:id/approve` sets `approved_by` and `approved_at`
+- [x] `PATCH /projects/:code/deliverables/:id/approve` sets `approved_by` and `approved_at`
 - [ ] Requires `plan_file_path` to be set
 - [ ] Returns 400 if plan file path is not set
 - [ ] Returns 400 if already approved (cannot re-approve)
@@ -1270,7 +1270,7 @@ Modify `reset-and-seed.js`:
 
 ### AC-10: Deliverable List Page
 - [ ] Route `/projects/:projectCode/deliverables` renders a sortable table
-- [ ] Columns: Deliverable ID, Name, Type, Status, Status Changed, DED Path, Plan Path, PRD Path, PR URL, Tasks
+- [ ] Columns: Deliverable ID, Name, Type, Status, Status Changed, SPEC Path, Plan Path, PRD Path, PR URL, Tasks
 - [ ] Clicking column headers sorts the table (ascending/descending toggle)
 - [ ] File path cells have a copy-to-clipboard icon button
 - [ ] Clicking the copy icon copies the path and shows a brief "Copied!" tooltip
@@ -1312,7 +1312,7 @@ Tests follow the existing pattern: Vitest runner + PactumJS HTTP DSL against tes
 
 **File**: `api/__tests__/routes/deliverables.test.mjs`
 
-#### Describe: GET /projects/:projectId/deliverables
+#### Describe: GET /projects/:code/deliverables
 - **it** should return all deliverables for a project (seeded data)
 - **it** should return an empty array for a project with no deliverables
 - **it** should filter by status query parameter
@@ -1325,7 +1325,7 @@ Tests follow the existing pattern: Vitest runner + PactumJS HTTP DSL against tes
 - **it** should include taskCount and completedTaskCount
 - **it** should include approvedByName when approved
 
-#### Describe: POST /projects/:projectId/deliverables
+#### Describe: POST /projects/:code/deliverables
 - **it** should create a deliverable with name and type (minimum required fields)
 - **it** should auto-generate deliverable_id as {PROJECT_CODE}-{sequence}
 - **it** should set initial status to PLANNING
@@ -1337,7 +1337,7 @@ Tests follow the existing pattern: Vitest runner + PactumJS HTTP DSL against tes
 - **it** should return 404 if project does not exist
 - **it** should accept optional fields (description, dedFilePath, planFilePath, prdFilePath, gitWorktree, gitBranch)
 
-#### Describe: PUT /deliverables/:id
+#### Describe: PUT /projects/:code/deliverables/:id
 - **it** should update the deliverable name
 - **it** should update document paths (dedFilePath, planFilePath, prdFilePath)
 - **it** should update git fields (gitWorktree, gitBranch)
@@ -1346,7 +1346,7 @@ Tests follow the existing pattern: Vitest runner + PactumJS HTTP DSL against tes
 - **it** should not allow changing deliverable_id
 - **it** should not allow name exceeding 30 characters
 
-#### Describe: DELETE /deliverables/:id
+#### Describe: DELETE /projects/:code/deliverables/:id
 - **it** should delete the deliverable and CASCADE delete associated tasks
 - **it** should return 404 for non-existent deliverable
 - **it** should return 200 with success message
@@ -1355,7 +1355,7 @@ Tests follow the existing pattern: Vitest runner + PactumJS HTTP DSL against tes
 
 **File**: `api/__tests__/routes/deliverables.status.test.mjs`
 
-#### Describe: PATCH /deliverables/:id/status
+#### Describe: PATCH /projects/:code/deliverables/:id/status
 - **it** should change status and append to status_history
 - **it** should record changedBy as the authenticated user's ID
 - **it** should record changedAt as current timestamp
@@ -1371,7 +1371,7 @@ Tests follow the existing pattern: Vitest runner + PactumJS HTTP DSL against tes
 
 **File**: `api/__tests__/routes/deliverables.approval.test.mjs`
 
-#### Describe: PATCH /deliverables/:id/approve
+#### Describe: PATCH /projects/:code/deliverables/:id/approve
 - **it** should set approved_by to authenticated user's ID
 - **it** should set approved_at to current timestamp
 - **it** should return 400 if plan_file_path is not set
@@ -1384,7 +1384,7 @@ Tests follow the existing pattern: Vitest runner + PactumJS HTTP DSL against tes
 
 **File**: `api/__tests__/routes/deliverables.tasks.test.mjs`
 
-#### Describe: GET /deliverables/:id/tasks
+#### Describe: GET /projects/:code/deliverables/:id/tasks
 - **it** should return all tasks linked to the deliverable
 - **it** should return an empty array if no tasks are linked
 - **it** should return 404 for non-existent deliverable
@@ -1428,7 +1428,7 @@ This is a clean break. The database is nuked and rebuilt.
 - Stored in `DELIVERABLES.deliverable_id` VARCHAR(20), UNIQUE
 - Generated on create using `PROJECTS.next_deliverable_sequence` (repurposed from the old `next_task_sequence`)
 - Same auto-increment-on-create logic that previously generated task IDs
-- These are what humans see, reference in conversation, and use in DEDs/plans
+- These are what humans see, reference in conversation, and use in SPECs/plans
 
 ### Tasks: Integer IDs Only
 - Identified by `TASKS.id` (serial integer PK) — e.g., `1`, `2`, `42`
@@ -1456,7 +1456,7 @@ task-blaster/
 ├── main/                    ← main branch worktree
 ├── homepage-redesign/       ← deliverable branch worktree
 ├── fix-auth-token-expiry/   ← another deliverable branch
-└── docs/                    ← shared docs (DEDs, plans)
+└── docs/                    ← shared docs (SPECs, plans)
 ```
 
 ---
@@ -1480,7 +1480,7 @@ task-blaster/
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2026-02-16
-**Status**: Draft — Awaiting Review
-**Next Step**: Review with PM, resolve open questions, then create Implementation Plan
+**Document Version**: 1.1
+**Last Updated**: 2026-03-01
+**Status**: Implemented
+**Note**: This SPEC was used to build the deliverables feature. The document has been updated to reflect the implemented functionality and current terminology (Deliverable Specification / SPEC).
