@@ -550,43 +550,7 @@ export default async function projectRoutes(fastify, options) {
 
   // POST /projects/:code/deliverables/:delivId/tasks - Create task
   fastify.post('/projects/:code/deliverables/:delivId/tasks', {
-    schema: {
-      params: {
-        type: 'object',
-        required: ['code', 'delivId'],
-        properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' }
-        }
-      },
-      body: {
-        type: 'object',
-        required: ['title'],
-        properties: {
-          title: { type: 'string', minLength: 1, maxLength: 255 },
-          description: { type: 'string', maxLength: 5000 },
-          status: { type: 'string', pattern: '^[A-Z_]+$' },
-          priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
-          agentName: { type: 'string', maxLength: 50 },
-          storyPoints: { type: 'integer', minimum: 1, maximum: 21 },
-          position: { type: 'integer', minimum: 0 },
-          phaseTaskId: {
-            type: 'string',
-            maxLength: 20,
-            description: 'Explicit phase task ID (e.g. "1.2"). Auto-generated from phase if omitted. Use "1.2.1" format for rework tasks.'
-          },
-          prompt: { type: 'string', maxLength: 10000 },
-          gitWorktree: { type: 'string', maxLength: 255 },
-          phase: { type: 'integer', minimum: 1 },
-          dependencies: {
-            type: 'array',
-            items: { type: 'integer', minimum: 1 },
-            uniqueItems: true
-          }
-        },
-        additionalProperties: false
-      }
-    }
+    schema: projectSchemas.createDeliverableTask
   }, async (request, reply) => {
     try {
       const { code, delivId } = request.params;
@@ -626,17 +590,7 @@ export default async function projectRoutes(fastify, options) {
 
   // GET /projects/:code/deliverables/:delivId/tasks/:taskId - Get single task
   fastify.get('/projects/:code/deliverables/:delivId/tasks/:taskId', {
-    schema: {
-      params: {
-        type: 'object',
-        required: ['code', 'delivId', 'taskId'],
-        properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' },
-          taskId: { type: 'string', pattern: '^\\d+$' }
-        }
-      }
-    }
+    schema: projectSchemas.getDeliverableTask
   }, async (request, reply) => {
     try {
       const { code, delivId, taskId } = request.params;
@@ -664,33 +618,7 @@ export default async function projectRoutes(fastify, options) {
 
   // PUT /projects/:code/deliverables/:delivId/tasks/:taskId - Update task
   fastify.put('/projects/:code/deliverables/:delivId/tasks/:taskId', {
-    schema: {
-      params: {
-        type: 'object',
-        required: ['code', 'delivId', 'taskId'],
-        properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' },
-          taskId: { type: 'string', pattern: '^\\d+$' }
-        }
-      },
-      body: {
-        type: 'object',
-        properties: {
-          title: { type: 'string', minLength: 1, maxLength: 255 },
-          description: { type: 'string', maxLength: 5000 },
-          status: { type: 'string', pattern: '^[A-Z_]+$' },
-          priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
-          agentName: { type: 'string', maxLength: 50 },
-          storyPoints: { type: 'integer', minimum: 1, maximum: 21 },
-          prompt: { type: 'string', maxLength: 10000 },
-          isBlocked: { type: 'boolean' },
-          blockedReason: { type: 'string', maxLength: 1000 },
-          gitWorktree: { type: 'string', maxLength: 255 }
-        },
-        additionalProperties: false
-      }
-    }
+    schema: projectSchemas.updateDeliverableTask
   }, async (request, reply) => {
     try {
       const { code, delivId, taskId } = request.params;

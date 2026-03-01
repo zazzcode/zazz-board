@@ -1,5 +1,6 @@
 import DatabaseService from '../services/databaseService.js';
 import { tokenService } from '../services/tokenService.js';
+import { coreSchemas } from '../schemas/validation.js';
 
 // Import route plugins
 import userRoutes from './users.js';
@@ -15,8 +16,8 @@ import deliverableRoutes from './deliverables.js';
 const dbService = new DatabaseService();
 
 export default async function routes(fastify, options) {
-  // Health check endpoint
-  fastify.get('/health', async (request, reply) => {
+  // Health check endpoint (public)
+  fastify.get('/health', { schema: coreSchemas.getHealth }, async (request, reply) => {
     const tokenStats = tokenService.getCacheStats();
     reply.send({ 
       status: 'ok', 
@@ -28,8 +29,8 @@ export default async function routes(fastify, options) {
     });
   });
 
-  // Root endpoint
-  fastify.get('/', async (request, reply) => {
+  // Root endpoint (public)
+  fastify.get('/', { schema: coreSchemas.getRoot }, async (request, reply) => {
     reply.send({ 
       message: 'Task Blaster API', 
       version: '1.0.0',
@@ -37,8 +38,8 @@ export default async function routes(fastify, options) {
     });
   });
 
-  // Database connection test
-  fastify.get('/db-test', async (request, reply) => {
+  // Database connection test (public)
+  fastify.get('/db-test', { schema: coreSchemas.getDbTest }, async (request, reply) => {
     try {
       const result = await dbService.testConnection();
       reply.send({ status: 'Database connected', result });
@@ -48,8 +49,8 @@ export default async function routes(fastify, options) {
     }
   });
 
-  // Token info endpoint (for debugging)
-  fastify.get('/token-info', async (request, reply) => {
+  // Token info endpoint (public, for debugging)
+  fastify.get('/token-info', { schema: coreSchemas.getTokenInfo }, async (request, reply) => {
     const tokenStats = tokenService.getCacheStats();
     reply.send({
       cacheInitialized: tokenStats.isInitialized,

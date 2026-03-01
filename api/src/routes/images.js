@@ -1,4 +1,5 @@
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { imageSchemas } from '../schemas/validation.js';
 
 export default async function imageRoutes(fastify, options) {
   const { dbService } = options;
@@ -7,7 +8,7 @@ export default async function imageRoutes(fastify, options) {
   fastify.addHook('preHandler', authMiddleware);
 
   // GET /tasks/:taskId/images - Get all images for a task
-  fastify.get('/tasks/:taskId/images', async (request, reply) => {
+  fastify.get('/tasks/:taskId/images', { schema: imageSchemas.getTaskImages }, async (request, reply) => {
     try {
       const { taskId } = request.params;
       request.log.info(`Fetching images for task ${taskId}`);
@@ -23,7 +24,7 @@ export default async function imageRoutes(fastify, options) {
   });
 
   // POST /tasks/:taskId/images/upload - Upload images to a task
-  fastify.post('/tasks/:taskId/images/upload', async (request, reply) => {
+  fastify.post('/tasks/:taskId/images/upload', { schema: imageSchemas.uploadTaskImages }, async (request, reply) => {
     try {
       const { taskId } = request.params;
       const { images } = request.body;
@@ -75,7 +76,7 @@ export default async function imageRoutes(fastify, options) {
   });
 
   // GET /images/:id - Serve individual image
-  fastify.get('/images/:id', async (request, reply) => {
+  fastify.get('/images/:id', { schema: imageSchemas.getImageById }, async (request, reply) => {
     try {
       const { id } = request.params;
       const imageId = parseInt(id);
@@ -107,7 +108,7 @@ export default async function imageRoutes(fastify, options) {
   });
 
   // GET /images/:id/metadata - Get image metadata only
-  fastify.get('/images/:id/metadata', async (request, reply) => {
+  fastify.get('/images/:id/metadata', { schema: imageSchemas.getImageMetadata }, async (request, reply) => {
     try {
       const { id } = request.params;
       const imageId = parseInt(id);
@@ -130,7 +131,7 @@ export default async function imageRoutes(fastify, options) {
   });
 
   // DELETE /tasks/:taskId/images/:imageId - Delete specific image from task (with security validation)
-  fastify.delete('/tasks/:taskId/images/:imageId', async (request, reply) => {
+  fastify.delete('/tasks/:taskId/images/:imageId', { schema: imageSchemas.deleteTaskImage }, async (request, reply) => {
     try {
       const { taskId, imageId } = request.params;
       const taskIdNum = parseInt(taskId);
