@@ -31,7 +31,7 @@
 | **Deliverable list** | Sortable table of deliverables per project; SPEC/PLAN/PRD paths with copy-to-clipboard; PR links. |
 | **Deliverable Kanban** | Columns from project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done). Drag-and-drop deliverable cards; task progress and PR URL on cards. |
 | **Task Kanban** | Columns from project’s task workflow (To Do, Ready, In Progress, QA, Completed). Tasks show deliverable name in card footer. Drag-and-drop. |
-| **Task graph** | Dependency graph with **swim lanes per deliverable**; each lane is one deliverable’s sub-graph; edges can cross lanes. Readiness and coordination types (e.g. TEST_TOGETHER, DEPLOY_TOGETHER) supported. |
+| **Task graph** | **Task Graph** — one deliverable’s task graph at a time; select deliverable via dropdown. Readiness and coordination types (e.g. TEST_TOGETHER, DEPLOY_TOGETHER) supported. |
 
 ### Deliverable lifecycle (high level)
 
