@@ -169,8 +169,8 @@ standards:
     purpose: Primary and secondary languages, runtimes, versions
   - file: coding-styles.md
     purpose: Coding conventions, style guides, patterns
-  - file: database.md
-    purpose: Database type, ORM, schema conventions
+  - file: data-architecture.md
+    purpose: Database design philosophy, schema-first, ORM, conventions
   # ... other project-wide standards
 ```
 

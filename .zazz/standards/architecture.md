@@ -8,6 +8,6 @@
 
 ## Patterns
 
-- Schema-first DB (Drizzle schema in `api/lib/db/schema.js`); no migrations in this phase—`npm run db:reset` drops and recreates
+- Schema-first data design; see [data-architecture.md](./data-architecture.md)
 - All DB access via `databaseService`; no direct DB access in routes
 - Project → Deliverable → Task hierarchy

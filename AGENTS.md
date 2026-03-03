@@ -102,7 +102,7 @@ Manual API test token: `TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000`
 
 ## Database
 
-- **Schema**: `api/lib/db/schema.js` (Drizzle). No migrations; reset = drop + push.
+- **Schema**: `api/lib/db/schema.js` (Drizzle). Pre-v1: no migrations — we push the schema directly (`db:push` / `db:reset`). At v1 we'll switch to migrations for production upgrades.
 - **Reset (dev)**: From `api/` run `npm run db:reset` (runs reset-and-seed: drop tables/enums → drizzle-kit push → seed).
 - **Seeding order**: users → tags → status definitions → coordination requirement definitions → translations → projects → deliverables → tasks → task-tags → task relations. To add seed data: add or edit files in `scripts/seeders/` and register in `reset-and-seed.js` and `seed-all.js` in dependency order.
 
