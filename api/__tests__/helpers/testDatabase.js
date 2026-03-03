@@ -25,9 +25,9 @@ export async function validateTestEnvironment() {
   }
 
   const testDbName = testDbUrl.split('/').pop()?.split('?')[0];
-  if (testDbName !== 'task_blaster_test') {
+  if (testDbName !== 'zazz_board_test') {
     throw new Error(
-      `SAFETY CHECK FAILED: DATABASE_URL_TEST must point to 'task_blaster_test' (current: ${testDbName})\n` +
+      `SAFETY CHECK FAILED: DATABASE_URL_TEST must point to 'zazz_board_test' (current: ${testDbName})\n` +
       `Check api/.env configuration`
     );
   }
@@ -37,10 +37,10 @@ export async function validateTestEnvironment() {
     const result = await db.execute(sql`SELECT current_database()`);
     const currentDb = result[0]?.current_database;
     
-    if (currentDb !== 'task_blaster_test') {
+    if (currentDb !== 'zazz_board_test') {
       throw new Error(
         `SAFETY CHECK FAILED: Connected to wrong database: ${currentDb}\n` +
-        `Expected: task_blaster_test`
+        `Expected: zazz_board_test`
       );
     }
   } catch (error) {

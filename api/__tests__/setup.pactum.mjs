@@ -17,12 +17,12 @@ if (process.env.NODE_ENV !== 'test') {
 // Validate DATABASE_URL_TEST is set and points to test database
 const testDbUrl = process.env.DATABASE_URL_TEST || '';
 const testDbName = testDbUrl.split('/').pop()?.split('?')[0];
-if (testDbName !== 'task_blaster_test') {
+if (testDbName !== 'zazz_board_test') {
   console.error(
     '\x1b[31m%s\x1b[0m', // Red color
     '\n❌ SAFETY CHECK FAILED: DATABASE_URL_TEST must point to test database\n' +
     `   Current: ${testDbName}\n` +
-    `   Expected: task_blaster_test\n` +
+    `   Expected: zazz_board_test\n` +
     `   Check: api/.env\n`
   );
   process.exit(1);
@@ -35,7 +35,7 @@ beforeAll(async () => {
   // Validate test environment before starting server
   await validateTestEnvironment();
   
-  console.log('✅ Environment validation passed: task_blaster_test');
+  console.log('✅ Environment validation passed: zazz_board_test');
   
   app = await createTestServer();
   await app.listen({ port: PORT, host: '127.0.0.1' });

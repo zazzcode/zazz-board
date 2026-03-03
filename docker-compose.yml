@@ -2,19 +2,19 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15
-    container_name: task_blaster_postgres
+    container_name: zazz_board_postgres
     environment:
-      POSTGRES_DB: task_blaster_db
-      POSTGRES_USER: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-zazz_board_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5433:5432"  # Using 5433 to avoid conflict with existing containers
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - zazz_board_postgres_data:/var/lib/postgresql/data
     networks:
-      - task_blaster_network
+      - zazz_board_network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d task_blaster_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-zazz_board_db}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,45 +24,36 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: task_blaster_api
+    container_name: zazz_board_api
     ports:
       - "3030:3030"
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/task_blaster_db
-      NODE_ENV: development
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-zazz_board_db}
+      NODE_ENV: production
       PORT: 3030
-    volumes:
-      - ./api:/app
-      - /app/node_modules
     networks:
-      - task_blaster_network
+      - zazz_board_network
     depends_on:
       postgres:
         condition: service_healthy
-    command: npm run dev
+    command: sh -c "node scripts/bootstrap-first-run.js && npm start"
 
   # React Client (Development)
   client:
     build:
       context: ./client
-      dockerfile: Dockerfile.dev
-    container_name: task_blaster_client
+      dockerfile: Dockerfile
+    container_name: zazz_board_client
     ports:
-      - "3001:3001"
-    environment:
-      - VITE_API_URL=http://localhost:3030
-    volumes:
-      - ./client:/app
-      - /app/node_modules
+      - "3001:80"
     networks:
-      - task_blaster_network
+      - zazz_board_network
     depends_on:
       - api
-    command: npm run dev
 
 volumes:
-  postgres_data:
+  zazz_board_postgres_data:
 
 networks:
-  task_blaster_network:
+  zazz_board_network:
     driver: bridge
