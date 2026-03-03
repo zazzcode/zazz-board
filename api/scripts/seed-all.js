@@ -3,6 +3,7 @@ import { seedStatusDefinitions } from './seeders/seedStatusDefinitions.js';
 import { seedCoordinationTypes } from './seeders/seedCoordinationTypes.js';
 import { seedTranslations } from './seeders/seedTranslations.js';
 import { seedProjects } from './seeders/seedProjects.js';
+import { seedDeliverables } from './seeders/seedDeliverables.js';
 import { seedTags } from './seeders/seedTags.js';
 import { seedTasks } from './seeders/seedTasks.js';
 import { seedTaskTags } from './seeders/seedTaskTags.js';
@@ -10,11 +11,12 @@ import { seedTaskRelations } from './seeders/seedTaskRelations.js';
 import { client } from '../lib/db/index.js';
 
 // Safety check: Prevent seeding production
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PRODUCTION_SEED !== 'true') {
   console.error(
     '\x1b[31m%s\x1b[0m',
     '\n❌ SAFETY CHECK FAILED: Cannot seed production database\n' +
-    '   NODE_ENV=production detected\n'
+    '   NODE_ENV=production detected\n' +
+    '   Set ALLOW_PRODUCTION_SEED=true only for trusted first-run bootstrap\n'
   );
   process.exit(1);
 }
@@ -23,7 +25,7 @@ if (process.env.NODE_ENV === 'production') {
 const dbUrl = process.env.DATABASE_URL || '';
 const dbName = dbUrl.split('/').pop()?.split('?')[0];
 
-const allowedDatabases = ['task_blaster_dev', 'task_blaster_test'];
+const allowedDatabases = ['zazz_board_db', 'zazz_board_dev', 'zazz_board_test'];
 if (!allowedDatabases.includes(dbName)) {
   console.error(
     '\x1b[31m%s\x1b[0m',
@@ -55,30 +57,35 @@ async function seedAll() {
     await seedProjects();
     console.log('');
 
-    // Step 3: Seed tables that depend on projects and users
-    console.log('📋 Step 3: Seeding tasks (depends on projects and users)...');
+    // Step 3: Seed deliverables (depends on projects and users)
+    console.log('📋 Step 3: Seeding deliverables (depends on projects and users)...');
+    await seedDeliverables();
+    console.log('');
+
+    // Step 4: Seed tasks (depends on projects, deliverables, and users)
+    console.log('📋 Step 4: Seeding tasks (depends on projects, deliverables, and users)...');
     await seedTasks();
     console.log('');
 
-    // Step 4: Seed relationship tables
-    console.log('📋 Step 4: Seeding relationships (depends on tasks and tags)...');
+    // Step 5: Seed relationship tables
+    console.log('📋 Step 5: Seeding relationships (depends on tasks and tags)...');
     await seedTaskTags();
     console.log('');
 
-    // Step 5: Seed task relations (depends on tasks existing)
-    console.log('📋 Step 5: Seeding task relations (depends on tasks)...');
+    // Step 6: Seed task relations (depends on tasks existing)
+    console.log('📋 Step 6: Seeding task relations (depends on tasks)...');
     await seedTaskRelations();
     console.log('');
 
     console.log('✅ Database seeding completed successfully!');
     console.log('📊 Summary:');
-    console.log('   • 4 users created');
+    console.log('   • 5 users created');
     console.log('   • 8 status definitions created');
     console.log('   • 4 translation sets created (en, es, fr, de)');
-    console.log('   • 3 projects created');
+    console.log('   • 5 projects created');
+    console.log('   • 6 deliverables created');
     console.log('   • 6 tags created');
-    console.log('   • 5 tasks created');
-    console.log('   • 10 task-tag relationships created');
+    console.log('   • 0 tasks (task model refactor in progress — no task seed data)');
     
   } catch (error) {
     console.error('❌ Error seeding data:', error.message);

@@ -2,19 +2,19 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15
-    container_name: task_blaster_postgres_prod
+    container_name: zazz_board_postgres_prod
     environment:
-      POSTGRES_DB: task_blaster_db
-      POSTGRES_USER: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-zazz_board_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5432:5432"
     volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
+      - zazz_board_postgres_prod_data:/var/lib/postgresql/data
     networks:
-      - task_blaster_network
+      - zazz_board_network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d task_blaster_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-zazz_board_db}" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -24,18 +24,19 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: task_blaster_api_prod
+    container_name: zazz_board_api_prod
     ports:
       - "3030:3030"
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/task_blaster_db
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-zazz_board_db}
       NODE_ENV: production
       PORT: 3030
     networks:
-      - task_blaster_network
+      - zazz_board_network
     depends_on:
       postgres:
         condition: service_healthy
+    command: sh -c "node scripts/bootstrap-first-run.js && npm start"
     restart: unless-stopped
 
   # React Client (Production - Nginx)
@@ -43,18 +44,18 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: task_blaster_client_prod
+    container_name: zazz_board_client_prod
     ports:
       - "80:80"
     networks:
-      - task_blaster_network
+      - zazz_board_network
     depends_on:
       - api
     restart: unless-stopped
 
 volumes:
-  postgres_prod_data:
+  zazz_board_postgres_prod_data:
 
 networks:
-  task_blaster_network:
+  zazz_board_network:
     driver: bridge

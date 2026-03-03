@@ -12,6 +12,7 @@
 
 - [Main views and features](#main-views-and-features)
 - [Quick start](#quick-start)
+- [Contributor setup](#contributor-setup)
 - [Running in the cloud](#running-in-the-cloud)
 - [Running tests](#running-tests)
 - [API docs (Swagger)](#api-docs-swagger)
@@ -54,50 +55,106 @@ Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliv
 ---
 
 ## Quick start
+Production/self-hosted Docker setup with two flows.
 
-Prerequisites: Node.js 22+, Docker Desktop. All commands assume the terminal is in the project root (directory containing `api/`, `client/`, `package.json`).
-
-### 1. Install dependencies
-
-```bash
-npm install
-npm install --workspace=api
-cd client && npm install && cd ..
-```
-
-### 2. Configure environment
+### Flow A — Initial install (first time)
 
 ```bash
-cp api/.env.example api/.env
+docker compose up --build
 ```
 
-Edit `api/.env`: set `DATABASE_URL` and `DATABASE_URL_TEST` to use password `password` and port `5433`:
-
-```
-DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_dev
-DATABASE_URL_TEST=postgres://postgres:password@localhost:5433/task_blaster_test
-```
-
-### 3. Start PostgreSQL
+Optional non-destructive seed attempt:
 
 ```bash
-npm run docker:up:db
+npm run docker:seed
 ```
 
-### 4. Create and seed database
+Expected result:
+- PostgreSQL on `localhost:5433`
+- API on `localhost:3030`
+- Client on `localhost:3001`
+- First-run schema + seed happens automatically
+
+### Verify readiness before running DB queries
+
+Wait for the API to be ready (schema created and seed applied) before running `psql` queries:
 
 ```bash
-cd api && npm run db:reset && cd ..
+# Health check (wait until this returns OK)
+curl http://localhost:3030/health
 ```
 
-### 5. Run the app
+Expected response: `{"status":"ok"}`
+
+Once healthy, you can safely query the database. Example:
 
 ```bash
-npm run dev
+set -a && source .env && set +a
+docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT COUNT(*) AS task_count FROM \"TASKS\";"
 ```
 
-- API: http://localhost:3030  
-- Client: http://localhost:3001  
+### If first-run seed fails or sample data is missing
+
+Run this as a second step from terminal (with containers running):
+
+```bash
+npm run docker:reset:seed
+```
+
+Then re-run the health check above before running DB queries.
+
+### Flow B — Upgrade existing install (preserve data)
+
+```bash
+docker compose up --build -d
+```
+
+Notes:
+- Do **not** run `docker compose down -v` for normal upgrades (that deletes Postgres data).
+- If schema has changed and data must be preserved, run:
+
+```bash
+docker compose exec api npm run db:push
+```
+
+### Optional environment overrides
+
+You can skip env files and use defaults. To customize DB settings, copy `.env.example` to `.env` and change values.
+
+Default credentials:
+
+```bash
+POSTGRES_DB=zazz_board_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=password
+```
+
+## Contributor setup
+
+Contributor/committer instructions are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_SETUP.md).
+
+### Log in from the browser with an access token
+
+1. Open `http://localhost:3001`
+2. Click the **Zazz Board** menu in the header
+3. Click **Set Access Token**
+4. Paste this token and submit:
+
+```
+550e8400-e29b-41d4-a716-446655440000
+```
+
+If that token does not work, fetch a valid one from your local DB:
+
+```bash
+set -a && source .env && set +a
+docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT email, access_token FROM \"USERS\";"
+```
+
+### Local URLs
+
+- API: `http://localhost:3030`
+- Client: `http://localhost:3001`
 
 ---
 
@@ -145,7 +202,7 @@ Set `API_BASE_URL` in the API container if the client needs to reach the API at 
 **Step 1 — Cloud SQL**
 
 1. Create a Cloud SQL instance (PostgreSQL 15).
-2. Create database `task_blaster_db` and user.
+2. Create database `zazz_board_db` and user.
 3. Enable **Cloud SQL Admin API** and (optionally) **Private IP** for VPC connectivity.
 
 **Step 2 — API on Cloud Run**
@@ -160,7 +217,7 @@ Set `API_BASE_URL` in the API container if the client needs to reach the API at 
      --image gcr.io/YOUR_PROJECT/zazz-board-api \
      --platform managed \
      --region us-central1 \
-     --set-env-vars "DATABASE_URL=postgres://USER:PASS@/task_blaster_db?host=/cloudsql/PROJECT:REGION:INSTANCE" \
+     --set-env-vars "DATABASE_URL=postgres://USER:PASS@/zazz_board_db?host=/cloudsql/PROJECT:REGION:INSTANCE" \
      --add-cloudsql-instances PROJECT:REGION:INSTANCE
    ```
 3. Use **Cloud SQL Auth Proxy** connection name in `DATABASE_URL` when using Unix socket, or configure **VPC connector** for private IP.
@@ -193,11 +250,12 @@ Run the seed script once against Cloud SQL (e.g. from Cloud Shell or a one-off C
 
 ## Running tests
 
-Tests use a separate database (`task_blaster_test`). One-time setup:
+Tests use a separate database (`zazz_board_test`). One-time setup:
 
 ```bash
-docker exec task_blaster_postgres psql -U postgres -c "CREATE DATABASE task_blaster_test;" 2>/dev/null || true
-cd api && DATABASE_URL=postgres://postgres:password@localhost:5433/task_blaster_test npm run db:reset
+set -a && source .env && set +a
+docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -c "CREATE DATABASE zazz_board_test;" 2>/dev/null || true
+cd api && DATABASE_URL=postgres://postgres:$POSTGRES_PASSWORD@localhost:5433/zazz_board_test npm run db:reset
 ```
 
 Then run tests (from `api/`):
@@ -271,14 +329,15 @@ For **Swagger UI**, see [How to access the docs with your access token](#how-to-
 
 ## Reference
 
-| Action | Command (project root unless noted) |
-|--------|-------------------------------------|
-| Run API + client | `npm run dev` |
-| Run API only | `npm run dev:api` |
-| Run client only | `npm run dev:client` |
-| Reset dev DB (from `api/`) | `npm run db:reset` |
-| Seed only (from `api/`) | `npm run db:seed` |
-| Run tests (from `api/`) | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
+|| Action | Command (project root unless noted) |
+||--------|-------------------------------------|
+|| Run API + client | `npm run dev` |
+|| Run API only | `npm run dev:api` |
+|| Run client only | `npm run dev:client` |
+|| Reset dev DB (from `api/`) | `npm run db:reset` |
+|| Seed only (from `api/`) | `npm run db:seed` |
+|| Reset + reseed Docker DB (containers running) | `npm run docker:reset:seed` |
+|| Run tests (from `api/`) | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
 
 Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/__tests__/README.md](./api/__tests__/README.md).
 

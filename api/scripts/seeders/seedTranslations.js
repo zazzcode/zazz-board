@@ -11,8 +11,30 @@ export async function seedTranslations() {
   console.log('  📝 Seeding translations...');
   
   try {
-    // Define the path to translation files
-    const translationsPath = join(__dirname, '../../../client/src/i18n/locales');
+    const candidatePaths = [
+      join(__dirname, '../../../client/src/i18n/locales'),
+      join(__dirname, 'locales'),
+    ];
+
+    const canReadLocale = (path, file) => {
+      try {
+        readFileSync(join(path, file), 'utf-8');
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const translationsPath = candidatePaths.find((path) =>
+      canReadLocale(path, 'en.json') &&
+      canReadLocale(path, 'es.json') &&
+      canReadLocale(path, 'fr.json') &&
+      canReadLocale(path, 'de.json')
+    );
+
+    if (!translationsPath) {
+      throw new Error('Translation locale files not found in expected paths');
+    }
     
     // Load existing translation files
     const enTranslations = JSON.parse(readFileSync(join(translationsPath, 'en.json'), 'utf-8'));

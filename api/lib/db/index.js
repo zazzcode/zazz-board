@@ -14,8 +14,13 @@ if (process.env.NODE_ENV === 'test') {
     );
   }
 } else {
+  const dbUser = process.env.DB_USER || 'postgres';
+  const dbPassword = process.env.DB_PASSWORD || 'password';
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbPort = process.env.DB_PORT || '5433';
+  const dbName = process.env.DB_NAME || 'zazz_board_db';
   connectionString = process.env.DATABASE_URL || 
-    'postgres://postgres:password@localhost:5433/task_blaster_dev';
+    `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
 }
 
 // Create postgres client
