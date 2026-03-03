@@ -142,7 +142,6 @@ The `.zazz` folder is installed in the root of repositories using the Zazz frame
 │   ├── index.yaml          # Index of standard files (order, purpose)
 │   ├── system-architecture.md  # Example: stack, layering, cloud deployment
 │   ├── testing.md         # Example: test frameworks, tooling
-│   ├── languages.md       # Example: runtimes, versions
 │   ├── coding-styles.md   # Example: conventions, patterns
 │   └── ...                # Other atomic standard files
 ├── deliverables/           # SPEC and PLAN files
@@ -165,8 +164,6 @@ standards:
     purpose: System architecture, stack, layering, cloud deployment
   - file: testing.md
     purpose: Test frameworks, patterns, tooling
-  - file: languages.md
-    purpose: Primary and secondary languages, runtimes, versions
   - file: coding-styles.md
     purpose: Coding conventions, style guides, patterns
   - file: data-architecture.md

@@ -30,7 +30,8 @@
 - **Columns**: snake_case in DB, camelCase in JS
 - **Automatic conversion**: `databaseService` converts returned rows via `keysToCamelCase` (`api/src/utils/propertyMapper.js`); the API and client always receive camelCase
 - **Task positions**: sparse numbering (e.g. 10, 20) for reordering
-- **System enums**: `pgEnum` for fixed values (e.g. `task_relation_type`); user-definable values use `varchar`
+- **System enums**: PostgreSQL `pgEnum` for fixed values (e.g. `task_relation_type`, `deliverable_type`); user-definable values use `varchar`
+- **UPPER_SNAKE_CASE codes**: Status codes, priorities, and enum-like values use UPPER_SNAKE_CASE. Used in: `STATUS_DEFINITIONS.code`, `TASKS.status`, `PROJECTS.status_workflow` / `deliverable_status_workflow`, `DELIVERABLES.status` / `deliverable_type`, `COORDINATION_TYPES.code`. These codes also serve as i18n keys (see [coding-styles.md](./coding-styles.md)).
 
 ## Key tables
 

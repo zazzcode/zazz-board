@@ -2,7 +2,8 @@
 
 ## Stack: JavaScript only (no TypeScript)
 
-Full-stack JavaScript. Use `.js` / `.mjs` and JSDoc for types.
+- **Runtime**: Node.js 22+
+- Full-stack JavaScript (ESM). Use `.js` / `.mjs` and JSDoc for types
 
 **Backend** (api/): Fastify, Drizzle ORM, Pino (logging), JSON Schema + AJV (validation), postgres driver
 
