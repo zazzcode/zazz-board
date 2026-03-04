@@ -70,3 +70,6 @@ Cleanup and improvements **outside the scope** of current deliverables. Add item
 **Current state**: Routes without project in path: `GET /projects`, `GET /users`, `GET /users/me`, `GET /tags`, `GET /images`, `GET /status-definitions`, `GET /coordination-types`, `GET /translations/:language`, `GET /health`, etc.
 
 **Design**: Non-project routes just work—no agent-token restriction. Authorization is limited to project-scoped routes. When a route gains project scoping (e.g. images become project-scoped), add agent-token authorization there. Authorization follows route scoping; don't restrict until the route has project context.
+
+
+ use **Dredd/Schemathesis** only if you need full contract testing.

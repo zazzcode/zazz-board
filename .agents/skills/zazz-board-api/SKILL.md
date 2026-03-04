@@ -1,356 +1,123 @@
 ---
 name: "Zazz Board API"
 type: "rule"
-description: "Required API skill for all agents to communicate and manage deliverables"
+description: "Required API skill for agents to create and manage deliverables and tasks. Uses live OpenAPI spec; only agent-relevant routes are needed."
 required_for: ["planner", "coordinator", "worker", "qa", "spec-builder"]
 ---
 
-# Zazz Board API (Required Rule Skill)
+# Zazz Board API (Agent Routes)
 
-**Purpose**: Defines how all agents communicate via the Zazz Board API for creating/managing deliverables and tasks
-
-**Required By**: All agents (Coordinator, Worker, QA, Spec-Builder) MUST use this API
-
----
-
-## Overview
-
-The Zazz Board API provides REST endpoints for managing deliverables and tasks. All agents use this API for:
-- Creating and updating deliverables
-- Creating and updating tasks
-- Posting task comments and questions
-- Updating task status
-- Managing task relations (dependencies)
-- **Agent pub/sub (MVP):** Redis pub/sub backend exposed via API endpoints—heartbeat, agent status, agent-to-agent messaging
-
----
-
-## Quick Reference
-
-**API Documentation (Swagger/OpenAPI)**: `{ZAZZ_API_BASE_URL}/docs`
-
-Open this URL in a browser to explore the full API interactively while developing.
+**Purpose**: Agents use this API to create deliverables, create tasks, update content, and change statuses. Projects and users are pre-configured; agents do not create them.
 
 ---
 
 ## Authentication
 
-All API requests require:
-- **Header**: `Authorization: Bearer {ZAZZ_API_TOKEN}`
-- **Base URL**: `{ZAZZ_API_BASE_URL}` (e.g., `http://localhost:3000`)
+All API requests (except `/openapi.json`, `/health`, `/`, `/db-test`, `/token-info`) require:
+- **Header**: `TB_TOKEN: <uuid>` or `Authorization: Bearer <uuid>`
+- **Token**: `ZAZZ_API_TOKEN` or fallback `550e8400-e29b-41d4-a716-446655440000`
 
 ---
 
-## Deliverable Endpoints
+## Environment variables
 
-### GET /projects/{project_code}/deliverables/{deliverable_id}
-Fetch deliverable details.
-
-**Parameters**:
-- `project_code` (string): Project identifier (e.g., "APP")
-- `deliverable_id` (string): Deliverable ID (e.g., "DEL-001")
-
-**Response**:
-```json
-{
-  "id": "DEL-001",
-  "project_code": "APP",
-  "name": "User Authentication",
-  "status": "PLANNING",
-  "spec_url": "project-repo/user-auth-SPEC.md",
-  "plan_url": "project-repo/user-auth-PLAN.md",
-  "created_at": "2026-02-23T00:00:00Z",
-  "updated_at": "2026-02-23T10:30:00Z"
-}
-```
-
-### PATCH /projects/{project_code}/deliverables/{deliverable_id}
-Update deliverable status or metadata.
-
-**Request Body**:
-```json
-{
-  "status": "IN_PROGRESS|IN_REVIEW|COMPLETED|BLOCKED",
-  "plan_url": "updated-url-if-needed"
-}
-```
+| Variable | Fallback | Purpose |
+|----------|----------|---------|
+| `ZAZZ_API_BASE_URL` | `http://localhost:3030` | API base; spec at `{base}/openapi.json` |
+| `ZAZZ_API_TOKEN` | `550e8400-e29b-41d4-a716-446655440000` | Auth token |
+| `PROJECT_CODE` | `ZAZZ` | Default project code |
 
 ---
 
-## Task Endpoints
+## Source of truth: OpenAPI spec
 
-### POST /projects/{project_code}/deliverables/{deliverable_id}/tasks
-Create a new task.
+**Fetch the live spec for request/response schemas.** The spec is at `{ZAZZ_API_BASE_URL}/openapi.json`. No auth required for the spec. Parse as JSON; use `paths` for routes.
 
-**Request Body**:
-```json
-{
-  "title": "Add JWT validation to auth handler",
-  "goal": "Implement JWT token validation for all protected endpoints",
-  "instructions": "See implementation plan section 2.3...",
-  "acceptance_criteria": [
-    "JWT token is validated on every protected endpoint",
-    "Invalid tokens return 401 Unauthorized",
-    "Expired tokens return 401 Unauthorized"
-  ],
-  "test_requirements": {
-    "unit_tests": ["JWT validation logic"],
-    "api_tests": ["Valid token acceptance", "Invalid token rejection", "Expired token rejection"],
-    "e2e_tests": []
-  },
-  "files_to_modify": ["src/middleware/auth.ts", "tests/middleware/auth.test.ts"],
-  "depends_on": ["TASK-10"],
-  "coordinates_with": [],
-  "estimated_complexity": "medium"
-}
-```
+**Agent routes only** — When using the spec, extract only these paths. Ignore projects, users, tags, and other non-agent routes.
 
-**Response**:
-```json
-{
-  "id": "TASK-42",
-  "title": "Add JWT validation to auth handler",
-  "status": "TO_DO",
-  "created_at": "2026-02-23T10:30:00Z"
-}
-```
-
-### GET /projects/{project_code}/deliverables/{deliverable_id}/tasks
-List all tasks for a deliverable.
-
-**Query Parameters**:
-- `status` (optional): Filter by status (TO_DO, IN_PROGRESS, COMPLETED, BLOCKED)
-- `assigned_to` (optional): Filter by agent
-
-**Response**:
-```json
-[
-  {
-    "id": "TASK-1",
-    "title": "Setup authentication routes",
-    "status": "COMPLETED",
-    "assigned_to": "worker_1"
-  },
-  {
-    "id": "TASK-42",
-    "title": "Add JWT validation to auth handler",
-    "status": "TO_DO",
-    "depends_on": ["TASK-10"]
-  }
-]
-```
-
-### GET /projects/{project_code}/deliverables/{deliverable_id}/tasks/{task_id}
-Fetch task details.
-
-**Response**:
-```json
-{
-  "id": "TASK-42",
-  "title": "Add JWT validation to auth handler",
-  "goal": "Implement JWT token validation...",
-  "instructions": "See implementation plan section 2.3...",
-  "status": "IN_PROGRESS",
-  "assigned_to": "worker_1",
-  "created_at": "2026-02-23T10:30:00Z",
-  "started_at": "2026-02-23T11:00:00Z",
-  "depends_on": ["TASK-10"],
-  "coordinates_with": [],
-  "comments": [...]
-}
-```
-
-### PATCH /projects/{project_code}/deliverables/{deliverable_id}/tasks/{task_id}
-Update task status or assignment.
-
-**Request Body**:
-```json
-{
-  "status": "IN_PROGRESS|COMPLETED|BLOCKED",
-  "assigned_to": "worker_1"
-}
-```
+| Capability | Method | Path |
+|------------|--------|------|
+| Create deliverable | POST | `/projects/{projectCode}/deliverables` |
+| Get deliverable | GET | `/projects/{projectCode}/deliverables/{id}` |
+| Update deliverable (add spec path, plan path, git worktree, etc.) | PUT | `/projects/{projectCode}/deliverables/{id}` |
+| Change deliverable status | PATCH | `/projects/{projectCode}/deliverables/{id}/status` |
+| Approve deliverable (required before creating tasks) | PATCH | `/projects/{projectCode}/deliverables/{id}/approve` |
+| List deliverables | GET | `/projects/{projectCode}/deliverables` |
+| Create task | POST | `/projects/{code}/deliverables/{delivId}/tasks` |
+| Get task | GET | `/projects/{code}/deliverables/{delivId}/tasks/{taskId}` |
+| Update task | PUT | `/projects/{code}/deliverables/{delivId}/tasks/{taskId}` |
+| Change task status | PATCH | `/projects/{code}/deliverables/{delivId}/tasks/{taskId}/status` |
+| Append note to task | PATCH | `/projects/{code}/deliverables/{delivId}/tasks/{taskId}/notes` |
+| List deliverable tasks | GET | `/projects/{projectCode}/deliverables/{id}/tasks` |
+| Get deliverable graph | GET | `/projects/{code}/deliverables/{delivId}/graph` |
+| Check task readiness | GET | `/projects/{code}/tasks/{taskId}/readiness` |
+| Get deliverable statuses | GET | `/projects/{code}/deliverable-statuses` |
+| List task images | GET | `/tasks/{taskId}/images` |
+| Upload task images | POST | `/tasks/{taskId}/images/upload` |
+| Get image binary | GET | `/images/{id}` |
+| Get image metadata | GET | `/images/{id}/metadata` |
 
 ---
 
-## Task Comments
+## Fetch spec
 
-### POST /projects/{project_code}/deliverables/{deliverable_id}/tasks/{task_id}/comments
-Post a comment or question on a task.
+**URL**: `{ZAZZ_API_BASE_URL}/openapi.json` (see Environment variables for base URL)
 
-**Request Body**:
-```json
-{
-  "author": "worker_1",
-  "type": "question|answer|note",
-  "content": "Should JWT validation happen in middleware or in route handler?"
-}
-```
-
-**Response**:
-```json
-{
-  "id": "comment-001",
-  "task_id": "TASK-42",
-  "author": "worker_1",
-  "type": "question",
-  "content": "Should JWT validation happen in middleware or in route handler?",
-  "created_at": "2026-02-23T11:15:00Z"
-}
-```
-
-### GET /projects/{project_code}/deliverables/{deliverable_id}/tasks/{task_id}/comments
-Fetch all comments for a task.
-
-**Response**:
-```json
-[
-  {
-    "id": "comment-001",
-    "author": "worker_1",
-    "type": "question",
-    "content": "Should JWT validation happen in middleware or in route handler?",
-    "created_at": "2026-02-23T11:15:00Z"
-  },
-  {
-    "id": "comment-002",
-    "author": "coordinator",
-    "type": "answer",
-    "reply_to": "comment-001",
-    "content": "Use middleware per tech spec section 3.2. See example in src/middleware/auth-old.ts",
-    "created_at": "2026-02-23T11:20:00Z"
-  }
-]
-```
+Filter `spec.paths` to the agent paths in the table above before reading schemas.
 
 ---
 
-## Agent Pub/Sub (MVP)
+## Create deliverable
 
-Redis pub/sub backend, exposed via Zazz Board API endpoints. Agents **pull/subscribe** via the API to receive events. Use cases:
+**POST** `/projects/{projectCode}/deliverables`
 
-- **Plan approval**: When a deliverable's plan is approved, an event is published. The Coordinator subscribes and picks up plan approval messages to create the initial task graph.
-- **Heartbeat**: Publish `last_ping` every ~10 seconds; others detect crashes via timeout
-- **Agent status**: Publish IDLE, EXECUTING, BLOCKED, WAITING
-- **Agent-to-agent messaging**: Questions, escalations, responses (alternative to polling task comments)
+- **Required body**: `name` (string, 1–30 chars), `type` (enum: `FEATURE`, `BUG_FIX`, `REFACTOR`, `ENHANCEMENT`, `CHORE`, `DOCUMENTATION`).
+- **Optional body**: `description`, `dedFilePath`, `planFilePath`, `prdFilePath`, `gitWorktree`, `gitBranch`, `pullRequestUrl`.
+- **Response (201)**: `id` (numeric, for API paths), `deliverableId` (e.g. `ZAZZ-4`, for display). Return `deliverableId` to the user.
 
-Exact endpoint paths TBD; see Swagger at `{ZAZZ_API_BASE_URL}/docs` when implemented.
-
----
-
-## Task Relations
-
-### POST /projects/{project_code}/deliverables/{deliverable_id}/tasks/{task_id}/relations
-Create a dependency or coordination relation to another task.
-
-**Request Body**:
-```json
-{
-  "type": "DEPENDS_ON|COORDINATES_WITH|REWORK_FOR",
-  "related_task_id": "TASK-10"
-}
-```
-
-### GET /projects/{project_code}/deliverables/{deliverable_id}/tasks/{task_id}/relations
-Fetch all relations for a task.
+**Before creating:** Ensure you have `name`, `type`, and `projectCode` (path; from user or `PROJECT_CODE` env). If any are missing, ask the human. Do not infer or invent.
 
 ---
 
-## Error Handling
+## Create task
 
-All endpoints return standard HTTP status codes:
+**POST** `/projects/{code}/deliverables/{delivId}/tasks`
 
-- **200**: Success
-- **201**: Created
-- **400**: Bad Request (invalid parameters)
-- **401**: Unauthorized (missing/invalid token)
-- **404**: Not Found (resource doesn't exist)
-- **409**: Conflict (race condition, e.g., task status changed)
-- **500**: Internal Server Error
+- **Path params**: `code` = project code, `delivId` = numeric deliverable id from create deliverable response.
+- **Required body**: `title` (string, 1–255 chars).
+- **Optional body**: `description`, `status`, `priority`, `agentName`, `storyPoints`, `position`, `phase`, `phaseTaskId`, `prompt`, `dependencies`, `gitWorktree`.
+- **Prerequisite**: Deliverable must be approved (PATCH `.../approve`) before creating tasks.
+- **Response (201)**: `id` (numeric task id). Return `id` to the user.
 
-Error response:
-```json
-{
-  "error": "Task not found",
-  "status": 404,
-  "timestamp": "2026-02-23T11:20:00Z"
-}
-```
+**Before creating:** Ensure you have `code`, `delivId`, and `title`. If any are missing, ask the human. Do not infer or invent.
 
 ---
 
-## Rate Limiting
+## Missing data — do not invent
 
-- **Requests per minute**: 60 (per agent)
-- **Burst**: Up to 10 concurrent requests
-- **Backoff**: Exponential backoff if rate limited (429 status)
+If required fields are missing, **do not make up values**. Ask the human (or surface through the agent so the human can provide them). Example: "To create the deliverable, I need the type. Please choose: FEATURE, BUG_FIX, REFACTOR, ENHANCEMENT, CHORE, DOCUMENTATION."
 
 ---
 
-## Example: Coordinator Creating Task
+## Key conventions
 
-```bash
-curl -X POST http://localhost:3000/projects/APP/deliverables/DEL-001/tasks \
-  -H "Authorization: Bearer ${ZAZZ_API_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Add JWT validation",
-    "goal": "Implement JWT token validation",
-    "instructions": "1. Create JWT validation middleware...",
-    "acceptance_criteria": ["Valid tokens accepted", "Invalid tokens rejected"],
-    "test_requirements": {
-      "unit_tests": ["JWT validation logic"],
-      "api_tests": ["Token validation"]
-    },
-    "files_to_modify": ["src/middleware/auth.ts"],
-    "depends_on": ["TASK-10"],
-    "estimated_complexity": "medium"
-  }'
-```
+- **`id` / `delivId`**: Numeric ids for API paths. `deliverableId` (e.g. ZAZZ-4) is display-only.
+- **Update deliverable**: PUT to add `dedFilePath`, `planFilePath`, `gitWorktree`, `gitBranch`, `pullRequestUrl` after creation.
+- **Append note**: PATCH `.../tasks/{taskId}/notes` — body `{ "note": "...", "agentName": "..." }`.
+- **Claim task**: Include `agentName` when PATCHing status to IN_PROGRESS.
+- **Upload images**: POST `/tasks/{taskId}/images/upload` — body `{ images: [{ originalName, contentType, fileSize, base64Data }] }`, `contentType` must be `image/*`.
 
 ---
 
-## Example: Worker Posting Question
+## Workflow
 
-```bash
-curl -X POST http://localhost:3000/projects/APP/deliverables/DEL-001/tasks/TASK-42/comments \
-  -H "Authorization: Bearer ${ZAZZ_API_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "author": "worker_1",
-    "type": "question",
-    "content": "Should validation happen in middleware or route handler?"
-  }'
-```
+1. Fetch spec from `/openapi.json`.
+2. Extract only the agent paths listed above from `spec.paths`.
+3. For each operation, read `requestBody.content.application/json.schema` and `responses.201` (or 200) from the spec.
+4. Make requests to `{ZAZZ_API_BASE_URL}{path}` with `TB_TOKEN` header and JSON body per spec.
 
 ---
 
-## Best Practices
+## Error handling
 
-1. **Retry on Failure**: Implement exponential backoff for transient errors
-2. **Validate Input**: Check task dependencies are valid before creating
-3. **Use Meaningful Messages**: Clear commit messages and comments for audit trail
-4. **Batch Operations**: Group related API calls to minimize requests
-5. **Cache When Possible**: Cache deliverable SPEC and PLAN locally
-6. **Log Everything**: Log all API calls for debugging and audit
-
----
-
-## Environment Variables Required
-
-```bash
-export ZAZZ_API_BASE_URL="http://localhost:3000"
-export ZAZZ_API_TOKEN="your-api-token"
-export PROJECT_CODE="APP"
-export DELIVERABLE_ID="DEL-001"
-```
-
----
-
-## Reference
-
-See examples for:
-- How Coordinator creates initial task graph
-- How Worker posts questions
-- How QA creates rework tasks
-- How to handle API errors and retries
+200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 404 Not Found, 409 Conflict, 500 Internal Server Error. Response bodies may include `error` field.

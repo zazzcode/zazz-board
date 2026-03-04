@@ -121,13 +121,25 @@ docker compose exec api npm run db:push
 
 You can skip env files and use defaults. To customize DB settings, copy `.env.example` to `.env` and change values.
 
-Default credentials:
+Default credentials (from `docker-compose.yml`):
 
 ```bash
 POSTGRES_DB=zazz_board_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=password
 ```
+
+### Docker Compose reference (from `docker-compose.yml`)
+
+| Service  | Container name       | Host port | Container port | Notes                    |
+|----------|----------------------|-----------|----------------|--------------------------|
+| postgres | zazz_board_postgres  | 5433      | 5432          | DB: `zazz_board_db`      |
+| api      | zazz_board_api       | 3030      | 3030          | Fastify API              |
+| client   | zazz_board_client    | 3001      | 80            | React app (Nginx)        |
+
+- **API**: http://localhost:3030
+- **Client**: http://localhost:3001
+- **Postgres** (from host): `localhost:5433`, database `zazz_board_db`
 
 ## Contributor setup
 
@@ -151,10 +163,10 @@ set -a && source .env && set +a
 docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT email, access_token FROM \"USERS\";"
 ```
 
-### Local URLs
+### Local URLs (from `docker-compose.yml`)
 
-- API: `http://localhost:3030`
-- Client: `http://localhost:3001`
+- API: http://localhost:3030
+- Client: http://localhost:3001
 
 ---
 
@@ -250,11 +262,11 @@ Run the seed script once against Cloud SQL (e.g. from Cloud Shell or a one-off C
 
 ## Running tests
 
-Tests use a separate database (`zazz_board_test`). One-time setup:
+Tests use a separate database (`zazz_board_test`). One-time setup (from project root):
 
 ```bash
 set -a && source .env && set +a
-docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -c "CREATE DATABASE zazz_board_test;" 2>/dev/null || true
+docker compose exec postgres psql -U postgres -c "CREATE DATABASE zazz_board_test;" 2>/dev/null || true
 cd api && DATABASE_URL=postgres://postgres:$POSTGRES_PASSWORD@localhost:5433/zazz_board_test npm run db:reset
 ```
 
@@ -272,7 +284,14 @@ See [api/__tests__/README.md](./api/__tests__/README.md) for details.
 
 The API serves **OpenAPI 3.1** interactive docs (Swagger UI) at **http://localhost:3030/docs** when the API is running. The spec is **generated from Fastify route schemas** (single source of truth; no separate YAML to maintain). It includes all routes, request/response shapes, and security: **TB_TOKEN** (header) and **Bearer** (Authorization header). Access to `/docs` is **token-protected** so only authenticated users and agents can view it in production.
 
-### What’s in the docs
+### Spec and docs URLs
+
+| URL | Purpose |
+|-----|---------|
+| **/openapi.json** | Raw OpenAPI 3.1 JSON spec — no auth. Use for agents, codegen, tooling. |
+| **/docs** | Swagger UI — interactive docs. Use Authorize for try-it-out. |
+
+### What's in the docs
 
 - **Tags**: core, users, projects, deliverables, task-graph, tags, translations, status-definitions, images.
 - **Security**: Global auth via `TB_TOKEN` or Bearer; the UI has an **Authorize** button to set your token for “Try it out” requests.
@@ -284,28 +303,29 @@ You need a valid **access token** (UUID from `USERS.access_token`; seed example:
 
 **Option A — Browser (easiest)**  
 1. Start the API (`npm run dev` or `npm run dev:api`).  
-2. Open: **http://localhost:3030/docs?token=550e8400-e29b-41d4-a716-446655440000** (replace with your token).  
-3. The docs page loads. Click **Authorize**, enter the same token in the **TB_TOKEN** field, then **Authorize** → **Close**.  
+2. Open **http://localhost:3030/docs** (the `?token=` query string does not work; use Authorize instead)
+3. Click **Authorize**, enter `550e8400-e29b-41d4-a716-446655440000` in the **TB_TOKEN** field, then **Authorize** → **Close**  
 4. Use “Try it out” on any route; the token is sent on every request.
 
 **Option B — Browser (no token in URL)**  
 If you can send a header with the first request (e.g. a REST client or extension), open `http://localhost:3030/docs` with header `TB_TOKEN: <your-uuid>`. Then use **Authorize** in the UI as above for try-it-out.
 
-**Option C — Raw OpenAPI JSON**  
-Fetch the spec with your token (e.g. for codegen or tooling):
+**Option C — Raw OpenAPI JSON (for agents and codegen)**  
+The spec is available at **`/openapi.json`** (no auth required). Agents and tooling can fetch it directly:
 
 ```bash
-curl -H "TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000" http://localhost:3030/docs/json
+curl http://localhost:3030/openapi.json
 ```
 
-**Security**: Don’t share URLs that contain `?token=...`; use that pattern only in trusted environments.
+For authenticated requests, use the token header: `curl -H "TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000" http://localhost:3030/openapi.json`
+
 
 ---
 
 ## API authentication
 
 **Which routes require a token?**  
-All API routes except: `GET /health`, `GET /`, `GET /db-test`, `GET /token-info`. The docs at `GET /docs` (and `/docs/*`) also require a valid token.
+All API routes except: `GET /health`, `GET /`, `GET /db-test`, `GET /token-info`, `GET /openapi.json`. The docs at `GET /docs` (and `/docs/*`) also require a valid token.
 
 **How is the access token set for API calls?**  
 Send one of:

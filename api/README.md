@@ -1,28 +1,30 @@
-# Task Blaster API
+# Zazz Board API
 
-This document covers quick commands for API development.
+Quick commands for API development. Values match `docker-compose.yml` at project root.
 
-## Database Setup (First Time)
+## Docker Compose reference
+
+| Service  | Container           | Host port | DB / URL                    |
+|----------|---------------------|-----------|-----------------------------|
+| postgres | zazz_board_postgres | 5433      | `zazz_board_db`             |
+| api      | zazz_board_api      | 3030      | http://localhost:3030       |
+
+## Database setup (first time)
 
 **Prerequisites**: Docker must be running.
 
-1. **Start PostgreSQL container** (from project root):
+1. **Start PostgreSQL** (from project root):
    ```bash
    npm run docker:up:db
    ```
 
-2. **Create the dev database** (run once):
-   ```bash
-   docker exec task_blaster_postgres psql -U postgres -c "CREATE DATABASE task_blaster_dev;"
-   ```
-
-3. **Reset and seed the database** (from `api/` directory):
+2. **Reset and seed** (from `api/` or project root):
    ```bash
    npm run db:reset
    ```
-   This drops all tables, recreates the schema from Drizzle ORM, and seeds initial data.
+   Drops all tables, recreates schema from `lib/db/schema.js`, seeds data.
 
-## Quick Commands
+## Quick commands
 
 ### Start the API
 
@@ -31,86 +33,64 @@ From project root:
 npm run dev:api
 ```
 
-Or from `api/` directory:
+From `api/`:
 ```bash
 npm run dev
 ```
 
-Or with Node watch flag:
+### Reset and seed database
+
 ```bash
-node --watch src/server.js
+cd api && npm run db:reset
 ```
 
-### Reset and Seed Database
+### Seed only (tables must exist)
 
-From `api/` directory:
-```bash
-npm run db:reset
-```
-
-What `db:reset` does:
-1. Drops all tables (IMAGE_DATA, TASK_RELATIONS, TASKS, PROJECTS, USERS, etc.)
-2. Drops custom enum types
-3. Runs `drizzle-kit push --force` to recreate schema from `lib/db/schema.js`
-4. Seeds all data (users → tags → status definitions → projects → deliverables → tasks → task relations)
-
-### Seed Data Only (Without Reset)
-
-If tables already exist and you just want to reseed:
 ```bash
 cd api && npm run db:seed
 ```
 
-### Check Database State
+### Check database state
 
 ```bash
-# List all tables
-docker exec task_blaster_postgres psql -U postgres -d task_blaster_dev -c "\dt"
+docker compose exec postgres psql -U postgres -d zazz_board_db -c "\dt"
 
-# Count rows in key tables
-docker exec task_blaster_postgres psql -U postgres -d task_blaster_dev -c \
-  "SELECT 'USERS' as table_name, count(*) FROM \"USERS\" \
+docker compose exec postgres psql -U postgres -d zazz_board_db -c \
+  "SELECT 'USERS' as tbl, count(*) FROM \"USERS\" \
    UNION ALL SELECT 'PROJECTS', count(*) FROM \"PROJECTS\" \
-   UNION ALL SELECT 'TASKS', count(*) FROM \"TASKS\" \
-   UNION ALL SELECT 'TASK_RELATIONS', count(*) FROM \"TASK_RELATIONS\";"
+   UNION ALL SELECT 'TASKS', count(*) FROM \"TASKS\";"
 ```
 
 ## Configuration
 
-- **API base URL**: http://localhost:3030
-- **PostgreSQL (Docker)**: `task_blaster_postgres` container
-  - Host: localhost:5433 (container port 5432)
-  - Username: postgres
-  - Password: password (from docker-compose)
-  - Dev database: `task_blaster_dev`
-  - Test database: `task_blaster_test`
+- **API**: http://localhost:3030
+- **Postgres** (from host): localhost:5433, database `zazz_board_db`
+- **api/.env**: `DATABASE_URL=postgres://postgres:password@localhost:5433/zazz_board_db`
 
 ## Environment
 
-API reads from `api/.env`:
-- `DATABASE_URL` — Connection string for dev database
-- `DATABASE_URL_TEST` — Connection string for test database (used when `NODE_ENV=test`)
-- `NODE_ENV` — Set to `development` (or `test` when running tests)
-- `PORT` — Default 3030
+- `DATABASE_URL` — Dev database (see `api/.env.example`)
+- `DATABASE_URL_TEST` — Test database (`zazz_board_test`) when `NODE_ENV=test`
+- `PORT` — 3030
 
 ## Troubleshooting
 
 **Database doesn't exist:**
 ```bash
-docker exec task_blaster_postgres psql -U postgres -c "CREATE DATABASE task_blaster_dev;"
+docker compose exec postgres psql -U postgres -c "CREATE DATABASE zazz_board_db;" 2>/dev/null || true
 cd api && npm run db:reset
 ```
 
-**Drizzle-kit errors with "please install drizzle-orm":**
+**drizzle-kit "please install drizzle-orm":**
 ```bash
 ln -sf ./api/node_modules/drizzle-orm ./node_modules/drizzle-orm
 ```
 
 **Connection refused:**
-- Check Docker is running: `docker ps | grep task_blaster_postgres`
-- Check `.env` DATABASE_URL points to localhost:5433
+- `docker ps | grep zazz_board_postgres`
+- `DATABASE_URL` in `api/.env` must use `localhost:5433`
 
-**Port already in use:**
+**Port in use:**
 ```bash
 lsof -ti:3030 | xargs kill -9
 ```

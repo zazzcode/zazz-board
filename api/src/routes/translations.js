@@ -9,6 +9,9 @@ export default async function translationsRoutes(fastify, options) {
   // GET /translations/:language - Get translations for specified language
   fastify.get('/translations/:language', {
     schema: {
+      tags: ['translations'],
+      summary: 'Get translations by language',
+      description: 'Returns i18n translations for a two-letter language code (e.g. en, es). Used by the client for localized UI.',
       params: {
         type: 'object',
         required: ['language'],
