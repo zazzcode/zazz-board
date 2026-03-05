@@ -110,12 +110,15 @@ export default async function projectRoutes(fastify, options) {
   // GET /projects/:id/kanban/tasks/column/:status - Get column positions for a specific status
   fastify.get('/projects/:id/kanban/tasks/column/:status', {
     schema: {
+      tags: ['projects'],
+      summary: 'Get kanban column positions',
+      description: 'Returns task order within a status column for the Kanban board. id = numeric project id, status = column status (e.g. TO_DO, IN_PROGRESS).',
       params: {
         type: 'object',
         required: ['id', 'status'],
         properties: {
-          id: { type: 'string', pattern: '^\\d+$' },
-          status: { type: 'string', pattern: '^[A-Z_]+$' }
+          id: { type: 'string', pattern: '^\\d+$', description: 'Numeric project id.' },
+          status: { type: 'string', pattern: '^[A-Z_]+$', description: 'Column status (e.g. TO_DO, IN_PROGRESS).' }
         }
       }
     }
@@ -135,12 +138,15 @@ export default async function projectRoutes(fastify, options) {
   // PATCH /projects/:code/kanban/tasks/column/:status/positions - Update multiple task positions in a column
   fastify.patch('/projects/:code/kanban/tasks/column/:status/positions', {
     schema: {
+      tags: ['projects'],
+      summary: 'Bulk update column positions',
+      description: 'Updates positions of multiple tasks in a Kanban column. Body: { positionUpdates: [{ taskId, newPosition }] }. Use when drag-and-drop reorders several tasks.',
       params: {
         type: 'object',
         required: ['code', 'status'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' }, // Project code like PROJ, FEATURE
-          status: { type: 'string', pattern: '^[A-Z_]+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          status: { type: 'string', pattern: '^[A-Z_]+$', description: 'Column status.' }
         }
       },
       body: {
@@ -153,10 +159,11 @@ export default async function projectRoutes(fastify, options) {
               type: 'object',
               required: ['taskId', 'newPosition'],
               properties: {
-                taskId: { type: 'number' },
-                newPosition: { type: 'number' }
+                taskId: { type: 'number', description: 'Numeric task id.' },
+                newPosition: { type: 'number', description: 'New position in column.' }
               }
-            }
+            },
+            description: 'Array of { taskId, newPosition } for each moved task.'
           }
         }
       }
@@ -183,20 +190,23 @@ export default async function projectRoutes(fastify, options) {
   // PATCH /projects/:code/kanban/tasks/:taskId/position - Update single task position
   fastify.patch('/projects/:code/kanban/tasks/:taskId/position', {
     schema: {
+      tags: ['projects'],
+      summary: 'Update single task position',
+      description: 'Moves a task to a new position within a column. Body: { newPosition, status }. Use when drag-and-drop moves one task.',
       params: {
         type: 'object',
         required: ['code', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' }, // Project code like PROJ, FEATURE
-          taskId: { type: 'string', pattern: '^\\d+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
       },
       body: {
         type: 'object',
         required: ['newPosition', 'status'],
         properties: {
-          newPosition: { type: 'number' },
-          status: { type: 'string', pattern: '^[A-Z_]+$' }
+          newPosition: { type: 'number', description: 'New position in column.' },
+          status: { type: 'string', pattern: '^[A-Z_]+$', description: 'Column status (task stays in same column or moves).' }
         }
       }
     }
@@ -346,11 +356,14 @@ export default async function projectRoutes(fastify, options) {
   // GET /projects/:code/statuses - Get project's status workflow
   fastify.get('/projects/:code/statuses', {
     schema: {
+      tags: ['projects'],
+      summary: 'Get task status workflow',
+      description: 'Returns the project\'s task status workflow (e.g. TO_DO, IN_PROGRESS, QA, COMPLETED). Use to know valid statuses for PATCH task status.',
       params: {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       response: {
@@ -384,11 +397,14 @@ export default async function projectRoutes(fastify, options) {
   // PUT /projects/:code/statuses - Update project's status workflow (leaders only)
   fastify.put('/projects/:code/statuses', {
     schema: {
+      tags: ['projects'],
+      summary: 'Update task status workflow',
+      description: 'Updates the project\'s task status workflow. Leaders only. Status codes must exist in STATUS_DEFINITIONS. Cannot remove statuses that have tasks.',
       params: {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       body: {
@@ -464,11 +480,14 @@ export default async function projectRoutes(fastify, options) {
   // GET /projects/:code/deliverable-statuses - Get project's deliverable status workflow
   fastify.get('/projects/:code/deliverable-statuses', {
     schema: {
+      tags: ['projects'],
+      summary: 'Get deliverable status workflow',
+      description: 'Returns the project\'s deliverable status workflow (e.g. PLANNING, IN_PROGRESS, IN_REVIEW, STAGED, DONE). Use to know valid statuses for PATCH deliverable status.',
       params: {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       }
     }
@@ -487,11 +506,14 @@ export default async function projectRoutes(fastify, options) {
   // PUT /projects/:code/deliverable-statuses - Update deliverable status workflow (leaders only)
   fastify.put('/projects/:code/deliverable-statuses', {
     schema: {
+      tags: ['projects'],
+      summary: 'Update deliverable status workflow',
+      description: 'Updates the project\'s deliverable status workflow. Leaders only. Cannot remove statuses that have deliverables.',
       params: {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       body: {
@@ -654,13 +676,16 @@ export default async function projectRoutes(fastify, options) {
   // DELETE /projects/:code/deliverables/:delivId/tasks/:taskId - Delete task
   fastify.delete('/projects/:code/deliverables/:delivId/tasks/:taskId', {
     schema: {
+      tags: ['projects'],
+      summary: 'Delete task (deliverable-scoped)',
+      description: 'Deletes a task. code = project code, delivId = numeric deliverable id, taskId = numeric task id. Verifies task belongs to deliverable.',
       params: {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' },
-          taskId: { type: 'string', pattern: '^\\d+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
+          taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
       }
     }
@@ -703,17 +728,17 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' },
-          taskId: { type: 'string', pattern: '^\\d+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
+          taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
       },
       body: {
         type: 'object',
         required: ['note'],
         properties: {
-          note: { type: 'string', minLength: 1, maxLength: 5000 },
-          agentName: { type: 'string', maxLength: 255 }
+          note: { type: 'string', minLength: 1, maxLength: 5000, description: 'Progress message. Appended as "[timestamp] [agentName]: note".' },
+          agentName: { type: 'string', maxLength: 255, description: 'Agent or user name for the log entry. Defaults to authenticated user.' }
         },
         additionalProperties: false
       }
@@ -760,23 +785,23 @@ export default async function projectRoutes(fastify, options) {
   fastify.patch('/projects/:code/deliverables/:delivId/tasks/:taskId/status', {
     schema: {
       tags: ['projects'],
-      summary: 'Change task status (agent claim)',
-      description: 'Change task status. Include agentName to claim the task: { status: "IN_PROGRESS", agentName: "worker-1" }. Returns 409 if task is cancelled.',
+      summary: 'Change task status (deliverable-scoped)',
+      description: 'Changes task status within a deliverable. Use when you know the deliverable id: pick up (TO_DO→IN_PROGRESS), complete (IN_PROGRESS→COMPLETED), or move to QA. Include agentName to claim: { status: "IN_PROGRESS", agentName: "worker-1" }. delivId and taskId are numeric ids from create deliverable and create task. Returns 409 if task is cancelled.',
       params: {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' },
-          taskId: { type: 'string', pattern: '^\\d+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id from create deliverable.' },
+          taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id from create task.' }
         }
       },
       body: {
         type: 'object',
         required: ['status'],
         properties: {
-          status: { type: 'string', pattern: '^[A-Z_]+$' },
-          agentName: { type: 'string', maxLength: 50 }
+          status: { type: 'string', pattern: '^[A-Z_]+$', description: 'Target status (e.g. IN_PROGRESS, COMPLETED).' },
+          agentName: { type: 'string', maxLength: 50, description: 'Optional. Set to claim the task when moving to IN_PROGRESS.' }
         }
       }
     }
@@ -846,9 +871,9 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' },
-          taskId: { type: 'string', pattern: '^\\d+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
+          taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
       }
     }
@@ -888,20 +913,23 @@ export default async function projectRoutes(fastify, options) {
   // PATCH /projects/:code/deliverables/:delivId/tasks/:taskId/reorder - Reorder task position
   fastify.patch('/projects/:code/deliverables/:delivId/tasks/:taskId/reorder', {
     schema: {
+      tags: ['projects'],
+      summary: 'Reorder task',
+      description: 'Changes task position within its column. Body: { position: number }. Use when reordering tasks in a deliverable.',
       params: {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' },
-          taskId: { type: 'string', pattern: '^\\d+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
+          taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
       },
       body: {
         type: 'object',
         required: ['position'],
         properties: {
-          position: { type: 'integer', minimum: 0 }
+          position: { type: 'integer', minimum: 0, description: 'New position in column.' }
         }
       }
     }
@@ -938,13 +966,16 @@ export default async function projectRoutes(fastify, options) {
   // PUT /projects/:code/deliverables/:delivId/tasks/:taskId/tags - Set task tags
   fastify.put('/projects/:code/deliverables/:delivId/tasks/:taskId/tags', {
     schema: {
+      tags: ['projects'],
+      summary: 'Set task tags',
+      description: 'Replaces all tags on a task. Body: { tagIds: string[] }. Use tag ids from GET /tags.',
       params: {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$' },
-          delivId: { type: 'string', pattern: '^\\d+$' },
-          taskId: { type: 'string', pattern: '^\\d+$' }
+          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
+          taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
       },
       body: {
@@ -954,7 +985,8 @@ export default async function projectRoutes(fastify, options) {
           tagIds: {
             type: 'array',
             items: { type: 'string' },
-            uniqueItems: true
+            uniqueItems: true,
+            description: 'Array of tag ids (from GET /tags). Replaces existing tags.'
           }
         }
       }

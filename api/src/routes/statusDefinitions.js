@@ -9,6 +9,9 @@ export default async function statusDefinitionsRoutes(fastify, options) {
   // GET /status-definitions - Get all available status codes
   fastify.get('/status-definitions', {
     schema: {
+      tags: ['status-definitions'],
+      summary: 'List status definitions',
+      description: 'Returns all valid status codes (e.g. TO_DO, IN_PROGRESS, COMPLETED) with descriptions. Use to validate status values before PATCH task/deliverable status.',
       response: {
         200: {
           type: 'array',

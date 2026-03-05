@@ -84,3 +84,5 @@ export AGENT_ID="planner"
 export ZAZZ_WORKSPACE="/path/to/project"
 export ZAZZ_STATE_DIR="${ZAZZ_WORKSPACE}/.zazz"
 ```
+
+Notes - in the top of the plan we should call out the Project Code and the Deliverable code and the deliverable Id (integer) so the planner agent does not need to look up these values

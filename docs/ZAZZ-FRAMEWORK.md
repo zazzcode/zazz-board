@@ -140,9 +140,8 @@ The `.zazz` folder is installed in the root of repositories using the Zazz frame
 ├── project.md              # Project overview
 ├── standards/              # Atomic project standards
 │   ├── index.yaml          # Index of standard files (order, purpose)
-│   ├── architecture.md     # Example: layering, design patterns
+│   ├── system-architecture.md  # Example: stack, layering, cloud deployment
 │   ├── testing.md         # Example: test frameworks, tooling
-│   ├── languages.md       # Example: runtimes, versions
 │   ├── coding-styles.md   # Example: conventions, patterns
 │   └── ...                # Other atomic standard files
 ├── deliverables/           # SPEC and PLAN files
@@ -161,16 +160,14 @@ Project standards are **atomic**—split into multiple files instead of one mono
 ```yaml
 # .zazz/standards/index.yaml
 standards:
-  - file: architecture.md
-    purpose: System architecture, layering, design patterns
+  - file: system-architecture.md
+    purpose: System architecture, stack, layering, cloud deployment
   - file: testing.md
     purpose: Test frameworks, patterns, tooling
-  - file: languages.md
-    purpose: Primary and secondary languages, runtimes, versions
   - file: coding-styles.md
     purpose: Coding conventions, style guides, patterns
-  - file: database.md
-    purpose: Database type, ORM, schema conventions
+  - file: data-architecture.md
+    purpose: Database design philosophy, schema-first, ORM, conventions
   # ... other project-wide standards
 ```
 

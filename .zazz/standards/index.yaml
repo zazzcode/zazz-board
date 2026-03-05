@@ -1,13 +1,11 @@
 # .zazz/standards/index.yaml
 # Index of atomic project standards. Order matters for agent consumption.
 standards:
-  - file: architecture.md
-    purpose: System architecture, layering, design patterns
+  - file: system-architecture.md
+    purpose: System architecture, stack, layering, cloud deployment
   - file: testing.md
     purpose: Test frameworks, patterns, tooling
-  - file: languages.md
-    purpose: Primary and secondary languages, runtimes, versions
   - file: coding-styles.md
     purpose: Coding conventions, style guides, patterns
-  - file: database.md
-    purpose: Database type, ORM, schema conventions
+  - file: data-architecture.md
+    purpose: Database design philosophy, schema-first, ORM, conventions
