@@ -25,7 +25,7 @@ All API requests (except `/openapi.json`, `/health`, `/`, `/db-test`, `/token-in
 |----------|----------|---------|
 | `ZAZZ_API_BASE_URL` | `http://localhost:3030` | API base; spec at `{base}/openapi.json` |
 | `ZAZZ_API_TOKEN` | `550e8400-e29b-41d4-a716-446655440000` | Auth token |
-| `PROJECT_CODE` | `ZAZZ` | Default project code |
+| `ZAZZ_PROJECT_CODE` | `ZAZZ` | Default project code |
 
 ---
 
