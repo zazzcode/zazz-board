@@ -11,7 +11,7 @@
 
 ## Layers
 
-- **API**: Fastify routes, JSON Schema validation, auth middleware
+- **API**: Fastify routes, JSON Schema validation (see [coding-styles.md](./coding-styles.md#api-validation-separate-from-business-logic)), auth middleware
 - **Services**: `databaseService` (Drizzle), `tokenService`
 - **Client**: React, Vite, Mantine, react-router-dom
 

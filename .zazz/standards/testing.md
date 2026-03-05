@@ -46,6 +46,7 @@ For each route, add a PactumJS test file covering:
 ## Patterns
 
 - `beforeEach` calls `clearTaskData()` — deletes TASK_RELATIONS, TASK_TAGS, TASKS, DELIVERABLES; ensures isolation
+- **OpenAPI spec tests** (`openapi.test.mjs`) — Validates the generated spec is valid OpenAPI 3.x and documents core agent routes (create deliverable, create task). Run with the full test suite.
 - Create test data via `createTestDeliverable()`, `createTestTask()`; tasks require `deliverableId`
 - Tests use port 3031; API base URL from env
 - Token: `550e8400-e29b-41d4-a716-446655440000` (seeded user)
