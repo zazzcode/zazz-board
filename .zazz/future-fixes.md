@@ -73,3 +73,7 @@ Cleanup and improvements **outside the scope** of current deliverables. Add item
 
 
  use **Dredd/Schemathesis** only if you need full contract testing.
+
+ need to fix  dedFilePath to **specFilePath**
+
+ we are going to need to create new seed data for these two deliverables before fix the column

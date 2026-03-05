@@ -46,7 +46,7 @@ You do **not** implement. You ask, clarify, document, and iterate until the Owne
 - **You are having a conversation.** Ask one or a few questions at a time; don't overwhelm. Follow up on answers.
 - **Be friendly and human.** Keep the tone warm, conversational, and occasionally playful—not dry or robotic. You're a helpful colleague, not a form-filling bot. See "Tone & Personality" below.
 - **Development mode**: If the Owner says "development mode", "we're in development mode", or similar, the **focus is on improving the skill itself**. Write the SPEC file only (no API calls). **Only in development mode** may the agent edit `.agents/skills/spec-builder-agent/SKILL.md` and `.agents/skills/spec-builder-agent/README.md` to iterate on how the skill works. **When not in development mode**, those files are **read-only**—the agent must not modify them. The Owner is refining the skill—spec generation is a way to exercise it; feedback on the skill (questions, flow, template) should drive edits to SKILL.md.
-- **Generation triggers**: When the Owner says "generate the spec", "generate a version", "generate the specification", "create a draft", "write the spec", "draft it", or similar—**immediately** produce and write the SPEC document (to `.zazz/deliverables/{name}-SPEC.md`) so they can review it. You may not have everything; that's fine—produce the best draft you can from the dialogue so far. **Before generating**: If you haven't yet discussed testing for each major feature, add a brief "Test Requirements" section with your best-effort test scenarios and note "Owner to confirm test coverage" so the draft prompts that discussion. The Owner can then give feedback and you iterate.
+- **Generation triggers**: When the Owner says "generate the spec", "generate a version", "generate the specification", "create a draft", "write the spec", "draft it", or similar—**immediately** produce and write the SPEC document (to `.zazz/deliverables/{deliverableCode}-{slug}-SPEC.md` per the naming rules below) so they can review it. You may not have everything; that's fine—produce the best draft you can from the dialogue so far. **Before generating**: If you haven't yet discussed testing for each major feature, add a brief "Test Requirements" section with your best-effort test scenarios and note "Owner to confirm test coverage" so the draft prompts that discussion. The Owner can then give feedback and you iterate.
 - **Draw out, don't assume.** If the Owner says "it should be fast," ask: "What does fast mean? Response time? Throughput? Under what load?"
 - **Never skip the testing discussion.** For every feature or requirement, ask how it will be tested. If the Owner hasn't mentioned tests, bring it up: "How will we verify this works? What test would pass when it's done?" Reference `.zazz/standards/testing.md` for project-specific patterns (e.g., PactumJS for API routes).
 - **Reference standards proactively.** Read `.zazz/standards/index.yaml` and the listed files. Discuss with the Owner which apply and how.
@@ -354,21 +354,28 @@ This phase is **mandatory**. Do not generate a spec without explicit AC and test
 
 **Directory**: `.zazz/deliverables/` — All deliverable specs live here.
 
-**Naming**: `{deliverable-name}-SPEC.md` — Use kebab-case for the deliverable name (e.g. `user-auth`, `multiple-agent-tokens-feature`). Suffix `-SPEC.md` is required.
+**Naming**: `{deliverableCode}-{slug}-SPEC.md`
 
-**Examples**:
-- `user-auth-SPEC.md`
-- `multiple-agent-tokens-feature-SPEC.md`
-- `deliverables-feature-SPEC.md`
+- **Prefix**: Deliverable code (e.g. `ZAZZ-5`) — makes the file unique per deliverable.
+- **Slug**: First 5 words from the deliverable name, hyphen-delimited. Example: "Audit routes for project filter" → `audit-routes-for-project-filter`.
+- **Suffix**: `-SPEC.md` required.
+- **Hyphen-delimited only** — No spaces. Git worktrees cannot have spaces in paths; enforce hyphen-delimited naming for all deliverable and plan documents (SPEC, PLAN, etc.).
 
-**Path from repo root**: `.zazz/deliverables/{deliverable-name}-SPEC.md`
-- Relative path for API sync: `.zazz/deliverables/user-auth-SPEC.md`
+**Example**: For deliverable ZAZZ-5 named "Audit routes for project filter" → `ZAZZ-5-audit-routes-for-project-filter-SPEC.md`. The deliverable code and `-SPEC` suffix make the doc unique.
+
+**Deliverable code**: Get from the deliverable card (deliverableId, e.g. ZAZZ-5) or from the Owner. Required to construct the filename.
+
+**After writing the SPEC**:
+1. Write to `.zazz/deliverables/{filename}.md`
+2. Update `.zazz/deliverables/index.yaml` — add an entry under `deliverables:` with `id`, `name`, `spec` (filename only), and optionally `plan` when it exists.
+
+**Path for API sync** (dedFilePath): `.zazz/deliverables/ZAZZ-5-audit-routes-for-project-filter-SPEC.md`
 
 ---
 
 ## SPEC Document Template
 
-Create `.zazz/deliverables/{deliverable-name}-SPEC.md` with this structure:
+Create `.zazz/deliverables/{deliverableCode}-{slug}-SPEC.md` with this structure:
 
 ```markdown
 # {Deliverable Name} Specification
@@ -475,8 +482,8 @@ When not in development mode: When the SPEC is created or updated, sync the deli
 **API calls** (requires zazz-board-api skill, `ZAZZ_API_BASE_URL`, `ZAZZ_API_TOKEN`):
 
 1. **If the deliverable already exists** (Owner created it or it was created earlier):
-   - `PUT /projects/:projectCode/deliverables/:id` with body `{ dedFilePath: ".zazz/deliverables/{deliverable-name}-SPEC.md" }`
-   - Use the relative path from the repo root (worktree root). Example: `.zazz/deliverables/user-auth-SPEC.md`
+   - `PUT /projects/:projectCode/deliverables/:id` with body `{ dedFilePath: ".zazz/deliverables/{deliverableCode}-{slug}-SPEC.md" }`
+   - Use the relative path from the repo root (worktree root). Example: `.zazz/deliverables/ZAZZ-5-audit-routes-for-project-filter-SPEC.md`
 
 2. **If creating a new deliverable** (Owner wants it on the board):
    - `POST /projects/:projectCode/deliverables` with `name`, `type`, `description`, and `dedFilePath` in the body
@@ -497,7 +504,7 @@ When not in development mode: When the SPEC is created or updated, sync the deli
 - [ ] Document agent constraints, preferences, escalation rules
 - [ ] Guide decomposition for complex deliverables; document break patterns
 - [ ] Define evaluation criteria
-- [ ] Create `.zazz/deliverables/{deliverable-name}-SPEC.md`
+- [ ] Create `.zazz/deliverables/{deliverableCode}-{slug}-SPEC.md` and update `index.yaml`
 - [ ] Sync `dedFilePath` to Zazz Board via API (unless in development mode)
 - [ ] Iterate based on feedback until Owner approves
 
@@ -526,11 +533,11 @@ When not in development mode: When the SPEC is created or updated, sync the deli
 **Behavior when development mode is on**:
 - Do **not** call the Zazz Board API (no POST, PUT, PATCH for deliverables)
 - Do **not** create or update deliverable cards
-- **Only** write the SPEC file to `.zazz/deliverables/{deliverable-name}-SPEC.md`
+- **Only** write the SPEC file to `.zazz/deliverables/{deliverableCode}-{slug}-SPEC.md`
 - The agent **may edit** `.agents/skills/spec-builder-agent/SKILL.md` and `.agents/skills/spec-builder-agent/README.md` to improve the skill. The Owner gives feedback on the skill itself ("add a question about X", "the AC format should...", "Phase 3 is missing Y") and the agent updates these files so the next session benefits.
 
 **Behavior when development mode is off**:
-- `.agents/skills/spec-builder-agent/SKILL.md` and `.agents/skills/spec-builder-agent/README.md` are **read-only**. The agent must **not** modify them. Only the SPEC file (`.zazz/deliverables/{name}-SPEC.md`) and deliverable cards (via API) may be written.
+- `.agents/skills/spec-builder-agent/SKILL.md` and `.agents/skills/spec-builder-agent/README.md` are **read-only**. The agent must **not** modify them. Only the SPEC file (`.zazz/deliverables/{deliverableCode}-{slug}-SPEC.md`) and deliverable cards (via API) may be written.
 
 **Focus**: In development mode, skill improvement. Spec generation is secondary—it exercises the dialogue and produces something to review, but the real outcome is a better skill.
 
