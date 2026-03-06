@@ -9,6 +9,28 @@ Reference for AI agents and developers. **Legacy**: If you see "Task Blaster" or
 - **Flow:** Work in feature worktree → push branch to GitHub → merge on GitHub → pull main locally.
 - **Never merge into main locally.** Main must reflect GitHub after pull.
 
+### New worktree setup (MANDATORY)
+
+When creating a new feature worktree, always do all of the following:
+
+1. Create the worktree from `main`:
+   - `git worktree add -b <branch> ../<worktree-name> main`
+2. Copy root env file from main:
+   - `cp ../main/.env ./.env`
+3. Copy API env file from main:
+   - `cp ../main/api/.env ./api/.env`
+4. Verify both files match main:
+   - `cmp -s ../main/.env ./.env`
+   - `cmp -s ../main/api/.env ./api/.env`
+
+### Env changes made in a feature worktree (MANDATORY)
+
+If any branch/worktree adds or changes settings in `.env` or `api/.env`:
+
+- The agent must explicitly ask the user whether those env changes should also be applied to the `main` worktree.
+- Do not assume automatic propagation without user confirmation.
+- If the user confirms, copy the updated env files into `main` and verify parity with `cmp -s`.
+
 ---
 
 ## Standards
