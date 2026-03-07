@@ -88,6 +88,27 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path.patch.requestBody?.content?.['application/json']?.schema?.properties?.status).toBeDefined();
   });
 
+  it('should document core agent operations: file locks', async () => {
+    const spec = await app.swagger();
+
+    const listPath = spec.paths['/projects/{code}/deliverables/{delivId}/locks'];
+    expect(listPath).toBeDefined();
+    expect(listPath.get).toBeDefined();
+
+    const acquirePath = spec.paths['/projects/{code}/deliverables/{delivId}/locks/acquire'];
+    expect(acquirePath).toBeDefined();
+    expect(acquirePath.post).toBeDefined();
+    expect(acquirePath.post.requestBody?.content?.['application/json']?.schema?.properties?.filePaths).toBeDefined();
+
+    const heartbeatPath = spec.paths['/projects/{code}/deliverables/{delivId}/locks/heartbeat'];
+    expect(heartbeatPath).toBeDefined();
+    expect(heartbeatPath.post).toBeDefined();
+
+    const releasePath = spec.paths['/projects/{code}/deliverables/{delivId}/locks/release'];
+    expect(releasePath).toBeDefined();
+    expect(releasePath.post).toBeDefined();
+  });
+
   it('should document key paths with tags and summaries', async () => {
     const spec = await app.swagger();
     const keyPaths = [
@@ -107,6 +128,10 @@ describe('OpenAPI / Swagger documentation', () => {
       '/projects/{code}/images/{id}/metadata',
       '/projects/{code}/tasks/{taskId}/relations',
       '/projects/{code}/tasks/{taskId}/readiness',
+      '/projects/{code}/deliverables/{delivId}/locks',
+      '/projects/{code}/deliverables/{delivId}/locks/acquire',
+      '/projects/{code}/deliverables/{delivId}/locks/heartbeat',
+      '/projects/{code}/deliverables/{delivId}/locks/release',
       '/health'
     ];
     for (const p of keyPaths) {

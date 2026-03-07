@@ -13,3 +13,7 @@ deliverables:
   - id: ZAZZ-6
     name: multiple-agent-tokens-feature
     spec: ZAZZ-6-multiple-agent-tokens-feature-SPEC.md
+  - id: ZAZZ-7
+    name: worker-file-locking
+    spec: ZAZZ-7-worker-file-locking-SPEC.md
+    plan: ZAZZ-7-worker-file-locking-PLAN.md

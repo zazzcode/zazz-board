@@ -179,6 +179,27 @@ export const TASK_RELATIONS = pgTable('TASK_RELATIONS', {
   index('idx_task_relations_related_task_id').on(table.related_task_id),
 ]);
 
+// File locks table - lease-based file ownership for worker/sub-agent coordination
+export const FILE_LOCKS = pgTable('FILE_LOCKS', {
+  id: serial('id').primaryKey(),
+  project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
+  deliverable_id: integer('deliverable_id').notNull().references(() => DELIVERABLES.id, { onDelete: 'cascade' }),
+  task_id: integer('task_id').notNull().references(() => TASKS.id, { onDelete: 'cascade' }),
+  phase_step: varchar('phase_step', { length: 20 }),
+  agent_name: varchar('agent_name', { length: 100 }).notNull(),
+  file_path: varchar('file_path', { length: 1000 }).notNull(),
+  acquired_at: timestamp('acquired_at', { withTimezone: true }).defaultNow().notNull(),
+  heartbeat_at: timestamp('heartbeat_at', { withTimezone: true }).defaultNow().notNull(),
+  lease_expires_at: timestamp('lease_expires_at', { withTimezone: true }).notNull(),
+  created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
+  updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  unique('uq_file_locks_deliverable_file').on(table.deliverable_id, table.file_path),
+  index('idx_file_locks_deliv_expiry').on(table.deliverable_id, table.lease_expires_at),
+  index('idx_file_locks_task_id').on(table.task_id),
+]);
+
 // Image metadata table
 export const IMAGE_METADATA = pgTable('IMAGE_METADATA', {
   id: serial('id').primaryKey(),
@@ -231,6 +252,7 @@ export const deliverablesRelations = relations(DELIVERABLES, ({ one, many }) => 
     references: [USERS.id],
   }),
   tasks: many(TASKS),
+  fileLocks: many(FILE_LOCKS),
   images: many(IMAGE_METADATA),
 }));
 
@@ -244,9 +266,33 @@ export const tasksRelations = relations(TASKS, ({ one, many }) => ({
     references: [DELIVERABLES.id],
   }),
   taskTags: many(TASK_TAGS),
+  fileLocks: many(FILE_LOCKS),
   images: many(IMAGE_METADATA),
   relations: many(TASK_RELATIONS, { relationName: 'taskRelations' }),
   relatedRelations: many(TASK_RELATIONS, { relationName: 'relatedTaskRelations' }),
+}));
+
+export const fileLocksRelations = relations(FILE_LOCKS, ({ one }) => ({
+  project: one(PROJECTS, {
+    fields: [FILE_LOCKS.project_id],
+    references: [PROJECTS.id],
+  }),
+  deliverable: one(DELIVERABLES, {
+    fields: [FILE_LOCKS.deliverable_id],
+    references: [DELIVERABLES.id],
+  }),
+  task: one(TASKS, {
+    fields: [FILE_LOCKS.task_id],
+    references: [TASKS.id],
+  }),
+  createdByUser: one(USERS, {
+    fields: [FILE_LOCKS.created_by],
+    references: [USERS.id],
+  }),
+  updatedByUser: one(USERS, {
+    fields: [FILE_LOCKS.updated_by],
+    references: [USERS.id],
+  }),
 }));
 
 export const taskRelationsRelations = relations(TASK_RELATIONS, ({ one }) => ({

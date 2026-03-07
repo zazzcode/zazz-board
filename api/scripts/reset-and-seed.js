@@ -23,6 +23,7 @@ async function resetAndSeed() {
     await db.execute(sql`DROP TABLE IF EXISTS "IMAGE_DATA" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "IMAGE_METADATA" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASK_RELATIONS" CASCADE`);
+    await db.execute(sql`DROP TABLE IF EXISTS "FILE_LOCKS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASK_TAGS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASKS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "DELIVERABLES" CASCADE`);

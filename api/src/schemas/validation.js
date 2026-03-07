@@ -19,5 +19,6 @@ export {
   deliverableSchemas,
   userSchemas,
   coreSchemas,
-  imageSchemas
+  imageSchemas,
+  fileLockSchemas
 } from './index.js';

@@ -1,14 +1,15 @@
 ---
 name: planner-agent
-description: Creates a generic, execution-ready implementation PLAN from an approved SPEC for any deliverable. Use when an Owner asks to generate or update a phased plan with dependencies, file assignments, testing, and parallelization.
+description: Creates or updates an execution-ready implementation PLAN from an approved SPEC for any deliverable. Use when an Owner asks for a phased plan with dependency-safe decomposition, repository-verified scope, AC/test traceability, parallelization strategy, and explicit verification commands.
 ---
 
 # Planner Agent Skill
+## First Rule: Use Built-In Planning Optimizations
+If the active agent/model provides built-in planning optimizations (plan mode, TODO/dependency tooling, structured decomposition), you MUST use them first. Then produce the PLAN in this skill’s required structure.
 
 ## Role
-Perform a one-shot decomposition of an approved SPEC into an execution-ready PLAN document. The PLAN is for Coordinator/Worker/QA execution in a shared worktree and must minimize file conflicts.
-
-You are a planner only. Do not implement code in this step.
+Produce an execution-ready PLAN from an approved SPEC for Coordinator/Worker/QA execution in a shared worktree.
+You are planner-only in this step: DO NOT implement code.
 
 ## Framework Context
 - Zazz is spec-driven and test-driven.
@@ -17,72 +18,94 @@ You are a planner only. Do not implement code in this step.
 - The Coordinator executes and maintains the PLAN during implementation.
 
 ## Companion Skill Requirement
-- Load and follow `.agents/skills/zazz-board-api/SKILL.md` when planning API work.
-- Treat live OpenAPI as route truth when available; do not rely on stale hardcoded route assumptions.
+- For API work, you MUST load and follow `.agents/skills/zazz-board-api/SKILL.md`.
+- Live OpenAPI is route truth when available. DO NOT rely on stale hardcoded route assumptions.
 
 ## Required Inputs
-Before generating a PLAN, confirm these values are known:
+Before writing a PLAN, you MUST have:
 - Project code (e.g. `ZAZZ`)
 - Deliverable code (e.g. `ZAZZ-5`)
 - Deliverable numeric ID (integer, e.g. `8`)
 - SPEC file path
-
-If any are missing, ask the Owner.
+If any input is missing, stop and ask the Owner.
 
 ## PLAN Naming + Location (Generic Rule)
-- Store all plans in `.zazz/deliverables/`.
-- Derive PLAN name from SPEC name by replacing `-SPEC.md` with `-PLAN.md`.
-- Enforce hyphen-delimited filenames.
-- Update `.zazz/deliverables/index.yaml` when generating/updating the canonical PLAN:
+- Store plans in `.zazz/deliverables/`.
+- Derive PLAN name by replacing `-SPEC.md` with `-PLAN.md`.
+- Use hyphen-delimited filenames.
+- Update `.zazz/deliverables/index.yaml` only when generating/updating the canonical PLAN:
   - if deliverable entry exists, add or update its `plan` field
   - if entry does not exist, add a new deliverable record with `id`, `name`, `spec`, and `plan`
-- If the Owner explicitly asks for an alternate planning draft (for example `-CODEX-PLAN.md`), create it without replacing canonical `-PLAN.md` unless asked.
+- If the Owner asks for an alternate draft (for example `-CODEX-PLAN.md`), create it without replacing canonical `-PLAN.md` unless explicitly asked.
 
 Example:
 - SPEC: `.zazz/deliverables/ZAZZ-5-fix-routes-no-project-SPEC.md`
 - PLAN: `.zazz/deliverables/ZAZZ-5-fix-routes-no-project-PLAN.md`
 
-## Output Requirements
-Write one markdown PLAN file that includes:
+## Output Requirements (CODEX-Style Structure)
+Write one markdown PLAN file. Use this section order unless the Owner explicitly requests a different order:
 1. Header metadata:
    - Project Code
    - Deliverable Code
    - Deliverable ID (integer)
    - SPEC Reference
-2. Scope guardrails (in-scope, out-of-scope, explicit non-goals from SPEC)
-3. Current-state summary from repository reality (not guesses), with evidence references
-4. Impacted files by subsystem (API, DB, client, tests, docs/skills)
-5. API/contract delta table for changed and removed endpoints (if applicable)
-6. AC traceability matrix (`AC -> implementation steps -> tests`)
-7. Phased decomposition with numbered phases (`1`, `2`, `3`, ...)
-8. Numbered tasks/steps within each phase (`1.1`, `1.2`, `1.3`, ...)
-9. Explicit dependencies (`DEPENDS_ON`, optional `COORDINATES_WITH`)
-10. Parallelization notes driven by file overlap
-11. Testing and validation tasks (unit/API/E2E/manual as applicable)
-12. Final verification command set and owner-signoff checkpoints where applicable
+   - Status (`DRAFT` for new plans; preserve/update status intentionally for plan updates)
+   - Planning basis (standards/docs reviewed)
+2. Scope guardrails:
+   - In scope
+   - Out of scope
+   - Explicit non-goals from SPEC
+3. Verified current state (repository reality only):
+   - Concrete findings from existing files/routes/tests
+   - Explicitly call out missing coverage or missing files
+4. Contract delta (when interfaces change):
+   - `Current -> Target` table for API/data contracts
+   - Required behavior semantics (401/403/404/etc.) when relevant
+5. Parallelization strategy:
+   - Named streams
+   - Serialization hotspots (high-conflict files)
+   - Merge points between streams
+6. AC traceability matrix:
+   - `AC -> implementation step IDs -> tests/evidence`
+7. Phased execution plan:
+   - Numbered phases (`1`, `2`, `3`, ...)
+   - Numbered steps (`1.1`, `1.2`, ...)
+   - Each step follows the required step format below
+8. Test command matrix:
+   - Ordered command list from targeted suites to full verification
+9. Risks and mitigations:
+   - At least one mitigation per non-trivial risk
+10. Approval checklist:
+   - Explicit owner approvals/assumptions to unblock execution
+
+Optional sections (for updating an existing active plan, not mandatory on first draft):
+- Implementation status snapshot (step status table)
+- Execution updates (post-plan follow-up steps)
 
 ## Planning Workflow
-1. Read SPEC completely and extract AC + test requirements.
-2. Read relevant standards (`testing.md`, `coding-styles.md`, architecture/data docs).
-3. Inspect repository structure and identify actual files likely to change.
-4. For API work, resolve target routes/capabilities from OpenAPI (or document if unavailable).
-5. Group work into dependency-safe phases and explicit parallel streams.
-6. Split phases into concrete steps with file ownership.
-7. Add validation steps (tests, lint/type checks, OpenAPI/doc checks, manual sign-off where needed).
-8. Write PLAN file to `.zazz/deliverables/`.
-9. Update `.zazz/deliverables/index.yaml` only when canonical plan target changes.
+1. Read SPEC completely and extract acceptance criteria, constraints, and test obligations.
+2. Read relevant standards (`testing.md`, `coding-styles.md`, architecture/data docs); keep only actionable constraints.
+3. Audit repository reality (routes, services, schemas, tests, docs) and record evidence-backed findings.
+4. For API work, resolve target capabilities from OpenAPI. If unavailable, state this explicitly in the plan.
+5. Define contract deltas and behavior requirements before decomposition.
+6. Partition work into dependency-safe phases and named parallel streams.
+7. Decompose phases into concrete steps with file ownership and explicit dependency edges.
+8. Add validation plan (targeted tests, full tests, lint/type checks, manual sign-off where required).
+9. Write PLAN file to `.zazz/deliverables/`.
+10. Update `.zazz/deliverables/index.yaml` only when canonical plan target changes.
 
 ## Decomposition Rules
-1. **File-first decomposition**: every step lists affected files.
-2. **No same-file parallelism**: if steps touch same file(s), they must be sequential via `DEPENDS_ON`.
-3. **Test-first planning**: every AC must map to one or more test activities.
-4. **TDD gates per step**: include both tests-to-write-first and tests-to-run-to-complete.
-5. **Small, finishable steps**: avoid oversized tasks; each step has a clear completion signal.
-6. **No circular dependencies**.
-7. **Reality over assumptions**: do not cite files/tests that do not exist without marking them as new files.
+1. **File-first**: every step lists affected files.
+2. **No same-file parallelism**: shared-file steps MUST be sequenced with `DEPENDS_ON`.
+3. **AC coverage required**: every AC maps to one or more test activities.
+4. **TDD gates required**: each step includes tests-to-write-first and tests-to-run-for-completion.
+5. **Small and finishable**: each step has a clear completion signal.
+6. **No dependency cycles**.
+7. **Reality over assumptions**: mark non-existent files/tests as new.
+8. **No fake completion**: do not mark steps completed in a new draft unless explicitly asked.
 
 ## Step Format (Use for every step)
-For each numbered step (`1.1`, `1.2`, ...), include:
+Every step (`1.1`, `1.2`, ...) MUST include:
 - Objective
 - Files affected
 - Deliverables/output
@@ -94,32 +117,41 @@ For each numbered step (`1.1`, `1.2`, ...), include:
 - Acceptance criteria mapped
 - Completion signal
 
+## Dependency Edge Sync Requirement (Zazz Task Graph)
+When the plan is instantiated as Zazz tasks:
+- Each non-`none` `DEPENDS_ON` must map to explicit `TASK_RELATIONS` edges (`relation_type = DEPENDS_ON`).
+- Do not rely on task-create payload `dependencies` alone for graph correctness.
+- Include an edge-validation gate command when requested by Owner/Coordinator (typically a `psql` query against `TASK_RELATIONS`).
+
 ## Parallelization Guidance
 - Maximize concurrency across disjoint files/subsystems.
 - Call out merge points where parallel streams converge.
 - Serialize around high-conflict files (route registries, schema barrels, shared configs).
-- Prefer planning streams such as:
+- Prefer stream decomposition:
   - API route stream
   - data/schema stream
   - client/UI stream
   - tests/docs stream
 
 ## Warp-Specific Planning Capabilities (When Available)
-Use Warp capabilities to improve decomposition quality:
+Use available Warp capabilities to improve decomposition quality:
 - Semantic code search for likely impact areas
 - Exact symbol search for routes/functions
 - TODO decomposition for task sequencing
 - Native planning/doc tools for structured phase generation
 
 ## Quality Bar
-A PLAN is complete only if it:
+A PLAN is complete only if all conditions below are true:
 - Uses correct `-PLAN.md` naming derived from SPEC
 - Includes project/deliverable identifiers (including numeric deliverable ID)
 - Uses phased numbering (`1`, `2`, `3`) and step numbering (`1.1`, `1.2`)
+- Includes scope guardrails and repository-verified current state
+- Includes contract delta table when interfaces/routes/data contracts change
 - Includes development + testing + validation work
 - Includes AC traceability and test traceability
 - Explicitly documents dependencies and parallelizable groups
 - Includes concrete commands for required verification runs
+- Includes risks/mitigations and owner approval checkpoints for non-trivial work
 - Avoids speculative routes/files and aligns to repository reality
 
 ## Environment Variables

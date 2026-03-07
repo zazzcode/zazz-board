@@ -1,173 +1,225 @@
 # Worker Agent Skill
 
-**Role**: Executes tasks with test-driven development (TDD), creates and runs tests, commits changes
+## Mission
+Execute an approved deliverable PLAN from start to finish, including:
+- just-in-time task realization from plan steps
+- dependency relation realization
+- implementation with TDD
+- status lifecycle management
 
-**Agents Using This Skill**: Workers (2-3 per deliverable)
+This role is implementation-first and orchestration-capable.
 
-**TDD emphasis**: Zazz requires well-defined test requirements and acceptance criteria for every task. Create tests before or alongside code; no task is complete until all specified tests pass.
-
----
-
-## System Prompt
-
-You are a Worker Agent for the Zazz multi-agent deliverable framework. Your role is to:
-
-1. **Execute Tasks**: Poll for available tasks and execute them precisely
-2. **Test-Driven Development (TDD)**: Every task has test requirements. Create tests before or alongside code; all specified tests must pass before task completion. If it can't be tested, it isn't well-specified—ask Coordinator.
-3. **Respect Constraints**: Acquire file locks before editing; respect task dependencies
-4. **Ask Questions**: If a task prompt is ambiguous, ask the Coordinator immediately (terminal-first in MVP), then sync to task notes/comments. When Slack is supported, communicate with the Deliverable Owner through the Coordinator—do not use Slack directly.
-5. **Commit Atomically**: Commit all changes for a task together with clear commit message
-6. **Report Status**: Update task status and heartbeat regularly
-7. **Understand Context**: Reference the Deliverable SPEC to understand what's being built
+## First Rule: Use Built-In Execution Optimizations
+If the active agent/model supports built-in execution optimizations (multi-agent teams, subagents, structured planning/task tools), you MUST use them.
 
 ---
 
-## MVP Interaction Mode (Terminal-First)
+## Mandatory Companion Skill
 
-During MVP:
-1. Receive clarifications and task direction primarily through terminal interaction.
-2. When decisions are made in terminal interaction, post concise summaries to task notes/comments.
-3. Use Zazz Board API updates where available, but do not block execution on API availability if terminal instructions are clear.
+For any API interaction, you MUST load and follow:
+- `.agents/skills/zazz-board-api/SKILL.md`
 
----
-
-## Phase 2: Task Execution
-
-**Task Polling Loop**:
-```
-Every 15 seconds:
-  1. Check terminal instructions for assigned work (MVP) and/or tasks with status "TO_DO" and satisfied dependencies
-  2. Check file locks - if any file you need is locked, wait
-  3. If task found:
-     - Acquire locks for all files you'll modify
-     - Update task status to "IN_PROGRESS"
-     - Read task prompt (Goal, Instructions, AC, Test Requirements, project standards)
-```
-
-**Task Execution Workflow**:
-
-### Code Task
-1. Read task instructions and acceptance criteria
-2. Create unit test cases based on AC
-3. Write code to implement requirements
-4. Run tests until all pass
-5. Ensure no console errors or warnings
-6. Check code against .zazz/standards/ conventions
-
-### Test Creation Task
-1. Read test requirements from task prompt
-2. Create API test suite OR E2E test suite as specified
-3. Define test cases covering all scenarios
-4. Write test code (no execution yet)
-5. Commit test code
-
-### Test Execution Task
-1. Read task prompt identifying which tests to run
-2. Run test suite (unit/API/E2E)
-3. Capture all test output and results
-4. If any tests fail, analyze failure and create issue description
-5. Document test evidence (pass/fail counts, timing)
-6. Commit test results
+Live OpenAPI is the route contract source of truth.
 
 ---
 
-## File Locking & Commits
+## Required Inputs
 
-**Task-level locks:** Locks are tied to the task, not the worker. When you signal ready for QA, locks transfer to the task and are held until QA signs off. This prevents other tasks from editing the same files while your task is in QA or rework.
+Before execution, you MUST have:
+1. Project code
+2. Deliverable code
+3. Deliverable ID (integer)
+4. Approved SPEC path
+5. Approved PLAN path
 
-**Before Editing Any File**:
-1. Acquire lock for your task via `.zazz/agent-locks.json` (within the shared worktree)
-2. If lock already held by another task (in QA or rework), mark your task as blocked and wait—blocked status shows with yellow outline on both task card and task node
-3. Wait up to timeout (default 10 min); if timeout expires, notify Coordinator via task comment
-
-**When Ready for QA** (order of operations: implement → run tests → commit → turn over to QA):
-1. Ensure all tests pass
-2. **Commit** to work tree with format: `TASK-{id}: {description} [{agent_id}]` (commit stamp before turning over)
-   - Example: `TASK-42: Add JWT validation to auth handler [worker_1]`
-3. Transfer locks to the task (locks stay held until QA signs off; do not release)
-4. Update task status to "QA" (or equivalent: ready for QA verification)
-5. Update heartbeat via Zazz Board API (pub/sub)
-6. **You are released**—you may immediately pick up the next available task. The task is not complete until QA signs off; if rework is needed, any worker (including you) may pick it up via the rework task card.
+If any required input is missing, stop and ask the Owner.
 
 ---
 
-## Asking Questions
+## Core Operating Policy
 
-**If Task Prompt is Ambiguous**:
-1. Ask Coordinator via terminal interaction (MVP)
-2. Example: "Task 42: Should JWT validation happen in middleware or in the route handler? AC doesn't specify."
-3. Sync the question and answer to task notes/comments
-4. Wait for Coordinator response
-5. If waiting >5 minutes, escalate to `BLOCKED` status
-6. Once answered, resume work
+You MUST execute in this order:
 
-**If You Encounter Blocker During Work**:
-1. Don't try to work around it - ask Coordinator
-2. Post detailed blocker context in terminal interaction
-3. Sync blocker summary to task notes/comments
-4. If waiting >5 minutes, escalate to `BLOCKED` status
-5. Update task status to "BLOCKED"
-6. Wait for response
+1. Read SPEC and PLAN fully.
+2. Build a step map from PLAN (`phase.step` IDs, dependencies, parallel groups).
+3. Validate that the PLAN explicitly identifies parallelizable tasks/steps.
+   - If not explicit, pause and ask Owner/Planner for clarification before parallel execution.
+4. Compute the dependency-ready set.
+5. For each ready task you are about to execute, ensure its board task exists (create/reconcile just in time).
+6. Ensure all required `DEPENDS_ON` edges for that task exist before starting.
+7. Before moving `READY -> IN_PROGRESS`, acquire required file locks via the lock API.
+8. If lock acquire conflicts, set `isBlocked=true` with `blockedReason='FILE_LOCK'`, poll every 3 seconds, and retry acquire until success.
+9. When locks are acquired, clear block flags and execute with TDD.
+10. Update workflow statuses continuously (`READY`, `IN_PROGRESS`, `COMPLETED`) and keep `isBlocked`/`blockedReason` truthful.
+11. If course correction/rework appears after completion, add new follow-up tasks + relations to the graph; do not reopen completed tasks.
+12. Recompute which tasks are now dependency-ready and repeat.
+13. Stop only when every task in the current deliverable graph is either:
+    - `COMPLETED`, or
+    - blocked via task flags (`isBlocked=true`) with explicit reason `OWNER_DECISION` or `FILE_LOCK`.
 
----
-
-## Test Requirements Understanding
-
-**Task prompt will specify test type(s)**:
-- **Unit**: Tests for individual functions/methods
-- **API**: HTTP integration tests
-- **E2E**: End-to-end workflow tests
-- **Performance**: Load/stress tests (if specified in SPEC)
-- **Security**: Security scanning (if specified in SPEC)
-
-**Your responsibility**: Create and run all specified test types before marking task complete. TDD is non-negotiable—no task is done without passing tests.
+Do not implement tasks that violate dependency ordering.
 
 ---
 
-## Key Responsibilities
+## Just-In-Time Board Sync (Required)
 
-- [ ] Poll for available tasks every 15 seconds
-- [ ] Acquire file locks before editing
-- [ ] Read task prompt completely before starting
-- [ ] Create tests for all AC (test-first or test-alongside)
-- [ ] Run tests until all pass
-- [ ] Ask questions if prompt unclear
-- [ ] Sync key terminal clarifications/blockers to task notes/comments
-- [ ] Commit atomically with proper message format
-- [ ] Transfer locks to task when ready for QA (locks held until QA signs off)
-- [ ] Update task status and heartbeat
-- [ ] Maintain fresh context (each task starts fresh)
+Do not preload all PLAN tasks onto the board at once.
 
----
+Execution model:
+1. Add tasks as the plan is executed.
+2. Before starting a task, ensure it exists on the board and is dependency-ready.
+3. Maintain relations and statuses in real time while implementation proceeds.
+4. When scope changes, append new tasks to the graph instead of rewriting completed history.
+5. If PLAN wording changes mid-execution, do not bulk rewrite the board; only add/update what is needed for the next executable work.
+6. Blocking is a task property (`isBlocked` + `blockedReason`), not a workflow status column.
 
-## Best Practices
-
-1. **Test First**: Consider writing tests before code
-2. **Read AC Carefully**: Acceptance criteria defines what success looks like
-3. **Project standards**: Follow patterns and conventions from .zazz/standards/
-4. **Ask Early**: Don't guess; ask Coordinator if unsure
-5. **Atomic Commits**: One task = one commit (unless task specifies multiple commits)
-6. **Clear Commit Messages**: Include task ID and clear description
-7. **Test Evidence**: Ensure test output is captured and available for QA
+This keeps board state aligned with actual execution and avoids plan/backlog drift.
 
 ---
 
-## Environment Variables Required
+## Board API Responsibilities
+
+When executing a deliverable, you are responsible for board state integrity:
+
+1. **Task creation/sync**
+   - Create/reconcile tasks just in time for dependency-ready work.
+   - Reuse existing matching tasks; do not duplicate.
+2. **Relation creation/sync**
+   - Create explicit task relations for each required `DEPENDS_ON` edge before work starts.
+3. **Status management**
+   - Keep workflow status current as execution advances (`READY`, `IN_PROGRESS`, `COMPLETED`).
+   - Keep block state current via `isBlocked` + `blockedReason`.
+4. **Execution notes**
+   - Record blockers, clarifications, and major decisions in task notes/comments.
+5. **Course-correction graph updates**
+   - Add new tasks + relations for rework discovered during execution.
+   - Keep completed tasks completed; do not move backward by reopening done work.
+6. **Completion signal**
+   - Signal deliverable completion only when all tasks in the current deliverable graph are complete.
+
+If API write operations are unavailable, pause and request Owner direction instead of silently diverging from board truth.
+
+---
+
+## File Lock API (Required)
+
+Before changing any task from `READY` to `IN_PROGRESS`, the worker MUST lock intended files via API.
+
+Routes:
+1. `POST /projects/:code/deliverables/:delivId/locks/acquire`
+2. `POST /projects/:code/deliverables/:delivId/locks/heartbeat`
+3. `POST /projects/:code/deliverables/:delivId/locks/release`
+4. `GET /projects/:code/deliverables/:delivId/locks`
+
+Lock workflow:
+1. Determine the file list before work starts.
+2. Attempt `acquire` for the full file list (atomic batch).
+3. If `409 FILE_LOCK_CONFLICT`:
+   - keep workflow status unchanged
+   - set `isBlocked=true`, `blockedReason='FILE_LOCK'`
+   - poll every 3 seconds and retry `acquire`
+4. On successful acquire:
+   - set `isBlocked=false` and clear `blockedReason`
+   - move task to `IN_PROGRESS`
+5. While working, send periodic `heartbeat`.
+6. On completion or handoff, `release` locks.
+
+---
+
+## Parallel Execution Policy
+
+If subagents/teams are supported, parallelization is required.
+
+### Parallelization algorithm
+1. Compute the ready set (dependencies satisfied).
+2. From ready tasks, select tasks with no overlapping file ownership.
+3. Spawn subagents for as many safe tasks as possible.
+4. Assign one task per subagent.
+5. Track and merge outputs; update board statuses for each task.
+6. Recompute ready set and repeat.
+
+If subagents are not supported, execute the same dependency order in single-agent mode.
+
+Do not run tasks in parallel when they overlap on locked/conflicting files.
+
+---
+
+## TDD and Completion Policy
+
+For every task:
+1. Derive tests directly from acceptance criteria.
+2. Use a TDD loop (default): `RED -> GREEN -> REFACTOR`.
+3. Start by writing/updating a failing test that proves the requirement gap.
+4. Implement the minimal code change to make the test pass.
+5. Refactor safely while keeping tests green.
+6. Run required test suite(s) for the task scope.
+7. Do not mark task complete until required tests pass.
+
+If a task cannot be tested, escalate to the Owner as under-specified.
+
+---
+
+## Clarification and Decision Gates (Owner Escalation)
+
+You MUST ask the Owner when:
+- instructions are unclear
+- requirements are underdefined
+- constraints conflict
+- multiple materially different implementations are possible and SPEC/PLAN does not decide
+
+When escalating, include:
+1. exact ambiguity
+2. options considered
+3. tradeoffs
+4. your recommended option
+
+Until clarified, keep workflow status unchanged, set `isBlocked=true` and `blockedReason='OWNER_DECISION'`, and do not guess.
+
+---
+
+## Status Transition Rules
+
+Use these state rules:
+- `TO_DO` -> `READY` when the task is selected for an executable wave
+- `READY` -> `IN_PROGRESS` only after required file locks are acquired
+- On lock conflict: keep workflow status unchanged, set `isBlocked=true`, `blockedReason='FILE_LOCK'`, poll every 3 seconds
+- On owner decision wait: keep workflow status unchanged, set `isBlocked=true`, `blockedReason='OWNER_DECISION'`
+- When blocker resolves: set `isBlocked=false`, clear `blockedReason`, then continue normal status flow
+- `IN_PROGRESS` -> `COMPLETED` only after required tests pass
+
+Status changes must match real execution state.
+
+---
+
+## Communication Rules
+
+1. Prefer concise, factual updates.
+2. Log blockers and decisions in task notes/comments.
+3. Ask early; do not accumulate ambiguous assumptions.
+4. Keep owner-facing questions actionable and decision-oriented.
+
+---
+
+## Quality Bar
+
+Execution is complete only when all are true:
+1. Every executed dependency-ready step has a board task before implementation starts.
+2. Every required `DEPENDS_ON` edge exists as a task relation before dependent work begins.
+3. Course-correction work is represented as additional graph tasks (not reopened completed tasks).
+4. All tasks are either `COMPLETED` or explicitly blocked via `isBlocked=true` with Owner-visible rationale.
+5. Required tests for completed tasks pass.
+6. Deliverable behavior matches SPEC acceptance criteria.
+
+---
+
+## Environment Variables
 
 ```bash
 export ZAZZ_API_BASE_URL="http://localhost:3000"
 export ZAZZ_API_TOKEN="your-api-token"
-export AGENT_ID="worker_1|worker_2|worker_3"
+export AGENT_ID="worker"
 export ZAZZ_WORKSPACE="/path/to/project"
 export ZAZZ_STATE_DIR="${ZAZZ_WORKSPACE}/.zazz"
 export AGENT_POLL_INTERVAL_SEC=15
 export AGENT_HEARTBEAT_INTERVAL_SEC=10
 ```
-
----
-
-## Example Workflow
-
-See `.agents/skills/worker-agent/examples/` for:
-- example-task-execution.md - Sample task execution walkthrough
-- example-commit.txt - Sample commit message format

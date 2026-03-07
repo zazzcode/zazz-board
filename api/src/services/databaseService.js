@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, asc, like, or, inArray, ne } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES, FILE_LOCKS } from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
 import { keysToCamelCase } from '../utils/propertyMapper.js';
 import { randomUUID } from 'crypto';
@@ -1436,6 +1436,264 @@ class DatabaseService {
       originalName: deletedImage.original_name,
       contentType: deletedImage.content_type
     } : null;
+  }
+
+  // ==================== FILE LOCK OPERATIONS ====================
+
+  normalizeLockFilePaths(filePaths = []) {
+    if (!Array.isArray(filePaths)) return [];
+    const normalized = filePaths
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+    return [...new Set(normalized)];
+  }
+
+  normalizeLockTtlSeconds(ttlSeconds) {
+    const parsed = Number.parseInt(ttlSeconds, 10);
+    if (!Number.isFinite(parsed)) return 30;
+    if (parsed < 5) return 5;
+    if (parsed > 300) return 300;
+    return parsed;
+  }
+
+  mapFileLock(lock) {
+    return {
+      id: lock.id,
+      projectId: lock.project_id,
+      deliverableId: lock.deliverable_id,
+      taskId: lock.task_id,
+      phaseStep: lock.phase_step,
+      agentName: lock.agent_name,
+      filePath: lock.file_path,
+      acquiredAt: lock.acquired_at,
+      heartbeatAt: lock.heartbeat_at,
+      leaseExpiresAt: lock.lease_expires_at,
+      createdBy: lock.created_by,
+      updatedBy: lock.updated_by,
+      updatedAt: lock.updated_at,
+    };
+  }
+
+  async reclaimExpiredFileLocks(tx, deliverableId) {
+    return tx
+      .delete(FILE_LOCKS)
+      .where(
+        and(
+          eq(FILE_LOCKS.deliverable_id, deliverableId),
+          sql`${FILE_LOCKS.lease_expires_at} <= NOW()`
+        )
+      );
+  }
+
+  async listActiveFileLocks({ projectId, deliverableId }) {
+    return db.transaction(async (tx) => {
+      await this.reclaimExpiredFileLocks(tx, deliverableId);
+      const rows = await tx
+        .select()
+        .from(FILE_LOCKS)
+        .where(
+          and(
+            eq(FILE_LOCKS.project_id, projectId),
+            eq(FILE_LOCKS.deliverable_id, deliverableId),
+            sql`${FILE_LOCKS.lease_expires_at} > NOW()`
+          )
+        )
+        .orderBy(asc(FILE_LOCKS.file_path));
+      return rows.map((row) => this.mapFileLock(row));
+    });
+  }
+
+  async acquireFileLocks({ projectId, deliverableId, taskId, phaseStep = null, agentName, filePaths, ttlSeconds = 30, userId = null }) {
+    const normalizedFilePaths = this.normalizeLockFilePaths(filePaths);
+    if (normalizedFilePaths.length === 0) {
+      throw new Error('filePaths is required and must contain at least one path');
+    }
+    const normalizedAgentName = String(agentName || '').trim();
+    if (!normalizedAgentName) {
+      throw new Error('agentName is required');
+    }
+    const ttl = this.normalizeLockTtlSeconds(ttlSeconds);
+
+    return db.transaction(async (tx) => {
+      await this.reclaimExpiredFileLocks(tx, deliverableId);
+
+      const [task] = await tx.select({
+        id: TASKS.id,
+        projectId: TASKS.project_id,
+        deliverableId: TASKS.deliverable_id,
+      })
+      .from(TASKS)
+      .where(eq(TASKS.id, taskId))
+      .limit(1);
+
+      if (!task || task.projectId !== projectId || task.deliverableId !== deliverableId) {
+        throw new Error('Task not found in this project/deliverable');
+      }
+
+      const existingLocks = await tx
+        .select()
+        .from(FILE_LOCKS)
+        .where(
+          and(
+            eq(FILE_LOCKS.deliverable_id, deliverableId),
+            inArray(FILE_LOCKS.file_path, normalizedFilePaths),
+            sql`${FILE_LOCKS.lease_expires_at} > NOW()`
+          )
+        );
+
+      const conflicts = existingLocks
+        .filter((lock) => !(lock.task_id === taskId && lock.agent_name === normalizedAgentName))
+        .map((lock) => ({
+          filePath: lock.file_path,
+          taskId: lock.task_id,
+          phaseStep: lock.phase_step,
+          agentName: lock.agent_name,
+          leaseExpiresAt: lock.lease_expires_at,
+        }));
+
+      if (conflicts.length > 0) {
+        return {
+          acquired: false,
+          error: 'FILE_LOCK_CONFLICT',
+          conflicts,
+          pollIntervalSeconds: 3,
+        };
+      }
+
+      const now = new Date();
+      const leaseExpiresAt = new Date(now.getTime() + ttl * 1000);
+
+      for (const filePath of normalizedFilePaths) {
+        const existing = existingLocks.find((lock) => lock.file_path === filePath);
+        if (existing) {
+          await tx
+            .update(FILE_LOCKS)
+            .set({
+              phase_step: phaseStep ?? existing.phase_step,
+              heartbeat_at: now,
+              lease_expires_at: leaseExpiresAt,
+              updated_by: userId,
+              updated_at: now,
+            })
+            .where(eq(FILE_LOCKS.id, existing.id));
+        } else {
+          await tx
+            .insert(FILE_LOCKS)
+            .values({
+              project_id: projectId,
+              deliverable_id: deliverableId,
+              task_id: taskId,
+              phase_step: phaseStep,
+              agent_name: normalizedAgentName,
+              file_path: filePath,
+              acquired_at: now,
+              heartbeat_at: now,
+              lease_expires_at: leaseExpiresAt,
+              created_by: userId,
+              updated_by: userId,
+              updated_at: now,
+            });
+        }
+      }
+
+      const acquiredRows = await tx
+        .select()
+        .from(FILE_LOCKS)
+        .where(
+          and(
+            eq(FILE_LOCKS.project_id, projectId),
+            eq(FILE_LOCKS.deliverable_id, deliverableId),
+            eq(FILE_LOCKS.task_id, taskId),
+            eq(FILE_LOCKS.agent_name, normalizedAgentName),
+            inArray(FILE_LOCKS.file_path, normalizedFilePaths),
+            sql`${FILE_LOCKS.lease_expires_at} > NOW()`
+          )
+        )
+        .orderBy(asc(FILE_LOCKS.file_path));
+
+      return {
+        acquired: true,
+        locks: acquiredRows.map((row) => this.mapFileLock(row)),
+        ttlSeconds: ttl,
+      };
+    });
+  }
+
+  async heartbeatFileLocks({ projectId, deliverableId, taskId, agentName, filePaths = [], ttlSeconds = 30, userId = null }) {
+    const normalizedAgentName = String(agentName || '').trim();
+    if (!normalizedAgentName) {
+      throw new Error('agentName is required');
+    }
+    const normalizedFilePaths = this.normalizeLockFilePaths(filePaths);
+    const ttl = this.normalizeLockTtlSeconds(ttlSeconds);
+
+    return db.transaction(async (tx) => {
+      await this.reclaimExpiredFileLocks(tx, deliverableId);
+
+      const now = new Date();
+      const leaseExpiresAt = new Date(now.getTime() + ttl * 1000);
+
+      const conditions = [
+        eq(FILE_LOCKS.project_id, projectId),
+        eq(FILE_LOCKS.deliverable_id, deliverableId),
+        eq(FILE_LOCKS.task_id, taskId),
+        eq(FILE_LOCKS.agent_name, normalizedAgentName),
+        sql`${FILE_LOCKS.lease_expires_at} > NOW()`,
+      ];
+
+      if (normalizedFilePaths.length > 0) {
+        conditions.push(inArray(FILE_LOCKS.file_path, normalizedFilePaths));
+      }
+
+      const refreshedRows = await tx
+        .update(FILE_LOCKS)
+        .set({
+          heartbeat_at: now,
+          lease_expires_at: leaseExpiresAt,
+          updated_by: userId,
+          updated_at: now,
+        })
+        .where(and(...conditions))
+        .returning();
+
+      return {
+        refreshedCount: refreshedRows.length,
+        ttlSeconds: ttl,
+        locks: refreshedRows.map((row) => this.mapFileLock(row)),
+      };
+    });
+  }
+
+  async releaseFileLocks({ projectId, deliverableId, taskId, agentName, filePaths = [] }) {
+    const normalizedAgentName = String(agentName || '').trim();
+    if (!normalizedAgentName) {
+      throw new Error('agentName is required');
+    }
+    const normalizedFilePaths = this.normalizeLockFilePaths(filePaths);
+
+    return db.transaction(async (tx) => {
+      await this.reclaimExpiredFileLocks(tx, deliverableId);
+
+      const conditions = [
+        eq(FILE_LOCKS.project_id, projectId),
+        eq(FILE_LOCKS.deliverable_id, deliverableId),
+        eq(FILE_LOCKS.task_id, taskId),
+        eq(FILE_LOCKS.agent_name, normalizedAgentName),
+      ];
+      if (normalizedFilePaths.length > 0) {
+        conditions.push(inArray(FILE_LOCKS.file_path, normalizedFilePaths));
+      }
+
+      const releasedRows = await tx
+        .delete(FILE_LOCKS)
+        .where(and(...conditions))
+        .returning();
+
+      return {
+        releasedCount: releasedRows.length,
+        locks: releasedRows.map((row) => this.mapFileLock(row)),
+      };
+    });
   }
 
   // ==================== UTILITY METHODS ====================

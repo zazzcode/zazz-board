@@ -22,3 +22,4 @@ export { deliverableSchemas } from './deliverables.js';
 export { userSchemas } from './users.js';
 export { coreSchemas } from './core.js';
 export { imageSchemas } from './images.js';
+export { fileLockSchemas } from './fileLocks.js';

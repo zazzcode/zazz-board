@@ -1,5 +1,5 @@
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS, IMAGE_METADATA, IMAGE_DATA } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS, FILE_LOCKS, IMAGE_METADATA, IMAGE_DATA } from '../../lib/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 
 /**
@@ -62,6 +62,7 @@ export async function clearTaskData() {
   // Explicitly clear image tables so image route tests remain isolated.
   await db.delete(IMAGE_DATA);
   await db.delete(IMAGE_METADATA);
+  await db.delete(FILE_LOCKS);
   await db.delete(TASK_RELATIONS);
   await db.delete(TASK_TAGS);
   await db.delete(TASKS);
