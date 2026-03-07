@@ -1,63 +1,38 @@
 import { db } from '../../lib/db/index.js';
 import { PROJECTS } from '../../lib/db/schema.js';
+import { loadZazzProjectSnapshot } from './zazzSnapshot.js';
 
 export async function seedProjects() {
   console.log('  📝 Seeding projects...');
   try {
+    const snapshot = await loadZazzProjectSnapshot();
+    const zazzProject = snapshot.project;
+    const zedLeaderId = zazzProject.leader_id === 2 ? 3 : 2;
+
     await db.insert(PROJECTS).values([
       {
-        title: 'Zazz Board',
-        code: 'ZAZZ',
-        description: 'Zazz-Board application development — primary test project',
-        leader_id: 5,
-        next_deliverable_sequence: 4,
+        title: zazzProject.title || 'Zazz Board',
+        code: zazzProject.code || 'ZAZZ',
+        description: zazzProject.description || 'Zazz-Board application development — primary test project',
+        leader_id: zazzProject.leader_id || 5,
+        next_deliverable_sequence: zazzProject.next_deliverable_sequence || 4,
+        status_workflow: Array.isArray(zazzProject.status_workflow) ? zazzProject.status_workflow : ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
+        deliverable_status_workflow: Array.isArray(zazzProject.deliverable_status_workflow) ? zazzProject.deliverable_status_workflow : ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
+        task_graph_layout_direction: zazzProject.task_graph_layout_direction || 'LR',
+        completion_criteria_status: zazzProject.completion_criteria_status || 'COMPLETED',
+        created_by: zazzProject.created_by || 5
+      },
+      {
+        title: 'Zed Mermaid',
+        code: 'ZED_MER',
+        description: 'Product-only project for real deliverable creation',
+        leader_id: zedLeaderId,
+        next_deliverable_sequence: 1,
         status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
         deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
         task_graph_layout_direction: 'LR',
         completion_criteria_status: 'COMPLETED',
-        created_by: 5
-      },
-      {
-        title: 'Mobile App Development',
-        code: 'MOBDEV',
-        description: 'Native mobile app for iOS and Android platforms',
-        leader_id: 2,
-        next_deliverable_sequence: 2,
-        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
-        deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
-        created_by: 2
-      },
-      {
-        title: 'API Modernization',
-        code: 'APIMOD',
-        description: 'Migrate legacy APIs to modern REST architecture',
-        leader_id: 3,
-        next_deliverable_sequence: 3,
-        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
-        deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'UAT', 'STAGED', 'PROD'],
-        task_graph_layout_direction: 'LR',
-        completion_criteria_status: 'COMPLETED',
-        created_by: 3
-      },
-      {
-        title: 'Database Migration',
-        code: 'DATAMIG',
-        description: 'Migrate all customer data to new clustered database',
-        leader_id: 5,
-        next_deliverable_sequence: 1,
-        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
-        deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
-        created_by: 5
-      },
-      {
-        title: 'Security Compliance',
-        code: 'SECURE',
-        description: 'Annual security audit and compliance updates',
-        leader_id: 4,
-        next_deliverable_sequence: 1,
-        status_workflow: ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
-        deliverable_status_workflow: ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE'],
-        created_by: 4
+        created_by: zedLeaderId
       }
     ]);
     console.log('  ✅ Projects seeded successfully');

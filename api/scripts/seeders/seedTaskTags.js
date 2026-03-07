@@ -1,6 +1,7 @@
 import { db } from '../../lib/db/index.js';
-import { TASKS, TAGS, TASK_TAGS } from '../../lib/db/schema.js';
-import { eq, sql } from 'drizzle-orm';
+import { TASKS, TAGS, TASK_TAGS, DELIVERABLES } from '../../lib/db/schema.js';
+import { sql } from 'drizzle-orm';
+import { loadZazzProjectSnapshot } from './zazzSnapshot.js';
 
 export async function seedTaskTags() {
   console.log('  📝 Seeding task-tag relationships...');
@@ -12,32 +13,61 @@ export async function seedTaskTags() {
       return;
     }
 
+    const snapshot = await loadZazzProjectSnapshot();
     const tags = await db.select({ tag: TAGS.tag }).from(TAGS);
     const tagSet = new Set(tags.map(t => t.tag));
 
-    const tasks = await db.select({ id: TASKS.id, title: TASKS.title }).from(TASKS);
+    const deliverables = await db
+      .select({ id: DELIVERABLES.id, key: DELIVERABLES.deliverable_id })
+      .from(DELIVERABLES);
+    const deliverableKeyByDbId = new Map(deliverables.map((deliverable) => [deliverable.id, deliverable.key]));
+
+    const tasks = await db
+      .select({
+        id: TASKS.id,
+        title: TASKS.title,
+        phaseTaskId: TASKS.phase_task_id,
+        deliverableDbId: TASKS.deliverable_id,
+      })
+      .from(TASKS);
+
     if (tasks.length === 0) {
       console.log('  ⏭️  No tasks found. Skipping task-tag seeding.');
       return;
     }
 
-    const byTitle = new Map(tasks.map(t => [t.title, t.id]));
+    const byDeliverableAndPhaseTask = new Map();
+    const byDeliverableAndTitle = new Map();
+
+    for (const task of tasks) {
+      const deliverableKey = deliverableKeyByDbId.get(task.deliverableDbId);
+      if (!deliverableKey) continue;
+
+      if (task.phaseTaskId) {
+        byDeliverableAndPhaseTask.set(`${deliverableKey}::${task.phaseTaskId}`, task.id);
+      }
+
+      byDeliverableAndTitle.set(`${deliverableKey}::${task.title}`, task.id);
+    }
 
     const links = [];
-    const add = (title, tag) => {
-      const id = byTitle.get(title);
-      if (!id) return;
-      if (!tagSet.has(tag)) return;
-      links.push({ task_id: id, tag });
-    };
+    const seen = new Set();
 
-    // Keep tags consistent with TAGS seed data.
-    add('ZAZZ-1: Foundation completed (schema + API read paths)', 'backend');
-    add('ZAZZ-1: Remaining work (UI polish + edge cases)', 'frontend');
+    for (const tagLink of snapshot.task_tags) {
+      if (!tagSet.has(tagLink.tag)) continue;
 
-    add('ZAZZ-3: Reproduce bug and capture failing cases', 'bug-fix');
-    add('ZAZZ-3: Add regression tests for invalid tag formats', 'testing');
-    add('ZAZZ-3: Fix validation for trailing hyphen and edge cases', 'bug-fix');
+      const taskId = tagLink.phase_task_id
+        ? byDeliverableAndPhaseTask.get(`${tagLink.deliverable_id}::${tagLink.phase_task_id}`)
+        : null;
+
+      const resolvedTaskId = taskId || byDeliverableAndTitle.get(`${tagLink.deliverable_id}::${tagLink.title}`);
+      if (!resolvedTaskId) continue;
+
+      const dedupeKey = `${resolvedTaskId}::${tagLink.tag}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      links.push({ task_id: resolvedTaskId, tag: tagLink.tag });
+    }
 
     if (links.length === 0) {
       console.log('  ⏭️  No task-tag links to insert.');

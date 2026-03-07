@@ -82,10 +82,10 @@ async function seedAll() {
     console.log('   • 5 users created');
     console.log('   • 8 status definitions created');
     console.log('   • 4 translation sets created (en, es, fr, de)');
-    console.log('   • 5 projects created');
-    console.log('   • 6 deliverables created');
+    console.log('   • 2 projects created (ZAZZ, ZED_MER)');
+    console.log('   • 4 deliverables created (ZAZZ only)');
     console.log('   • 6 tags created');
-    console.log('   • 0 tasks (task model refactor in progress — no task seed data)');
+    console.log('   • 32 ZAZZ tasks seeded from database snapshot');
     
   } catch (error) {
     console.error('❌ Error seeding data:', error.message);

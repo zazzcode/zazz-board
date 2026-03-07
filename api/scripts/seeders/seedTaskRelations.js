@@ -1,6 +1,11 @@
 import { db } from '../../lib/db/index.js';
-import { TASKS, TASK_RELATIONS } from '../../lib/db/schema.js';
-import { eq, sql } from 'drizzle-orm';
+import { TASKS, TASK_RELATIONS, DELIVERABLES } from '../../lib/db/schema.js';
+import { sql } from 'drizzle-orm';
+import { loadZazzProjectSnapshot } from './zazzSnapshot.js';
+
+function toDateOrNull(value) {
+  return value ? new Date(value) : null;
+}
 
 export async function seedTaskRelations() {
   console.log('  📝 Seeding task relations...');
@@ -12,46 +17,78 @@ export async function seedTaskRelations() {
       return;
     }
 
-    const tasks = await db.select({ id: TASKS.id, title: TASKS.title }).from(TASKS);
+    const snapshot = await loadZazzProjectSnapshot();
+
+    const deliverables = await db
+      .select({ id: DELIVERABLES.id, key: DELIVERABLES.deliverable_id })
+      .from(DELIVERABLES);
+    const deliverableKeyByDbId = new Map(deliverables.map((deliverable) => [deliverable.id, deliverable.key]));
+
+    const tasks = await db
+      .select({
+        id: TASKS.id,
+        title: TASKS.title,
+        phaseTaskId: TASKS.phase_task_id,
+        deliverableDbId: TASKS.deliverable_id,
+      })
+      .from(TASKS);
     if (tasks.length === 0) {
       console.log('  ⏭️  No tasks found. Skipping task relation seeding.');
       return;
     }
 
-    const byTitle = new Map(tasks.map(t => [t.title, t.id]));
+    const byDeliverableAndPhaseTask = new Map();
+    const byDeliverableAndTitle = new Map();
 
-    const depends = (a, b) => {
-      const taskId = byTitle.get(a);
-      const relatedId = byTitle.get(b);
-      if (!taskId || !relatedId) return null;
-      return { task_id: taskId, related_task_id: relatedId, relation_type: 'DEPENDS_ON' };
+    for (const task of tasks) {
+      const deliverableKey = deliverableKeyByDbId.get(task.deliverableDbId);
+      if (!deliverableKey) continue;
+
+      if (task.phaseTaskId) {
+        byDeliverableAndPhaseTask.set(`${deliverableKey}::${task.phaseTaskId}`, task.id);
+      }
+
+      byDeliverableAndTitle.set(`${deliverableKey}::${task.title}`, task.id);
+    }
+
+    const resolveTaskId = (deliverableId, phaseTaskId, title) => {
+      if (phaseTaskId) {
+        const byPhaseTask = byDeliverableAndPhaseTask.get(`${deliverableId}::${phaseTaskId}`);
+        if (byPhaseTask) return byPhaseTask;
+      }
+      return byDeliverableAndTitle.get(`${deliverableId}::${title}`) || null;
     };
 
-    const coordinates = (a, b) => {
-      const taskId = byTitle.get(a);
-      const relatedId = byTitle.get(b);
-      if (!taskId || !relatedId) return [];
-      // Store both directions so consumers that treat the table as directed still see the edge.
-      return [
-        { task_id: taskId, related_task_id: relatedId, relation_type: 'COORDINATES_WITH' },
-        { task_id: relatedId, related_task_id: taskId, relation_type: 'COORDINATES_WITH' },
-      ];
-    };
+    const now = new Date();
+    const rels = [];
+    const seen = new Set();
 
-    const rels = [
-      // ZAZZ-1 simple dependency (1.1 must complete before 1.2)
-      depends('ZAZZ-1: Remaining work (UI polish + edge cases)', 'ZAZZ-1: Foundation completed (schema + API read paths)'),
+    for (const relation of snapshot.task_relations) {
+      const taskId = resolveTaskId(
+        relation.from_deliverable_id,
+        relation.from_phase_task_id,
+        relation.from_title
+      );
+      const relatedTaskId = resolveTaskId(
+        relation.to_deliverable_id,
+        relation.to_phase_task_id,
+        relation.to_title
+      );
 
-      // ZAZZ-3 progression chain (each task depends on the previous phase)
-      depends('ZAZZ-3: Add regression tests for invalid tag formats', 'ZAZZ-3: Reproduce bug and capture failing cases'),
-      depends('ZAZZ-3: Confirm API validation contract + error messaging', 'ZAZZ-3: Add regression tests for invalid tag formats'),
-      depends('ZAZZ-3: Fix validation for trailing hyphen and edge cases', 'ZAZZ-3: Confirm API validation contract + error messaging'),
-      depends('ZAZZ-3: Add server-side canonicalization (lowercase + hyphens)', 'ZAZZ-3: Fix validation for trailing hyphen and edge cases'),
-      depends('ZAZZ-3: Ensure tag creation/upsert handles collisions', 'ZAZZ-3: Add server-side canonicalization (lowercase + hyphens)'),
-      depends('ZAZZ-3: QA run (API + UI) for tag flows', 'ZAZZ-3: Ensure tag creation/upsert handles collisions'),
-      depends('ZAZZ-3: Address review feedback / small refactor', 'ZAZZ-3: QA run (API + UI) for tag flows'),
-      depends('ZAZZ-3: Final sign-off checklist', 'ZAZZ-3: Address review feedback / small refactor'),
-    ].flat().filter(Boolean);
+      if (!taskId || !relatedTaskId) continue;
+
+      const dedupeKey = `${taskId}::${relatedTaskId}::${relation.relation_type}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      rels.push({
+        task_id: taskId,
+        related_task_id: relatedTaskId,
+        relation_type: relation.relation_type,
+        updated_by: relation.updated_by,
+        updated_at: toDateOrNull(relation.updated_at) || now,
+      });
+    }
 
     if (rels.length === 0) {
       console.log('  ⏭️  No relations to insert.');
