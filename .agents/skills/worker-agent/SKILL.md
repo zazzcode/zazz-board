@@ -9,6 +9,11 @@ Execute an approved deliverable PLAN from start to finish, including:
 
 This role is implementation-first and orchestration-capable.
 
+## Role Scope
+- Worker agent is the primary role with full board API interaction.
+- Spec-builder/planner activities may be orchestrated directly by the human Owner outside this skill.
+- When this skill is active, prioritize implementation execution and board truth synchronization.
+
 ## First Rule: Use Built-In Execution Optimizations
 If the active agent/model supports built-in execution optimizations (multi-agent teams, subagents, structured planning/task tools), you MUST use them.
 
