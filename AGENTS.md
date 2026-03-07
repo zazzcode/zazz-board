@@ -133,7 +133,7 @@ Vitest + PactumJS. See [testing.md](.zazz/standards/testing.md) and [api/**tests
 
 ## Troubleshooting
 
-- **drizzle-kit "drizzle-orm"**: From root: `ln -sf ./api/node_modules/drizzle-orm ./node_modules/drizzle-orm`
+- **drizzle-kit "drizzle-orm"**: Run `npm install` from repo root and `npm install --workspace=api`. Do not create manual `node_modules` symlinks in worktrees.
 - **DATABASE_URL_TEST not set**: Source `api/.env` before running tests
 - **SAFETY CHECK FAILED**: Ensure `zazz_board_test` exists; recreate test DB
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test)
@@ -151,4 +151,3 @@ cd api && DATABASE_URL=postgres://postgres:password@localhost:5433/zazz_board_te
 cd api && set -a && source .env && set +a && NODE_ENV=test npm run test
 npm run dev
 ```
-

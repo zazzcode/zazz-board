@@ -134,6 +134,7 @@ This repo uses **worktrees** for feature work. See [AGENTS.md](./AGENTS.md) and 
 
 - Dev Postgres runs on port **5433** (prod uses 5432) so you can run both dev and production on the same machine without port conflicts.
 - Default DB password is `password`.
+- In worktrees, avoid manual `node_modules` symlinks. If `drizzle-kit` complains about `drizzle-orm`, re-run `npm install` at repo root plus `npm install --workspace=api`.
 - If client dependencies fail due to peer resolution, re-run with `--legacy-peer-deps`.
 - Port in use: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client).
 - Manual API token (seed): `550e8400-e29b-41d4-a716-446655440000`
