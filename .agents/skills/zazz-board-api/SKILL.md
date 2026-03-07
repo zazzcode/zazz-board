@@ -90,12 +90,47 @@ If a critical capability cannot be resolved, stop and surface the mismatch.
 
 ---
 
+## Mandatory execution contract
+For coordinator/worker/qa agent runs, these behaviors are required:
+- Use live API for all task/deliverable lifecycle updates.
+- Do not leave created tasks in ambiguous state.
+- Keep task graph relations explicit and verifiable.
+
+Task lifecycle (required):
+1. Create task in deliverable (`POST /projects/{code}/deliverables/{delivId}/tasks`) with:
+   - `title`
+   - `phase`
+   - `phaseTaskId`
+   - `prompt`
+2. If task begins execution, set status to `IN_PROGRESS` immediately (`PATCH .../tasks/{taskId}/status`).
+3. On implementation completion, set status to `QA`.
+4. After QA passes, set status to `COMPLETED`.
+
+Deliverable lifecycle (required):
+- Resolve project deliverable workflow from API/OpenAPI-capable endpoints.
+- Update deliverable status explicitly with status endpoints; do not assume implicit transitions.
+- Approve deliverable explicitly with approve endpoint when workflow requires it.
+
+Dependency lifecycle (required):
+- Treat `DEPENDS_ON` in PLAN as required `TASK_RELATIONS` rows.
+- Do not assume task create `dependencies` field is sufficient for graph lines.
+- After task creation, create each dependency edge explicitly via relation endpoint.
+- Solo tasks are valid and visible without dependencies.
+
+Verification lifecycle (required):
+- After creating/updating tasks, re-fetch deliverable task list and confirm task `id`, `phaseTaskId`, and `status`.
+- Re-fetch deliverable graph and confirm task presence and relation edges.
+- If mismatch appears, report exact endpoint + payload + response.
+
+---
+
 ## Practical workflow
 1. Fetch OpenAPI spec.
 2. Resolve routes for required capabilities using deterministic rules.
 3. Validate required path/query/body schema for each operation.
 4. Execute request with `TB_TOKEN`.
-5. On errors, report capability + path + status + API error payload.
+5. Validate post-conditions (task list + graph + statuses).
+6. On errors, report capability + path + status + API error payload.
 
 ---
 
@@ -105,12 +140,16 @@ If a critical capability cannot be resolved, stop and surface the mismatch.
   - Return both numeric `id` and display `deliverableId`
 - Create task:
   - Required inputs: `code`, `delivId`, `title`
+  - Required operational fields for planning execution: `phase`, `phaseTaskId`, `prompt`
   - Respect deliverable approval prerequisites
-  - If dependencies are required, create relation edges explicitly via task-relation endpoint after task creation
+  - For each planned dependency, create explicit relation (`DEPENDS_ON`) after task creation
+- Update task status:
+  - Use explicit transitions: `READY` -> `IN_PROGRESS` -> `QA` -> `COMPLETED`
+  - Include `agentName` when moving to `IN_PROGRESS` to claim work
+- Update deliverable status:
+  - Use deliverable status endpoint, validate allowed values from workflow
 - Append note:
   - Include `note` and optional `agentName`
-- Status changes:
-  - Validate allowed values with workflow/status endpoints when needed
 - Images:
   - Use project-scoped routes only
   - Validate upload payload schema + content type from OpenAPI
@@ -121,3 +160,4 @@ If a critical capability cannot be resolved, stop and surface the mismatch.
 Expected statuses: `200`, `201`, `400`, `401`, `403`, `404`, `409`, `500`.
 - Include API `error` payload when present.
 - Do not retry with guessed alternate routes; re-resolve from OpenAPI first.
+- If status update response conflicts with subsequent list/graph reads, report eventual-consistency mismatch and re-check once before escalating.
