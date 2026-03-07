@@ -34,7 +34,7 @@ export default async function routes(fastify, options) {
     reply.send({ 
       message: 'Zazz Board API', 
       version: '1.0.0',
-      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/images', '/translations', '/status-definitions', '/coordination-types']
+      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/projects/:code/images/:id', '/translations', '/status-definitions', '/coordination-types']
     });
   });
 

@@ -109,6 +109,17 @@ function TaskGraphContent({ selectedProject, selectedDeliverableId }) {
 
   const taskStatuses = selectedProject?.statusWorkflow || ['READY', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 
+  if (!selectedDeliverableId) {
+    return (
+      <Center style={{ height: 'calc(100vh - 120px)' }}>
+        <Stack align="center" gap="sm">
+          <Text size="xl" c="dimmed">Select a deliverable to view the task graph</Text>
+          <Text size="sm" c="dimmed">Choose a deliverable from the center dropdown to load graph data.</Text>
+        </Stack>
+      </Center>
+    );
+  }
+
   // Show full-screen loader
   if (loading && !graphData) {
     return (

@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index, unique } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index, unique, check } from 'drizzle-orm/pg-core';
 import { pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
@@ -182,14 +182,20 @@ export const TASK_RELATIONS = pgTable('TASK_RELATIONS', {
 // Image metadata table
 export const IMAGE_METADATA = pgTable('IMAGE_METADATA', {
   id: serial('id').primaryKey(),
-  task_id: integer('task_id').notNull().references(() => TASKS.id, { onDelete: 'cascade' }),
+  task_id: integer('task_id').references(() => TASKS.id, { onDelete: 'cascade' }),
+  deliverable_id: integer('deliverable_id').references(() => DELIVERABLES.id, { onDelete: 'cascade' }),
   original_name: varchar('original_name', { length: 255 }).notNull(),
   content_type: varchar('content_type', { length: 100 }).notNull(),
   file_size: integer('file_size').notNull(),
   url: varchar('url', { length: 500 }).notNull(), // Local DB URL or S3 URL
   storage_type: varchar('storage_type', { length: 20 }).notNull().default('local'), // 'local' or 's3'
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  check(
+    'image_metadata_single_owner_chk',
+    sql`((${table.task_id} IS NOT NULL AND ${table.deliverable_id} IS NULL) OR (${table.task_id} IS NULL AND ${table.deliverable_id} IS NOT NULL))`
+  ),
+]);
 
 // Image binary data table (for local storage)
 export const IMAGE_DATA = pgTable('IMAGE_DATA', {
@@ -225,6 +231,7 @@ export const deliverablesRelations = relations(DELIVERABLES, ({ one, many }) => 
     references: [USERS.id],
   }),
   tasks: many(TASKS),
+  images: many(IMAGE_METADATA),
 }));
 
 export const tasksRelations = relations(TASKS, ({ one, many }) => ({
@@ -274,6 +281,10 @@ export const imageMetadataRelations = relations(IMAGE_METADATA, ({ one }) => ({
   task: one(TASKS, {
     fields: [IMAGE_METADATA.task_id],
     references: [TASKS.id],
+  }),
+  deliverable: one(DELIVERABLES, {
+    fields: [IMAGE_METADATA.deliverable_id],
+    references: [DELIVERABLES.id],
   }),
   imageData: one(IMAGE_DATA, {
     fields: [IMAGE_METADATA.id],

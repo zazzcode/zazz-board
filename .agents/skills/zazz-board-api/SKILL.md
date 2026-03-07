@@ -44,9 +44,10 @@ Core capabilities:
 - Create/list/get/update/delete/status-change task (deliverable-scoped)
 - Append notes to task
 - Get deliverable graph
+- Create task relations (`DEPENDS_ON`, `COORDINATES_WITH`)
 - Check task readiness
 - Get deliverable status workflow
-- Image operations (list/upload/delete/fetch/metadata), preferring project-scoped contracts when available
+- Image operations (list/upload/delete/fetch/metadata) using project-scoped routes
 
 ---
 
@@ -59,9 +60,10 @@ For each capability:
 5. Read request/response schemas from OpenAPI before constructing requests.
 6. If no match is found, stop and report missing capability + method + candidates.
 
-Image routing policy:
-- Prefer project-scoped image routes when present in OpenAPI.
-- Fallback to legacy image routes only if project-scoped routes are absent.
+Image/graph routing policy:
+- Use deliverable graph route (`/projects/{code}/deliverables/{delivId}/graph`).
+- Do not use project-wide graph route (`/projects/{code}/graph`) if absent in OpenAPI.
+- Use only project-scoped image routes; do not fallback to legacy global/task-only image routes.
 
 ---
 
@@ -104,12 +106,13 @@ If a critical capability cannot be resolved, stop and surface the mismatch.
 - Create task:
   - Required inputs: `code`, `delivId`, `title`
   - Respect deliverable approval prerequisites
+  - If dependencies are required, create relation edges explicitly via task-relation endpoint after task creation
 - Append note:
   - Include `note` and optional `agentName`
 - Status changes:
   - Validate allowed values with workflow/status endpoints when needed
 - Images:
-  - Prefer project-scoped routes when available
+  - Use project-scoped routes only
   - Validate upload payload schema + content type from OpenAPI
 
 ---

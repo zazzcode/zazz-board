@@ -14,7 +14,7 @@ Implementation guide for making the Zazz Board API documentation human-readable 
 | Inline schemas in projects.js | Hard to maintain, inconsistent | 15+ routes |
 | Global security only | Public endpoints misdocumented | /health, /, /db-test, /token-info |
 | Hardcoded base URL | Production spec has wrong URLs | server.js |
-| Image upload format undocumented | Agents guess wrong body structure | POST /tasks/:taskId/images/upload |
+| Scoped image route formats undocumented | Agents guess wrong body structure and scope params | POST /projects/:code/deliverables/:delivId/tasks/:taskId/images/upload |
 
 **Path param confusion**: Projects use `/projects/:id` (numeric) for some routes and `/projects/:code` (e.g. ZAZZ) for others. Descriptions should clarify which to use where.
 
@@ -28,7 +28,7 @@ Implementation guide for making the Zazz Board API documentation human-readable 
 |---|------|------|---------|
 | 1 | Add `/docs/json` | `api/src/server.js` | Explicit route; decide if public or auth-required |
 | 2 | Configurable base URL | `api/src/server.js` | Use `process.env.API_BASE_URL || BASE_URL` in OpenAPI `servers` |
-| 3 | Add image route schemas | `api/src/routes/images.js` | All 5 routes; upload body: `{ images: [{ originalName, contentType, fileSize, base64Data }] }` |
+| 3 | Add scoped image route schemas | `api/src/routes/images.js` | Task + deliverable + project image routes; upload body: `{ images: [{ originalName, contentType, fileSize, base64Data }] }` |
 
 **Code: `/docs/json` endpoint**
 
@@ -48,7 +48,7 @@ app.get('/docs/json', {
 |---|------|-------|---------|
 | 4 | Add response schemas | Deliverable/task routes | 200/201 success shapes for create task, get task, update status, list tasks |
 | 5 | Add core route schemas | `api/src/routes/index.js` | Minimal schemas for `/health`, `/`, `/users/me` |
-| 6 | Add image schemas | `api/src/routes/images.js` | Params, body, responses for all 5 image endpoints |
+| 6 | Add image schemas | `api/src/routes/images.js` | Params, body, responses for all project-scoped image endpoints |
 
 **Endpoints agents use** (prioritize descriptions and response schemas):
 
@@ -162,7 +162,7 @@ body: {
 **Phase 1**
 - [ ] Add `/docs/json` to server.js
 - [ ] Use API_BASE_URL in OpenAPI servers
-- [ ] Add image route schemas (5 routes)
+- [ ] Add project-scoped image route schemas
 
 **Phase 2**
 - [ ] Response schemas on core workflow endpoints (table in 2.2)

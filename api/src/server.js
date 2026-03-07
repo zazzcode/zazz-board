@@ -64,7 +64,7 @@ const start = async () => {
           { name: 'tags', description: 'Tags' },
           { name: 'translations', description: 'i18n' },
           { name: 'status-definitions', description: 'Status lookup' },
-          { name: 'images', description: 'Task images' }
+          { name: 'images', description: 'Project-scoped task and deliverable images' }
         ],
         components: {
           securitySchemes: {
@@ -117,4 +117,3 @@ const start = async () => {
 };
 
 start();
-

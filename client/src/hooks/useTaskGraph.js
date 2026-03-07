@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /**
- * Hook to fetch the task graph data for a project or deliverable.
+ * Hook to fetch task graph data for a specific deliverable.
  *
  * @param {string} projectCode – e.g. "APIMOD"
- * @param {number|null} deliverableId – when set, fetches the deliverable-scoped graph
+ * @param {number|null} deliverableId – selected deliverable id (required to fetch)
  * @returns {{ graphData, loading, error, refreshGraph }}
  *
  * Polls every 3 seconds so the graph stays live as agents work.
@@ -21,8 +21,10 @@ export function useTaskGraph(projectCode, deliverableId = null) {
   }, [projectCode, deliverableId]);
 
   const fetchGraph = useCallback(async () => {
-    if (!projectCode) {
+    if (!projectCode || !deliverableId) {
       setGraphData(null);
+      setError(null);
+      setLoading(false);
       return;
     }
 
@@ -37,9 +39,7 @@ export function useTaskGraph(projectCode, deliverableId = null) {
         return;
       }
 
-      const url = deliverableId
-        ? `http://localhost:3030/projects/${encodeURIComponent(projectCode)}/deliverables/${deliverableId}/graph`
-        : `http://localhost:3030/projects/${encodeURIComponent(projectCode)}/graph`;
+      const url = `http://localhost:3030/projects/${encodeURIComponent(projectCode)}/deliverables/${deliverableId}/graph`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -55,7 +55,7 @@ export function useTaskGraph(projectCode, deliverableId = null) {
       } else if (response.status === 401) {
         setError('Access token invalid');
       } else if (response.status === 404) {
-        setError('Project not found');
+        setError('Deliverable not found in this project');
       } else {
         setError(`Failed to fetch graph: ${response.status}`);
       }
@@ -67,12 +67,18 @@ export function useTaskGraph(projectCode, deliverableId = null) {
     }
   }, [projectCode, deliverableId]);
 
-  // Initial fetch + 10-second polling
+  // Initial fetch + 3-second polling (deliverable-selected only)
   useEffect(() => {
+    if (!projectCode || !deliverableId) {
+      setGraphData(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     fetchGraph();
     const interval = setInterval(fetchGraph, 3000);
     return () => clearInterval(interval);
-  }, [fetchGraph]);
+  }, [projectCode, deliverableId, fetchGraph]);
 
   return {
     graphData,

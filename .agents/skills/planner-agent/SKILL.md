@@ -6,7 +6,7 @@ description: Creates a generic, execution-ready implementation PLAN from an appr
 # Planner Agent Skill
 
 ## Role
-Perform a one-shot decomposition of an approved SPEC into a PLAN document. The PLAN is for execution by Coordinator/Worker/QA agents and must minimize file conflicts in a shared worktree.
+Perform a one-shot decomposition of an approved SPEC into an execution-ready PLAN document. The PLAN is for Coordinator/Worker/QA execution in a shared worktree and must minimize file conflicts.
 
 You are a planner only. Do not implement code in this step.
 
@@ -15,6 +15,10 @@ You are a planner only. Do not implement code in this step.
 - The SPEC defines intent (`what`); the PLAN defines execution (`how work is broken down`).
 - The SPEC is read-only during planning.
 - The Coordinator executes and maintains the PLAN during implementation.
+
+## Companion Skill Requirement
+- Load and follow `.agents/skills/zazz-board-api/SKILL.md` when planning API work.
+- Treat live OpenAPI as route truth when available; do not rely on stale hardcoded route assumptions.
 
 ## Required Inputs
 Before generating a PLAN, confirm these values are known:
@@ -29,9 +33,10 @@ If any are missing, ask the Owner.
 - Store all plans in `.zazz/deliverables/`.
 - Derive PLAN name from SPEC name by replacing `-SPEC.md` with `-PLAN.md`.
 - Enforce hyphen-delimited filenames.
-- Update `.zazz/deliverables/index.yaml` when generating/updating a PLAN:
+- Update `.zazz/deliverables/index.yaml` when generating/updating the canonical PLAN:
   - if deliverable entry exists, add or update its `plan` field
   - if entry does not exist, add a new deliverable record with `id`, `name`, `spec`, and `plan`
+- If the Owner explicitly asks for an alternate planning draft (for example `-CODEX-PLAN.md`), create it without replacing canonical `-PLAN.md` unless asked.
 
 Example:
 - SPEC: `.zazz/deliverables/ZAZZ-5-fix-routes-no-project-SPEC.md`
@@ -44,30 +49,37 @@ Write one markdown PLAN file that includes:
    - Deliverable Code
    - Deliverable ID (integer)
    - SPEC Reference
-2. Current-state summary from repository reality (not guesses)
-3. Impacted files by subsystem
-4. Phased decomposition with numbered phases (`1`, `2`, `3`, ...)
-5. Numbered tasks/steps within each phase (`1.1`, `1.2`, `1.3`, ...)
-6. Explicit dependencies (`DEPENDS_ON`, optional `COORDINATES_WITH`)
-7. Parallelization notes driven by file overlap
-8. Testing and validation tasks (unit/API/E2E/manual as applicable)
+2. Scope guardrails (in-scope, out-of-scope, explicit non-goals from SPEC)
+3. Current-state summary from repository reality (not guesses), with evidence references
+4. Impacted files by subsystem (API, DB, client, tests, docs/skills)
+5. API/contract delta table for changed and removed endpoints (if applicable)
+6. AC traceability matrix (`AC -> implementation steps -> tests`)
+7. Phased decomposition with numbered phases (`1`, `2`, `3`, ...)
+8. Numbered tasks/steps within each phase (`1.1`, `1.2`, `1.3`, ...)
+9. Explicit dependencies (`DEPENDS_ON`, optional `COORDINATES_WITH`)
+10. Parallelization notes driven by file overlap
+11. Testing and validation tasks (unit/API/E2E/manual as applicable)
+12. Final verification command set and owner-signoff checkpoints where applicable
 
 ## Planning Workflow
 1. Read SPEC completely and extract AC + test requirements.
-2. Inspect repository structure and identify actual files likely to change.
-3. Group work into dependency-safe phases.
-4. Split phases into concrete steps with file ownership.
-5. Identify safe parallel streams (disjoint file sets).
-6. Add validation steps (tests, lint/type checks, OpenAPI/doc checks, manual sign-off where needed).
-7. Write PLAN file to `.zazz/deliverables/`.
-8. Update `.zazz/deliverables/index.yaml` so the deliverable points to the generated PLAN file.
+2. Read relevant standards (`testing.md`, `coding-styles.md`, architecture/data docs).
+3. Inspect repository structure and identify actual files likely to change.
+4. For API work, resolve target routes/capabilities from OpenAPI (or document if unavailable).
+5. Group work into dependency-safe phases and explicit parallel streams.
+6. Split phases into concrete steps with file ownership.
+7. Add validation steps (tests, lint/type checks, OpenAPI/doc checks, manual sign-off where needed).
+8. Write PLAN file to `.zazz/deliverables/`.
+9. Update `.zazz/deliverables/index.yaml` only when canonical plan target changes.
 
 ## Decomposition Rules
 1. **File-first decomposition**: every step lists affected files.
 2. **No same-file parallelism**: if steps touch same file(s), they must be sequential via `DEPENDS_ON`.
 3. **Test-first planning**: every AC must map to one or more test activities.
-4. **Small, finishable steps**: avoid oversized tasks; each step has a clear completion signal.
-5. **No circular dependencies**.
+4. **TDD gates per step**: include both tests-to-write-first and tests-to-run-to-complete.
+5. **Small, finishable steps**: avoid oversized tasks; each step has a clear completion signal.
+6. **No circular dependencies**.
+7. **Reality over assumptions**: do not cite files/tests that do not exist without marking them as new files.
 
 ## Step Format (Use for every step)
 For each numbered step (`1.1`, `1.2`, ...), include:
@@ -75,8 +87,11 @@ For each numbered step (`1.1`, `1.2`, ...), include:
 - Files affected
 - Deliverables/output
 - DEPENDS_ON
+- COORDINATES_WITH (optional)
 - Parallelizable with
-- Test requirements
+- TDD: tests to write first
+- TDD: tests to run for completion
+- Acceptance criteria mapped
 - Completion signal
 
 ## Parallelization Guidance
@@ -102,7 +117,10 @@ A PLAN is complete only if it:
 - Includes project/deliverable identifiers (including numeric deliverable ID)
 - Uses phased numbering (`1`, `2`, `3`) and step numbering (`1.1`, `1.2`)
 - Includes development + testing + validation work
+- Includes AC traceability and test traceability
 - Explicitly documents dependencies and parallelizable groups
+- Includes concrete commands for required verification runs
+- Avoids speculative routes/files and aligns to repository reality
 
 ## Environment Variables
 ```bash

@@ -222,6 +222,11 @@ function AppContent() {
     console.log('==================');
   }, []);
 
+  // Reset graph deliverable scope when switching projects.
+  useEffect(() => {
+    setSelectedDeliverableId(null);
+  }, [selectedProject?.id]);
+
   const toggleTheme = () => {
     const newTheme = colorScheme === 'dark' ? 'light' : 'dark';
     setColorScheme(newTheme);
@@ -576,11 +581,8 @@ function AppContent() {
             {isProjectPage && selectedProject && (
               isTaskGraphPage ? (
                 <Select
-                  placeholder="All tasks (project-wide)"
-                  data={[
-                    { value: '', label: 'All tasks (project-wide)' },
-                    ...deliverables.map(d => ({ value: String(d.id), label: d.name }))
-                  ]}
+                  placeholder="Select deliverable"
+                  data={deliverables.map(d => ({ value: String(d.id), label: d.name }))}
                   value={selectedDeliverableId ?? ''}
                   onChange={(val) => setSelectedDeliverableId(val || null)}
                   size="sm"

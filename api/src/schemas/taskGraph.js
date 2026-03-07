@@ -2,8 +2,6 @@
  * Task graph and relation route schemas.
  */
 
-import { codeParam } from './common.js';
-
 const graphTaskItem = {
   type: 'object',
   properties: {
@@ -34,26 +32,6 @@ const graphRelationItem = {
 };
 
 export const taskGraphSchemas = {
-  getProjectGraph: {
-    tags: ['task-graph'],
-    summary: 'Get full task graph for a project',
-    description: 'Returns all tasks and intra-project relations. Polled every 3 s by the UI for live updates.',
-    params: codeParam,
-    response: {
-      200: {
-        type: 'object',
-        properties: {
-          projectId: { type: 'integer' },
-          projectCode: { type: 'string' },
-          taskGraphLayoutDirection: { type: 'string', enum: ['LR', 'TB'] },
-          completionCriteriaStatus: { type: 'string' },
-          tasks: { type: 'array', items: graphTaskItem },
-          relations: { type: 'array', items: graphRelationItem }
-        }
-      }
-    }
-  },
-
   getTaskRelations: {
     tags: ['task-graph'],
     summary: 'Get task relations',

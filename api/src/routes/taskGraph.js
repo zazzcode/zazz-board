@@ -7,32 +7,6 @@ export default async function taskGraphRoutes(fastify, options) {
   // Add authentication middleware to all task graph routes
   fastify.addHook('preHandler', authMiddleware);
 
-  // GET /projects/:code/graph - Get full task graph for a project
-  fastify.get('/projects/:code/graph', {
-    schema: taskGraphSchemas.getProjectGraph
-  }, async (request, reply) => {
-    try {
-      const { code } = request.params;
-
-      const project = await dbService.getProjectByCode(code);
-      if (!project) {
-        return reply.code(404).send({ error: 'Project not found' });
-      }
-
-      const graph = await dbService.getProjectTaskGraph(project.id);
-      reply.send({
-        projectId: project.id,
-        projectCode: project.code,
-        taskGraphLayoutDirection: project.taskGraphLayoutDirection,
-        completionCriteriaStatus: project.completionCriteriaStatus,
-        ...graph
-      });
-    } catch (error) {
-      request.log.error(error, 'Failed to fetch project task graph');
-      reply.code(500).send({ error: 'Failed to fetch project task graph' });
-    }
-  });
-
   // GET /projects/:code/tasks/:taskId/relations - Get all relations for a task
   fastify.get('/projects/:code/tasks/:taskId/relations', {
     schema: taskGraphSchemas.getTaskRelations

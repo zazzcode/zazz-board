@@ -1248,6 +1248,8 @@ class DatabaseService {
   async getTaskImages(taskId) {
     const images = await db.select({
       id: IMAGE_METADATA.id,
+      taskId: IMAGE_METADATA.task_id,
+      deliverableId: IMAGE_METADATA.deliverable_id,
       originalName: IMAGE_METADATA.original_name,
       contentType: IMAGE_METADATA.content_type,
       fileSize: IMAGE_METADATA.file_size,
@@ -1263,24 +1265,48 @@ class DatabaseService {
   }
 
   /**
-   * Store image with metadata and binary data
+   * Get all images attached directly to a deliverable
    */
-  async storeTaskImage(taskId, imageData) {
+  async getDeliverableImages(deliverableId) {
+    const images = await db.select({
+      id: IMAGE_METADATA.id,
+      taskId: IMAGE_METADATA.task_id,
+      deliverableId: IMAGE_METADATA.deliverable_id,
+      originalName: IMAGE_METADATA.original_name,
+      contentType: IMAGE_METADATA.content_type,
+      fileSize: IMAGE_METADATA.file_size,
+      url: IMAGE_METADATA.url,
+      storageType: IMAGE_METADATA.storage_type,
+      createdAt: IMAGE_METADATA.created_at
+    })
+    .from(IMAGE_METADATA)
+    .where(eq(IMAGE_METADATA.deliverable_id, deliverableId))
+    .orderBy(asc(IMAGE_METADATA.created_at));
+
+    return images;
+  }
+
+  /**
+   * Store task-owned image with metadata and binary data
+   */
+  async storeTaskImage(taskId, imageData, imageUrlBase = '/images') {
     // Insert image metadata
     const [metadata] = await db.insert(IMAGE_METADATA)
       .values({
         task_id: taskId,
+        deliverable_id: null,
         original_name: imageData.originalName,
         content_type: imageData.contentType,
         file_size: imageData.fileSize,
-        url: `/images/0`, // Temporary, will update with actual ID
+        url: `${imageUrlBase}/0`, // Temporary, will update with actual ID
         storage_type: 'local'
       })
       .returning();
-    
+
     // Update URL with actual image ID
+    const finalUrl = `${imageUrlBase}/${metadata.id}`;
     await db.update(IMAGE_METADATA)
-      .set({ url: `/images/${metadata.id}` })
+      .set({ url: finalUrl })
       .where(eq(IMAGE_METADATA.id, metadata.id));
     
     // Insert binary data
@@ -1293,10 +1319,53 @@ class DatabaseService {
     
     return {
       id: metadata.id,
+      taskId: metadata.task_id,
+      deliverableId: metadata.deliverable_id,
       originalName: metadata.original_name,
       contentType: metadata.content_type,
       fileSize: metadata.file_size,
-      url: `/images/${metadata.id}`,
+      url: finalUrl,
+      storageType: metadata.storage_type,
+      createdAt: metadata.created_at
+    };
+  }
+
+  /**
+   * Store deliverable-owned image with metadata and binary data
+   */
+  async storeDeliverableImage(deliverableId, imageData, imageUrlBase = '/images') {
+    const [metadata] = await db.insert(IMAGE_METADATA)
+      .values({
+        task_id: null,
+        deliverable_id: deliverableId,
+        original_name: imageData.originalName,
+        content_type: imageData.contentType,
+        file_size: imageData.fileSize,
+        url: `${imageUrlBase}/0`,
+        storage_type: 'local'
+      })
+      .returning();
+
+    const finalUrl = `${imageUrlBase}/${metadata.id}`;
+    await db.update(IMAGE_METADATA)
+      .set({ url: finalUrl })
+      .where(eq(IMAGE_METADATA.id, metadata.id));
+
+    await db.insert(IMAGE_DATA)
+      .values({
+        id: metadata.id,
+        data: imageData.base64Data,
+        thumbnail_data: null
+      });
+
+    return {
+      id: metadata.id,
+      taskId: metadata.task_id,
+      deliverableId: metadata.deliverable_id,
+      originalName: metadata.original_name,
+      contentType: metadata.content_type,
+      fileSize: metadata.file_size,
+      url: finalUrl,
       storageType: metadata.storage_type,
       createdAt: metadata.created_at
     };
@@ -1309,9 +1378,13 @@ class DatabaseService {
     const [result] = await db
       .select({
         id: IMAGE_METADATA.id,
+        taskId: IMAGE_METADATA.task_id,
+        deliverableId: IMAGE_METADATA.deliverable_id,
         originalName: IMAGE_METADATA.original_name,
         contentType: IMAGE_METADATA.content_type,
         fileSize: IMAGE_METADATA.file_size,
+        url: IMAGE_METADATA.url,
+        storageType: IMAGE_METADATA.storage_type,
         data: IMAGE_DATA.data,
         thumbnailData: IMAGE_DATA.thumbnail_data
       })
@@ -1330,6 +1403,7 @@ class DatabaseService {
     const [image] = await db.select({
       id: IMAGE_METADATA.id,
       taskId: IMAGE_METADATA.task_id,
+      deliverableId: IMAGE_METADATA.deliverable_id,
       originalName: IMAGE_METADATA.original_name,
       contentType: IMAGE_METADATA.content_type,
       fileSize: IMAGE_METADATA.file_size,
@@ -1359,6 +1433,8 @@ class DatabaseService {
     
     return deletedImage ? {
       id: deletedImage.id,
+      taskId: deletedImage.task_id,
+      deliverableId: deletedImage.deliverable_id,
       originalName: deletedImage.original_name,
       contentType: deletedImage.content_type
     } : null;
