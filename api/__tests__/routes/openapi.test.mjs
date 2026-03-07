@@ -7,7 +7,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import OpenAPISchemaValidatorPkg from 'openapi-schema-validator';
 import { createTestServerWithSwagger } from '../helpers/testServerWithSwagger.js';
 
-const OpenAPISchemaValidator = OpenAPISchemaValidatorPkg.default;
+const OpenAPISchemaValidator = OpenAPISchemaValidatorPkg.default || OpenAPISchemaValidatorPkg;
 
 let app;
 
@@ -44,10 +44,10 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path.post).toBeDefined();
     expect(path.post.summary).toBeDefined();
     expect(path.post.description).toContain('id');
-    expect(path.post.description).toContain('deliverableId');
+    expect(path.post.description).toContain('deliverableCode');
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.name).toBeDefined();
-    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.dedFilePath).toBeDefined();
-    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.planFilePath).toBeDefined();
+    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.specFilepath).toBeDefined();
+    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.planFilepath).toBeDefined();
   });
 
   it('should document core agent operations: create task', async () => {
@@ -66,8 +66,8 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path).toBeDefined();
     expect(path.put).toBeDefined();
     const bodySchema = path.put.requestBody?.content?.['application/json']?.schema;
-    expect(bodySchema?.properties?.dedFilePath).toBeDefined();
-    expect(bodySchema?.properties?.planFilePath).toBeDefined();
+    expect(bodySchema?.properties?.specFilepath).toBeDefined();
+    expect(bodySchema?.properties?.planFilepath).toBeDefined();
     expect(bodySchema?.properties?.gitWorktree).toBeDefined();
   });
 
@@ -97,6 +97,14 @@ describe('OpenAPI / Swagger documentation', () => {
       '/projects/{code}/deliverables/{delivId}/tasks',
       '/projects/{code}/deliverables/{delivId}/tasks/{taskId}',
       '/projects/{code}/deliverables/{delivId}/graph',
+      '/projects/{code}/deliverables/{delivId}/tasks/{taskId}/images',
+      '/projects/{code}/deliverables/{delivId}/tasks/{taskId}/images/upload',
+      '/projects/{code}/deliverables/{delivId}/tasks/{taskId}/images/{imageId}',
+      '/projects/{code}/deliverables/{delivId}/images',
+      '/projects/{code}/deliverables/{delivId}/images/upload',
+      '/projects/{code}/deliverables/{delivId}/images/{imageId}',
+      '/projects/{code}/images/{id}',
+      '/projects/{code}/images/{id}/metadata',
       '/projects/{code}/tasks/{taskId}/relations',
       '/projects/{code}/tasks/{taskId}/readiness',
       '/health'
@@ -120,5 +128,16 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(desc).toContain('Update deliverable');
     expect(desc).toContain('Change deliverable status');
     expect(desc).toContain('Change task status');
+  });
+
+  it('should not document removed project-wide graph and legacy image routes', async () => {
+    const spec = await app.swagger();
+
+    expect(spec.paths['/projects/{code}/graph']).toBeUndefined();
+    expect(spec.paths['/tasks/{taskId}/images']).toBeUndefined();
+    expect(spec.paths['/tasks/{taskId}/images/upload']).toBeUndefined();
+    expect(spec.paths['/tasks/{taskId}/images/{imageId}']).toBeUndefined();
+    expect(spec.paths['/images/{id}']).toBeUndefined();
+    expect(spec.paths['/images/{id}/metadata']).toBeUndefined();
   });
 });

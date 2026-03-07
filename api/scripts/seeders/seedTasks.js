@@ -1,6 +1,7 @@
 import { db } from '../../lib/db/index.js';
 import { PROJECTS, DELIVERABLES, TASKS } from '../../lib/db/schema.js';
-import { and, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { loadZazzProjectSnapshot } from './zazzSnapshot.js';
 
 async function getProjectId(code) {
   const [project] = await db.select({ id: PROJECTS.id }).from(PROJECTS).where(eq(PROJECTS.code, code)).limit(1);
@@ -8,101 +9,74 @@ async function getProjectId(code) {
   return project.id;
 }
 
-async function getDeliverableId(projectId, deliverableKey) {
-  const [deliverable] = await db
-    .select({ id: DELIVERABLES.id })
+async function getDeliverableIdMap(projectId) {
+  const deliverables = await db
+    .select({ id: DELIVERABLES.id, key: DELIVERABLES.deliverable_code })
     .from(DELIVERABLES)
-    .where(and(eq(DELIVERABLES.project_id, projectId), eq(DELIVERABLES.deliverable_id, deliverableKey)))
-    .limit(1);
-  if (!deliverable) throw new Error(`Deliverable not found: ${deliverableKey}`);
-  return deliverable.id;
+    .where(eq(DELIVERABLES.project_id, projectId));
+
+  return new Map(deliverables.map((deliverable) => [deliverable.key, deliverable.id]));
 }
 
-async function tasksExistForDeliverable(deliverableId) {
+async function tasksExistForProject(projectId) {
   const [{ count }] = await db
     .select({ count: sql`COUNT(*)::int` })
     .from(TASKS)
-    .where(eq(TASKS.deliverable_id, deliverableId));
+    .where(eq(TASKS.project_id, projectId));
   return (count ?? 0) > 0;
 }
 
-/**
- * Seed interdependent tasks for demo.
- * Seed rules requested:
- * - ZAZZ-3 (IN_REVIEW): lots of COMPLETED tasks + a small tail of IN_REVIEW/READY.
- * - ZAZZ-1 (IN_PROGRESS): one COMPLETED + one READY.
- * - Other deliverables: no tasks.
- */
+function toDateOrNull(value) {
+  return value ? new Date(value) : null;
+}
+
 export async function seedTasks() {
   console.log('  📝 Seeding tasks...');
 
   try {
+    const snapshot = await loadZazzProjectSnapshot();
     const projectId = await getProjectId('ZAZZ');
-
-    const zazz1 = await getDeliverableId(projectId, 'ZAZZ-1');
-    const zazz3 = await getDeliverableId(projectId, 'ZAZZ-3');
-
-    // Idempotency: if either deliverable already has tasks, don’t insert again.
-    const zazz1Has = await tasksExistForDeliverable(zazz1);
-    const zazz3Has = await tasksExistForDeliverable(zazz3);
-    if (zazz1Has || zazz3Has) {
-      console.log('  ⏭️  Tasks already exist for seeded deliverables. Skipping task seeding.');
+    const hasTasks = await tasksExistForProject(projectId);
+    if (hasTasks) {
+      console.log('  ⏭️  Tasks already exist for ZAZZ project. Skipping task seeding.');
       return;
     }
 
-    const createdBy = 5;
+    const deliverableIdMap = await getDeliverableIdMap(projectId);
     const now = new Date();
 
-    const mk = (overrides) => ({
-      project_id: projectId,
-      created_by: createdBy,
-      updated_by: createdBy,
-      created_at: now,
-      updated_at: now,
-      priority: 'MEDIUM',
-      status: 'READY',
-      position: 10,
-      ...overrides,
+    const tasks = snapshot.tasks.map((task, index) => {
+      const deliverableDbId = deliverableIdMap.get(task.deliverable_code);
+      if (!deliverableDbId) {
+        throw new Error(`Deliverable not found for task seed: ${task.deliverable_code}`);
+      }
+
+      return {
+        project_id: projectId,
+        deliverable_id: deliverableDbId,
+        phase: task.phase,
+        phase_step: task.phase_step,
+        title: task.title,
+        status: task.status || 'READY',
+        priority: task.priority || 'MEDIUM',
+        agent_name: task.agent_name,
+        prompt: task.prompt,
+        notes: task.notes,
+        story_points: task.story_points,
+        position: task.position ?? (index + 1) * 10,
+        is_blocked: task.is_blocked ?? false,
+        blocked_reason: task.blocked_reason,
+        is_cancelled: task.is_cancelled ?? false,
+        git_worktree: task.git_worktree,
+        started_at: toDateOrNull(task.started_at),
+        completed_at: toDateOrNull(task.completed_at),
+        coordination_code: task.coordination_code,
+        created_by: task.created_by ?? 5,
+        created_at: toDateOrNull(task.created_at) || now,
+        updated_by: task.updated_by ?? task.created_by ?? 5,
+        updated_at: toDateOrNull(task.updated_at) || now,
+      };
     });
-
-    const tasks = [
-      // ---------------- ZAZZ-1 (IN_PROGRESS) ----------------
-      mk({
-        deliverable_id: zazz1,
-        phase: 1,
-        phase_task_id: '1.1',
-        title: 'ZAZZ-1: Foundation completed (schema + API read paths)',
-        status: 'COMPLETED',
-        priority: 'HIGH',
-        position: 10,
-        completed_at: now,
-      }),
-      mk({
-        deliverable_id: zazz1,
-        phase: 2,
-        phase_task_id: '2.1',
-        title: 'ZAZZ-1: Remaining work (UI polish + edge cases)',
-        status: 'READY',
-        priority: 'MEDIUM',
-        position: 20,
-      }),
-
-      // ---------------- ZAZZ-3 (IN_REVIEW) ----------------
-      // Phase 1: reproduce + analysis
-      mk({ deliverable_id: zazz3, phase: 1, phase_task_id: '1.1', title: 'ZAZZ-3: Reproduce bug and capture failing cases', status: 'COMPLETED', priority: 'HIGH', position: 10, completed_at: now }),
-      mk({ deliverable_id: zazz3, phase: 1, phase_task_id: '1.2', title: 'ZAZZ-3: Add regression tests for invalid tag formats', status: 'COMPLETED', priority: 'HIGH', position: 20, completed_at: now }),
-      mk({ deliverable_id: zazz3, phase: 1, phase_task_id: '1.3', title: 'ZAZZ-3: Confirm API validation contract + error messaging', status: 'COMPLETED', priority: 'MEDIUM', position: 30, completed_at: now }),
-
-      // Phase 2: implement fix
-      mk({ deliverable_id: zazz3, phase: 2, phase_task_id: '2.1', title: 'ZAZZ-3: Fix validation for trailing hyphen and edge cases', status: 'COMPLETED', priority: 'HIGH', position: 40, completed_at: now }),
-      mk({ deliverable_id: zazz3, phase: 2, phase_task_id: '2.2', title: 'ZAZZ-3: Add server-side canonicalization (lowercase + hyphens)', status: 'COMPLETED', priority: 'MEDIUM', position: 50, completed_at: now }),
-      mk({ deliverable_id: zazz3, phase: 2, phase_task_id: '2.3', title: 'ZAZZ-3: Ensure tag creation/upsert handles collisions', status: 'COMPLETED', priority: 'MEDIUM', position: 60, completed_at: now }),
-
-      // Phase 3: QA + wrap-up tail
-      mk({ deliverable_id: zazz3, phase: 3, phase_task_id: '3.1', title: 'ZAZZ-3: QA run (API + UI) for tag flows', status: 'COMPLETED', priority: 'MEDIUM', position: 70, completed_at: now }),
-      mk({ deliverable_id: zazz3, phase: 3, phase_task_id: '3.2', title: 'ZAZZ-3: Address review feedback / small refactor', status: 'COMPLETED', priority: 'MEDIUM', position: 80, completed_at: now }),
-      mk({ deliverable_id: zazz3, phase: 3, phase_task_id: '3.3', title: 'ZAZZ-3: Final sign-off checklist', status: 'COMPLETED', priority: 'LOW', position: 90, completed_at: now }),
-    ];
 
     await db.insert(TASKS).values(tasks);
 

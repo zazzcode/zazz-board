@@ -1,5 +1,5 @@
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS, IMAGE_METADATA, IMAGE_DATA } from '../../lib/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 
 /**
@@ -58,7 +58,10 @@ export async function validateTestEnvironment() {
  */
 export async function clearTaskData() {
   await validateTestEnvironment();
-  
+
+  // Explicitly clear image tables so image route tests remain isolated.
+  await db.delete(IMAGE_DATA);
+  await db.delete(IMAGE_METADATA);
   await db.delete(TASK_RELATIONS);
   await db.delete(TASK_TAGS);
   await db.delete(TASKS);
@@ -94,13 +97,15 @@ export async function createTestDeliverable(projectId, overrides = {}) {
 
   const [deliverable] = await db.insert(DELIVERABLES).values({
     project_id: projectId,
-    deliverable_id: overrides.deliverableId || `${project.code}-T${sequence}`,
+    project_code: overrides.projectCode || project.code,
+    deliverable_code: overrides.deliverableCode || `${project.code}-T${sequence}`,
     name: overrides.name || `Test Deliverable ${sequence}`,
     description: overrides.description || null,
     type: overrides.type || 'FEATURE',
     status: overrides.status || 'PLANNING',
     status_history: overrides.statusHistory || [{ status: overrides.status || 'PLANNING', changedAt: new Date().toISOString(), changedBy: 1 }],
-    plan_file_path: overrides.planFilePath || null,
+    spec_filepath: overrides.specFilepath || null,
+    plan_filepath: overrides.planFilepath || null,
     approved_by: overrides.approvedBy || null,
     approved_at: overrides.approvedAt || null,
     position: overrides.position ?? sequence * 10,
@@ -127,7 +132,7 @@ export async function createTestTask(projectId, overrides = {}) {
     story_points: overrides.storyPoints || null,
     git_worktree: overrides.gitWorktree || null,
     phase: overrides.phase || null,
-    phase_task_id: overrides.phaseTaskId || null,
+    phase_step: overrides.phaseStep || null,
     notes: overrides.notes || null,
     is_cancelled: overrides.isCancelled || false,
     created_by: overrides.createdBy || 1,

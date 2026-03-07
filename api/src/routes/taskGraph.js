@@ -2,36 +2,15 @@ import { taskGraphSchemas } from '../schemas/validation.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export default async function taskGraphRoutes(fastify, options) {
-  const { dbService } = options;
+  const { dbService, realtimeService } = options;
+
+  const publishEvent = (projectCode, payload) => {
+    if (!realtimeService) return;
+    realtimeService.publish(projectCode, payload);
+  };
 
   // Add authentication middleware to all task graph routes
   fastify.addHook('preHandler', authMiddleware);
-
-  // GET /projects/:code/graph - Get full task graph for a project
-  fastify.get('/projects/:code/graph', {
-    schema: taskGraphSchemas.getProjectGraph
-  }, async (request, reply) => {
-    try {
-      const { code } = request.params;
-
-      const project = await dbService.getProjectByCode(code);
-      if (!project) {
-        return reply.code(404).send({ error: 'Project not found' });
-      }
-
-      const graph = await dbService.getProjectTaskGraph(project.id);
-      reply.send({
-        projectId: project.id,
-        projectCode: project.code,
-        taskGraphLayoutDirection: project.taskGraphLayoutDirection,
-        completionCriteriaStatus: project.completionCriteriaStatus,
-        ...graph
-      });
-    } catch (error) {
-      request.log.error(error, 'Failed to fetch project task graph');
-      reply.code(500).send({ error: 'Failed to fetch project task graph' });
-    }
-  });
 
   // GET /projects/:code/tasks/:taskId/relations - Get all relations for a task
   fastify.get('/projects/:code/tasks/:taskId/relations', {
@@ -88,6 +67,14 @@ export default async function taskGraphRoutes(fastify, options) {
       );
 
       request.log.info(`Created ${relationType} relation: task ${taskIdNum} -> ${relatedTaskId}`);
+      publishEvent(project.code, {
+        type: 'relation',
+        eventType: 'relation.created',
+        taskId: taskIdNum,
+        relatedTaskId,
+        relationType,
+        deliverableId: task.deliverableId,
+      });
       reply.code(201).send(relations);
     } catch (error) {
       // Return 400 for business logic errors (self-ref, cycle, cross-project, not found)
@@ -133,6 +120,14 @@ export default async function taskGraphRoutes(fastify, options) {
       }
 
       request.log.info(`Deleted ${relationType} relation: task ${taskIdNum} -> ${relatedId}`);
+      publishEvent(project.code, {
+        type: 'relation',
+        eventType: 'relation.deleted',
+        taskId: taskIdNum,
+        relatedTaskId: relatedId,
+        relationType,
+        deliverableId: task.deliverableId,
+      });
       reply.send({ message: 'Relation deleted successfully' });
     } catch (error) {
       request.log.error(error, 'Failed to delete task relation');

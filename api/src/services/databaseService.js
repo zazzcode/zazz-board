@@ -367,15 +367,15 @@ class DatabaseService {
     const rows = await db.select({
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
-      deliverableId: DELIVERABLES.deliverable_id,
+      projectCode: DELIVERABLES.project_code,
+      deliverableCode: DELIVERABLES.deliverable_code,
       name: DELIVERABLES.name,
       description: DELIVERABLES.description,
       type: DELIVERABLES.type,
       status: DELIVERABLES.status,
       statusHistory: DELIVERABLES.status_history,
-      dedFilePath: DELIVERABLES.ded_file_path,
-      planFilePath: DELIVERABLES.plan_file_path,
-      prdFilePath: DELIVERABLES.prd_file_path,
+      specFilepath: DELIVERABLES.spec_filepath,
+      planFilepath: DELIVERABLES.plan_filepath,
       approvedBy: DELIVERABLES.approved_by,
       approvedByName: USERS.full_name,
       approvedAt: DELIVERABLES.approved_at,
@@ -397,15 +397,15 @@ class DatabaseService {
     .groupBy(
       DELIVERABLES.id,
       DELIVERABLES.project_id,
-      DELIVERABLES.deliverable_id,
+      DELIVERABLES.project_code,
+      DELIVERABLES.deliverable_code,
       DELIVERABLES.name,
       DELIVERABLES.description,
       DELIVERABLES.type,
       DELIVERABLES.status,
       DELIVERABLES.status_history,
-      DELIVERABLES.ded_file_path,
-      DELIVERABLES.plan_file_path,
-      DELIVERABLES.prd_file_path,
+      DELIVERABLES.spec_filepath,
+      DELIVERABLES.plan_filepath,
       DELIVERABLES.approved_by,
       USERS.full_name,
       DELIVERABLES.approved_at,
@@ -427,16 +427,15 @@ class DatabaseService {
     const [deliverable] = await db.select({
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
-      projectCode: PROJECTS.code,
-      deliverableId: DELIVERABLES.deliverable_id,
+      projectCode: DELIVERABLES.project_code,
+      deliverableCode: DELIVERABLES.deliverable_code,
       name: DELIVERABLES.name,
       description: DELIVERABLES.description,
       type: DELIVERABLES.type,
       status: DELIVERABLES.status,
       statusHistory: DELIVERABLES.status_history,
-      dedFilePath: DELIVERABLES.ded_file_path,
-      planFilePath: DELIVERABLES.plan_file_path,
-      prdFilePath: DELIVERABLES.prd_file_path,
+      specFilepath: DELIVERABLES.spec_filepath,
+      planFilepath: DELIVERABLES.plan_filepath,
       approvedBy: DELIVERABLES.approved_by,
       approvedByName: USERS.full_name,
       approvedAt: DELIVERABLES.approved_at,
@@ -452,12 +451,12 @@ class DatabaseService {
       completedTaskCount: sql`COUNT(CASE WHEN ${TASKS.status} = 'COMPLETED' THEN 1 END)`.as('completedTaskCount')
     })
     .from(DELIVERABLES)
-    .leftJoin(PROJECTS, eq(DELIVERABLES.project_id, PROJECTS.id))
     .leftJoin(USERS, eq(DELIVERABLES.approved_by, USERS.id))
     .leftJoin(TASKS, eq(DELIVERABLES.id, TASKS.deliverable_id))
     .where(eq(DELIVERABLES.id, id))
     .groupBy(
-      DELIVERABLES.id, PROJECTS.code, USERS.full_name
+      DELIVERABLES.id,
+      USERS.full_name
     )
     .limit(1);
     return deliverable || null;
@@ -468,7 +467,7 @@ class DatabaseService {
       const [project] = await tx.select().from(PROJECTS).where(eq(PROJECTS.id, projectId)).limit(1);
       if (!project) throw new Error('Project not found');
 
-      const deliverableId = `${project.code}-${project.next_deliverable_sequence}`;
+      const deliverableCode = `${project.code}-${project.next_deliverable_sequence}`;
       await tx.update(PROJECTS)
         .set({ next_deliverable_sequence: project.next_deliverable_sequence + 1, updated_by: userId, updated_at: new Date() })
         .where(eq(PROJECTS.id, projectId));
@@ -479,15 +478,15 @@ class DatabaseService {
 
       const [row] = await tx.insert(DELIVERABLES).values({
         project_id: projectId,
-        deliverable_id: deliverableId,
+        project_code: project.code,
+        deliverable_code: deliverableCode,
         name: data.name,
         description: data.description,
         type: data.type,
         status: 'PLANNING',
         status_history: [{ status: 'PLANNING', changedAt: new Date().toISOString(), changedBy: userId }],
-        ded_file_path: data.dedFilePath,
-        plan_file_path: data.planFilePath,
-        prd_file_path: data.prdFilePath,
+        spec_filepath: data.specFilepath,
+        plan_filepath: data.planFilepath,
         git_worktree: data.gitWorktree,
         git_branch: data.gitBranch,
         pull_request_url: data.pullRequestUrl,
@@ -508,9 +507,8 @@ class DatabaseService {
     if (data.description !== undefined) updateData.description = data.description;
     if (data.type !== undefined) updateData.type = data.type;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.dedFilePath !== undefined) updateData.ded_file_path = data.dedFilePath;
-    if (data.planFilePath !== undefined) updateData.plan_file_path = data.planFilePath;
-    if (data.prdFilePath !== undefined) updateData.prd_file_path = data.prdFilePath;
+    if (data.specFilepath !== undefined) updateData.spec_filepath = data.specFilepath;
+    if (data.planFilepath !== undefined) updateData.plan_filepath = data.planFilepath;
     if (data.gitWorktree !== undefined) updateData.git_worktree = data.gitWorktree;
     if (data.gitBranch !== undefined) updateData.git_branch = data.gitBranch;
     if (data.pullRequestUrl !== undefined) updateData.pull_request_url = data.pullRequestUrl;
@@ -531,7 +529,7 @@ class DatabaseService {
   async approveDeliverablePlan(id, userId) {
     const deliverable = await this.getDeliverableById(id);
     if (!deliverable) throw new Error('Deliverable not found');
-    if (!deliverable.planFilePath) throw new Error('plan_file_path must be set before approval');
+    if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before approval');
     if (deliverable.approvedAt) throw new Error('Deliverable already approved');
     if (deliverable.status !== 'PLANNING') throw new Error('Only PLANNING deliverables can be approved');
 
@@ -552,7 +550,7 @@ class DatabaseService {
     if (!project?.workflow?.includes(status)) throw new Error(`Status ${status} not allowed for this project`);
 
     if (status === 'IN_PROGRESS') {
-      if (!deliverable.planFilePath) throw new Error('plan_file_path must be set before moving to IN_PROGRESS');
+      if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before moving to IN_PROGRESS');
       if (!deliverable.approvedAt) throw new Error('Deliverable must be approved before moving to IN_PROGRESS');
     }
 
@@ -623,7 +621,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -698,7 +696,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -741,7 +739,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -777,7 +775,7 @@ class DatabaseService {
   }
 
   /**
-   * Create new task with phase_task_id generation, dependency wiring, and auto-promotion.
+   * Create new task with phase_step generation, dependency wiring, and auto-promotion.
    * Leader provides phase + optional dependencies array; system handles the rest.
    */
   async createTask(taskData) {
@@ -803,16 +801,16 @@ class DatabaseService {
       .where(and(eq(TASKS.project_id, projectId), eq(TASKS.status, status)));
       const nextPosition = Math.floor(maxPos.max / 10) * 10 + 10;
 
-      // --- phase_task_id generation ---
+      // --- phase_step generation ---
       // Format: "{phase}.{seq}" e.g. "1.1", "1.2"
-      // Rework tasks can be created with explicit phaseTaskId like "1.2.1"
-      let phaseTaskId = taskData.phaseTaskId || null;
+      // Rework tasks can be created with explicit phaseStep like "1.2.1"
+      let phaseStep = taskData.phaseStep || null;
       const phase = taskData.phase ?? null;
 
-      if (phase !== null && !phaseTaskId) {
-        // Find all existing phase_task_ids for this deliverable+phase to determine next seq
+      if (phase !== null && !phaseStep) {
+        // Find all existing phase_steps for this deliverable+phase to determine next seq
         // Match format "{phase}.{digits}" (direct children only, not rework like "1.2.1")
-        const existing = await tx.select({ phaseTaskId: TASKS.phase_task_id })
+        const existing = await tx.select({ phaseStep: TASKS.phase_step })
           .from(TASKS)
           .where(
             and(
@@ -825,12 +823,12 @@ class DatabaseService {
         let maxSeq = 0;
         const directPattern = new RegExp(`^${phase}\\.(\\d+)$`);
         for (const row of existing) {
-          if (row.phaseTaskId) {
-            const m = row.phaseTaskId.match(directPattern);
+          if (row.phaseStep) {
+            const m = row.phaseStep.match(directPattern);
             if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
           }
         }
-        phaseTaskId = `${phase}.${maxSeq + 1}`;
+        phaseStep = `${phase}.${maxSeq + 1}`;
       }
 
       // --- Insert task ---
@@ -846,7 +844,7 @@ class DatabaseService {
         prompt: taskData.prompt,
         notes: taskData.notes || null,
         phase,
-        phase_task_id: phaseTaskId,
+        phase_step: phaseStep,
         is_blocked: taskData.isBlocked || false,
         blocked_reason: taskData.blockedReason,
         is_cancelled: taskData.isCancelled || false,
@@ -1248,6 +1246,8 @@ class DatabaseService {
   async getTaskImages(taskId) {
     const images = await db.select({
       id: IMAGE_METADATA.id,
+      taskId: IMAGE_METADATA.task_id,
+      deliverableId: IMAGE_METADATA.deliverable_id,
       originalName: IMAGE_METADATA.original_name,
       contentType: IMAGE_METADATA.content_type,
       fileSize: IMAGE_METADATA.file_size,
@@ -1263,24 +1263,48 @@ class DatabaseService {
   }
 
   /**
-   * Store image with metadata and binary data
+   * Get all images attached directly to a deliverable
    */
-  async storeTaskImage(taskId, imageData) {
+  async getDeliverableImages(deliverableId) {
+    const images = await db.select({
+      id: IMAGE_METADATA.id,
+      taskId: IMAGE_METADATA.task_id,
+      deliverableId: IMAGE_METADATA.deliverable_id,
+      originalName: IMAGE_METADATA.original_name,
+      contentType: IMAGE_METADATA.content_type,
+      fileSize: IMAGE_METADATA.file_size,
+      url: IMAGE_METADATA.url,
+      storageType: IMAGE_METADATA.storage_type,
+      createdAt: IMAGE_METADATA.created_at
+    })
+    .from(IMAGE_METADATA)
+    .where(eq(IMAGE_METADATA.deliverable_id, deliverableId))
+    .orderBy(asc(IMAGE_METADATA.created_at));
+
+    return images;
+  }
+
+  /**
+   * Store task-owned image with metadata and binary data
+   */
+  async storeTaskImage(taskId, imageData, imageUrlBase = '/images') {
     // Insert image metadata
     const [metadata] = await db.insert(IMAGE_METADATA)
       .values({
         task_id: taskId,
+        deliverable_id: null,
         original_name: imageData.originalName,
         content_type: imageData.contentType,
         file_size: imageData.fileSize,
-        url: `/images/0`, // Temporary, will update with actual ID
+        url: `${imageUrlBase}/0`, // Temporary, will update with actual ID
         storage_type: 'local'
       })
       .returning();
-    
+
     // Update URL with actual image ID
+    const finalUrl = `${imageUrlBase}/${metadata.id}`;
     await db.update(IMAGE_METADATA)
-      .set({ url: `/images/${metadata.id}` })
+      .set({ url: finalUrl })
       .where(eq(IMAGE_METADATA.id, metadata.id));
     
     // Insert binary data
@@ -1293,10 +1317,53 @@ class DatabaseService {
     
     return {
       id: metadata.id,
+      taskId: metadata.task_id,
+      deliverableId: metadata.deliverable_id,
       originalName: metadata.original_name,
       contentType: metadata.content_type,
       fileSize: metadata.file_size,
-      url: `/images/${metadata.id}`,
+      url: finalUrl,
+      storageType: metadata.storage_type,
+      createdAt: metadata.created_at
+    };
+  }
+
+  /**
+   * Store deliverable-owned image with metadata and binary data
+   */
+  async storeDeliverableImage(deliverableId, imageData, imageUrlBase = '/images') {
+    const [metadata] = await db.insert(IMAGE_METADATA)
+      .values({
+        task_id: null,
+        deliverable_id: deliverableId,
+        original_name: imageData.originalName,
+        content_type: imageData.contentType,
+        file_size: imageData.fileSize,
+        url: `${imageUrlBase}/0`,
+        storage_type: 'local'
+      })
+      .returning();
+
+    const finalUrl = `${imageUrlBase}/${metadata.id}`;
+    await db.update(IMAGE_METADATA)
+      .set({ url: finalUrl })
+      .where(eq(IMAGE_METADATA.id, metadata.id));
+
+    await db.insert(IMAGE_DATA)
+      .values({
+        id: metadata.id,
+        data: imageData.base64Data,
+        thumbnail_data: null
+      });
+
+    return {
+      id: metadata.id,
+      taskId: metadata.task_id,
+      deliverableId: metadata.deliverable_id,
+      originalName: metadata.original_name,
+      contentType: metadata.content_type,
+      fileSize: metadata.file_size,
+      url: finalUrl,
       storageType: metadata.storage_type,
       createdAt: metadata.created_at
     };
@@ -1309,9 +1376,13 @@ class DatabaseService {
     const [result] = await db
       .select({
         id: IMAGE_METADATA.id,
+        taskId: IMAGE_METADATA.task_id,
+        deliverableId: IMAGE_METADATA.deliverable_id,
         originalName: IMAGE_METADATA.original_name,
         contentType: IMAGE_METADATA.content_type,
         fileSize: IMAGE_METADATA.file_size,
+        url: IMAGE_METADATA.url,
+        storageType: IMAGE_METADATA.storage_type,
         data: IMAGE_DATA.data,
         thumbnailData: IMAGE_DATA.thumbnail_data
       })
@@ -1330,6 +1401,7 @@ class DatabaseService {
     const [image] = await db.select({
       id: IMAGE_METADATA.id,
       taskId: IMAGE_METADATA.task_id,
+      deliverableId: IMAGE_METADATA.deliverable_id,
       originalName: IMAGE_METADATA.original_name,
       contentType: IMAGE_METADATA.content_type,
       fileSize: IMAGE_METADATA.file_size,
@@ -1359,6 +1431,8 @@ class DatabaseService {
     
     return deletedImage ? {
       id: deletedImage.id,
+      taskId: deletedImage.task_id,
+      deliverableId: deletedImage.deliverable_id,
       originalName: deletedImage.original_name,
       contentType: deletedImage.content_type
     } : null;
@@ -1591,7 +1665,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -1632,7 +1706,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,

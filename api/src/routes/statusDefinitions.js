@@ -19,7 +19,7 @@ export default async function statusDefinitionsRoutes(fastify, options) {
             type: 'object',
             properties: {
               code: { type: 'string' },
-              description: { type: ['string', 'null'] },
+              description: { type: 'string', nullable: true },
               createdAt: { type: 'string' },
               updatedAt: { type: 'string' }
             }

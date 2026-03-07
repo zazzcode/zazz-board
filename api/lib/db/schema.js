@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index, unique } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index, unique, check } from 'drizzle-orm/pg-core';
 import { pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
@@ -86,15 +86,15 @@ export const PROJECTS = pgTable('PROJECTS', {
 export const DELIVERABLES = pgTable('DELIVERABLES', {
   id: serial('id').primaryKey(),
   project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
-  deliverable_id: varchar('deliverable_id', { length: 50 }).notNull().unique(),
+  project_code: varchar('project_code', { length: 10 }).notNull(),
+  deliverable_code: varchar('deliverable_code', { length: 25 }).notNull().unique(),
   name: varchar('name', { length: 30 }).notNull(),
   description: text('description'),
   type: deliverableTypeEnum('type').notNull(),
   status: varchar('status', { length: 25 }).notNull().default('PLANNING'),
   status_history: jsonb('status_history').notNull().default(sql`'[]'::jsonb`),
-  ded_file_path: varchar('ded_file_path', { length: 500 }),
-  plan_file_path: varchar('plan_file_path', { length: 500 }),
-  prd_file_path: varchar('prd_file_path', { length: 500 }),
+  spec_filepath: varchar('spec_filepath', { length: 500 }),
+  plan_filepath: varchar('plan_filepath', { length: 500 }),
   approved_by: integer('approved_by').references(() => USERS.id, { onDelete: 'set null' }),
   approved_at: timestamp('approved_at', { withTimezone: true }),
   git_worktree: varchar('git_worktree', { length: 255 }),
@@ -119,7 +119,7 @@ export const TASKS = pgTable('TASKS', {
   phase: integer('phase'),
   // Human-readable display ID within a deliverable: "1.1", "1.2", "1.2.1" (rework)
   // Unique per deliverable — enforced by constraint below
-  phase_task_id: varchar('phase_task_id', { length: 20 }),
+  phase_step: varchar('phase_step', { length: 20 }),
 
   // --- Core task fields ---
   title: varchar('title', { length: 255 }).notNull(),
@@ -156,8 +156,8 @@ export const TASKS = pgTable('TASKS', {
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
-  // phase_task_id must be unique within a deliverable (e.g. "1.1" unique per deliverable)
-  unique('uq_tasks_deliverable_phase_task_id').on(table.deliverable_id, table.phase_task_id),
+  // phase_step must be unique within a deliverable (e.g. "1.1" unique per deliverable)
+  unique('uq_tasks_deliverable_phase_step').on(table.deliverable_id, table.phase_step),
 ]);
 
 // Task-Tags junction table
@@ -182,14 +182,20 @@ export const TASK_RELATIONS = pgTable('TASK_RELATIONS', {
 // Image metadata table
 export const IMAGE_METADATA = pgTable('IMAGE_METADATA', {
   id: serial('id').primaryKey(),
-  task_id: integer('task_id').notNull().references(() => TASKS.id, { onDelete: 'cascade' }),
+  task_id: integer('task_id').references(() => TASKS.id, { onDelete: 'cascade' }),
+  deliverable_id: integer('deliverable_id').references(() => DELIVERABLES.id, { onDelete: 'cascade' }),
   original_name: varchar('original_name', { length: 255 }).notNull(),
   content_type: varchar('content_type', { length: 100 }).notNull(),
   file_size: integer('file_size').notNull(),
   url: varchar('url', { length: 500 }).notNull(), // Local DB URL or S3 URL
   storage_type: varchar('storage_type', { length: 20 }).notNull().default('local'), // 'local' or 's3'
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  check(
+    'image_metadata_single_owner_chk',
+    sql`((${table.task_id} IS NOT NULL AND ${table.deliverable_id} IS NULL) OR (${table.task_id} IS NULL AND ${table.deliverable_id} IS NOT NULL))`
+  ),
+]);
 
 // Image binary data table (for local storage)
 export const IMAGE_DATA = pgTable('IMAGE_DATA', {
@@ -225,6 +231,7 @@ export const deliverablesRelations = relations(DELIVERABLES, ({ one, many }) => 
     references: [USERS.id],
   }),
   tasks: many(TASKS),
+  images: many(IMAGE_METADATA),
 }));
 
 export const tasksRelations = relations(TASKS, ({ one, many }) => ({
@@ -274,6 +281,10 @@ export const imageMetadataRelations = relations(IMAGE_METADATA, ({ one }) => ({
   task: one(TASKS, {
     fields: [IMAGE_METADATA.task_id],
     references: [TASKS.id],
+  }),
+  deliverable: one(DELIVERABLES, {
+    fields: [IMAGE_METADATA.deliverable_id],
+    references: [DELIVERABLES.id],
   }),
   imageData: one(IMAGE_DATA, {
     fields: [IMAGE_METADATA.id],

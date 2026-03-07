@@ -80,9 +80,9 @@ async function resetAndSeed() {
     console.log('✅ Database reset and seeding completed successfully!');
     console.log('📊 Summary:');
     console.log('   • 5 users created');
-    console.log('   • 5 projects created');
-    console.log('   • 6 deliverables created');
-    console.log('   • 0 tasks (task model refactor in progress — tasks are created via API)');
+    console.log('   • 2 projects created (ZAZZ, ZED_MER)');
+    console.log('   • 4 deliverables created (ZAZZ only)');
+    console.log('   • 32 ZAZZ tasks seeded from database snapshot');
     console.log('   • status definitions + translations seeded');
     process.exit(0);
   } catch (error) {

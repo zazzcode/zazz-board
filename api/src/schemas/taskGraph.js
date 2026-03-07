@@ -2,15 +2,13 @@
  * Task graph and relation route schemas.
  */
 
-import { codeParam } from './common.js';
-
 const graphTaskItem = {
   type: 'object',
   properties: {
     id: { type: 'integer', description: 'Integer primary key' },
     taskId: { type: 'integer', description: 'Same as id' },
     phase: { type: 'integer', description: 'Phase number (e.g. 1, 2, 3)' },
-    phaseTaskId: { type: 'string', description: 'Human-readable ID within a deliverable, e.g. "1.2". Rework tasks use "1.2.1" format.' },
+    phaseStep: { type: 'string', description: 'Human-readable ID within a deliverable, e.g. "1.2". Rework tasks use "1.2.1" format.' },
     title: { type: 'string' },
     status: { type: 'string' },
     priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
@@ -34,26 +32,6 @@ const graphRelationItem = {
 };
 
 export const taskGraphSchemas = {
-  getProjectGraph: {
-    tags: ['task-graph'],
-    summary: 'Get full task graph for a project',
-    description: 'Returns all tasks and intra-project relations. Polled every 3 s by the UI for live updates.',
-    params: codeParam,
-    response: {
-      200: {
-        type: 'object',
-        properties: {
-          projectId: { type: 'integer' },
-          projectCode: { type: 'string' },
-          taskGraphLayoutDirection: { type: 'string', enum: ['LR', 'TB'] },
-          completionCriteriaStatus: { type: 'string' },
-          tasks: { type: 'array', items: graphTaskItem },
-          relations: { type: 'array', items: graphRelationItem }
-        }
-      }
-    }
-  },
-
   getTaskRelations: {
     tags: ['task-graph'],
     summary: 'Get task relations',
@@ -62,7 +40,7 @@ export const taskGraphSchemas = {
       type: 'object',
       required: ['code', 'taskId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
       }
     },
@@ -79,7 +57,7 @@ export const taskGraphSchemas = {
       type: 'object',
       required: ['code', 'taskId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id (source task).' }
       }
     },
@@ -102,7 +80,7 @@ export const taskGraphSchemas = {
       type: 'object',
       required: ['code', 'taskId', 'relatedTaskId', 'relationType'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric source task id.' },
         relatedTaskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric related task id.' },
         relationType: { type: 'string', enum: ['DEPENDS_ON', 'COORDINATES_WITH'], description: 'Relation type to remove.' }
@@ -118,7 +96,7 @@ export const taskGraphSchemas = {
       type: 'object',
       required: ['code', 'taskId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
       }
     },
@@ -151,7 +129,7 @@ export const taskGraphSchemas = {
       type: 'object',
       required: ['code', 'delivId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },

@@ -9,6 +9,7 @@ deliverables:
   - id: ZAZZ-5
     name: fix-routes-no-project
     spec: ZAZZ-5-fix-routes-no-project-SPEC.md
+    plan: ZAZZ-5-fix-routes-no-project-PLAN.md
   - id: ZAZZ-6
     name: multiple-agent-tokens-feature
     spec: ZAZZ-6-multiple-agent-tokens-feature-SPEC.md

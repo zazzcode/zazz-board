@@ -47,9 +47,9 @@ const start = async () => {
           description: `Kanban-style orchestration API for coordinating AI agents and humans. Auth: TB_TOKEN header or Authorization: Bearer (except /health, /, /db-test, /token-info, /openapi.json).
 
 **Common operations (agent quick reference)**:
-- Create deliverable: POST /projects/{projectCode}/deliverables — body: name, type; optional: dedFilePath, planFilePath. Response id = use for create task.
-- Create task: POST /projects/{code}/deliverables/{delivId}/tasks — delivId = numeric id from create deliverable. Body: title, prompt, phase, phaseTaskId.
-- Update deliverable: PUT /projects/{projectCode}/deliverables/{id} — add dedFilePath (spec path), planFilePath (plan path), gitWorktree, gitBranch when known.
+- Create deliverable: POST /projects/{projectCode}/deliverables — body: name, type; optional: specFilepath, planFilepath. Response id = use for create task.
+- Create task: POST /projects/{code}/deliverables/{delivId}/tasks — delivId = numeric id from create deliverable. Body: title, prompt, phase, phaseStep.
+- Update deliverable: PUT /projects/{projectCode}/deliverables/{id} — add specFilepath (spec path), planFilepath (plan path), gitWorktree, gitBranch when known.
 - Change deliverable status: PATCH /projects/{projectCode}/deliverables/{id}/status — body: { status }.
 - Change task status: PATCH /projects/{code}/deliverables/{delivId}/tasks/{taskId}/status — body: { status }; optional agentName to claim.`,
           version: '1.0.0'
@@ -64,7 +64,7 @@ const start = async () => {
           { name: 'tags', description: 'Tags' },
           { name: 'translations', description: 'i18n' },
           { name: 'status-definitions', description: 'Status lookup' },
-          { name: 'images', description: 'Task images' }
+          { name: 'images', description: 'Project-scoped task and deliverable images' }
         ],
         components: {
           securitySchemes: {
@@ -117,4 +117,3 @@ const start = async () => {
 };
 
 start();
-

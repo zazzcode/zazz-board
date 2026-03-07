@@ -1,17 +1,44 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Container, Text, Button, Group, Modal, Stack } from '@mantine/core';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useDeliverables } from '../hooks/useDeliverables.js';
+import { useProjectEvents } from '../hooks/useProjectEvents.js';
 import { DeliverableKanbanBoard } from '../components/DeliverableKanbanBoard.jsx';
 import { DeliverableModal } from '../components/DeliverableModal.jsx';
 
 export function DeliverableKanbanPage({ selectedProject }) {
   const { t } = useTranslation();
-  const { deliverables, loading, createDeliverable, updateDeliverableStatus, deleteDeliverable } = useDeliverables(selectedProject);
+  const { deliverables, loading, createDeliverable, updateDeliverableStatus, deleteDeliverable, refreshDeliverables } = useDeliverables(selectedProject);
 
   const [modalOpened, setModalOpened] = useState(false);
   const [editingDeliverable, setEditingDeliverable] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const refreshTimerRef = useRef(null);
+
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current) return;
+    refreshTimerRef.current = setTimeout(async () => {
+      refreshTimerRef.current = null;
+      await refreshDeliverables();
+    }, 150);
+  }, [refreshDeliverables]);
+
+  useProjectEvents(selectedProject?.code, {
+    enabled: Boolean(selectedProject?.code),
+    onEvent: (event) => {
+      if (event.type === 'deliverable') {
+        scheduleRefresh();
+      }
+    },
+  });
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
 
   if (loading) {
     return (

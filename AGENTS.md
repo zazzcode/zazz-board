@@ -9,6 +9,28 @@ Reference for AI agents and developers. **Legacy**: If you see "Task Blaster" or
 - **Flow:** Work in feature worktree → push branch to GitHub → merge on GitHub → pull main locally.
 - **Never merge into main locally.** Main must reflect GitHub after pull.
 
+### New worktree setup (MANDATORY)
+
+When creating a new feature worktree, always do all of the following:
+
+1. Create the worktree from `main`:
+   - `git worktree add -b <branch> ../<worktree-name> main`
+2. Copy root env file from main:
+   - `cp ../main/.env ./.env`
+3. Copy API env file from main:
+   - `cp ../main/api/.env ./api/.env`
+4. Verify both files match main:
+   - `cmp -s ../main/.env ./.env`
+   - `cmp -s ../main/api/.env ./api/.env`
+
+### Env changes made in a feature worktree (MANDATORY)
+
+If any branch/worktree adds or changes settings in `.env` or `api/.env`:
+
+- The agent must explicitly ask the user whether those env changes should also be applied to the `main` worktree.
+- Do not assume automatic propagation without user confirmation.
+- If the user confirms, copy the updated env files into `main` and verify parity with `cmp -s`.
+
 ---
 
 ## Standards
@@ -111,7 +133,7 @@ Vitest + PactumJS. See [testing.md](.zazz/standards/testing.md) and [api/**tests
 
 ## Troubleshooting
 
-- **drizzle-kit "drizzle-orm"**: From root: `ln -sf ./api/node_modules/drizzle-orm ./node_modules/drizzle-orm`
+- **drizzle-kit "drizzle-orm"**: Run `npm install` from repo root and `npm install --workspace=api`. Do not create manual `node_modules` symlinks in worktrees.
 - **DATABASE_URL_TEST not set**: Source `api/.env` before running tests
 - **SAFETY CHECK FAILED**: Ensure `zazz_board_test` exists; recreate test DB
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test)
@@ -129,4 +151,3 @@ cd api && DATABASE_URL=postgres://postgres:password@localhost:5433/zazz_board_te
 cd api && set -a && source .env && set +a && NODE_ENV=test npm run test
 npm run dev
 ```
-

@@ -1,5 +1,5 @@
 import * as pactum from 'pactum';
-import { clearTaskData, createTestDeliverable } from '../helpers/testDatabase.js';
+import { clearTaskData, createTestDeliverable, resetProjectDefaults } from '../helpers/testDatabase.js';
 
 const { spec } = pactum;
 const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
@@ -7,6 +7,7 @@ const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
 describe('Project Deliverable Status Workflow Configuration', () => {
   beforeEach(async () => {
     await clearTaskData();
+    await resetProjectDefaults();
   });
 
   it('should get default deliverable status workflow for ZAZZ project', async () => {
@@ -19,15 +20,6 @@ describe('Project Deliverable Status Workflow Configuration', () => {
     expect(response.deliverableStatusWorkflow).toEqual(['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']);
   });
 
-  it('should get extended deliverable status workflow for APIMOD project', async () => {
-    const response = await spec()
-      .get('/projects/APIMOD/deliverable-statuses')
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .expectStatus(200)
-      .returns('res.body');
-
-    expect(response.deliverableStatusWorkflow).toEqual(['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'UAT', 'STAGED', 'PROD']);
-  });
 
   it('should require authentication to get deliverable status workflow', async () => {
     await spec()
@@ -143,27 +135,23 @@ describe('Project Deliverable Status Workflow Configuration', () => {
       .expectStatus(400);
   });
 
-  it('should work independently for different projects', async () => {
+  it('should return workflow for multiple seeded projects', async () => {
     // Project ZAZZ
     const zazz = await spec()
       .get('/projects/ZAZZ/deliverable-statuses')
       .withHeaders('TB_TOKEN', VALID_TOKEN)
       .expectStatus(200)
       .returns('res.body');
-
-    // Project APIMOD
-    const apimod = await spec()
-      .get('/projects/APIMOD/deliverable-statuses')
+    // Project ZED_MER
+    const zedMer = await spec()
+      .get('/projects/ZED_MER/deliverable-statuses')
       .withHeaders('TB_TOKEN', VALID_TOKEN)
       .expectStatus(200)
       .returns('res.body');
-
-    // Verify they're different
-    expect(zazz.deliverableStatusWorkflow.length).not.toBe(apimod.deliverableStatusWorkflow.length);
-    expect(apimod.deliverableStatusWorkflow).toContain('UAT');
-    expect(apimod.deliverableStatusWorkflow).toContain('PROD');
-    expect(zazz.deliverableStatusWorkflow).not.toContain('UAT');
-    expect(zazz.deliverableStatusWorkflow).not.toContain('PROD');
+    expect(Array.isArray(zazz.deliverableStatusWorkflow)).toBe(true);
+    expect(Array.isArray(zedMer.deliverableStatusWorkflow)).toBe(true);
+    expect(zedMer.deliverableStatusWorkflow).toEqual(['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']);
+    expect(zazz.deliverableStatusWorkflow).toEqual(['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']);
   });
 
   it('should validate status is in workflow when transitioning deliverable', async () => {
@@ -178,7 +166,7 @@ describe('Project Deliverable Status Workflow Configuration', () => {
     // Try to transition deliverable to a status not in the workflow
     const deliverable = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test.md'
+      planFilepath: 'docs/test.md'
     });
 
     await spec()
@@ -213,7 +201,7 @@ describe('Project Deliverable Status Workflow Configuration', () => {
     expect(zazz.deliverableStatusWorkflow[0]).toBe('PLANNING');
   });
 
-  it('should allow different projects to have different workflow lengths', async () => {
+  it('should allow different seeded projects to have valid workflow arrays', async () => {
     const project1 = await spec()
       .get('/projects/ZAZZ/deliverable-statuses')
       .withHeaders('TB_TOKEN', VALID_TOKEN)
@@ -221,20 +209,11 @@ describe('Project Deliverable Status Workflow Configuration', () => {
       .returns('res.body');
 
     const project2 = await spec()
-      .get('/projects/MOBDEV/deliverable-statuses')
+      .get('/projects/ZED_MER/deliverable-statuses')
       .withHeaders('TB_TOKEN', VALID_TOKEN)
       .expectStatus(200)
       .returns('res.body');
-
-    const project3 = await spec()
-      .get('/projects/APIMOD/deliverable-statuses')
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .expectStatus(200)
-      .returns('res.body');
-
-    // All should be valid arrays
     expect(Array.isArray(project1.deliverableStatusWorkflow)).toBe(true);
     expect(Array.isArray(project2.deliverableStatusWorkflow)).toBe(true);
-    expect(Array.isArray(project3.deliverableStatusWorkflow)).toBe(true);
   });
 });

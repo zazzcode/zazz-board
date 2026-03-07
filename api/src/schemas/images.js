@@ -1,126 +1,128 @@
 /**
- * Image route schemas.
+ * Project-scoped image route schemas.
  */
 
-export const imageSchemas = {
-  getTaskImages: {
-    tags: ['images'],
-    summary: 'List task images',
-    description: 'Returns metadata (id, originalName, contentType, fileSize) for images attached to a task. Use GET /images/:id for binary.',
-    params: {
-      type: 'object',
-      required: ['taskId'],
-      properties: { taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' } }
-    },
-    response: {
-      200: {
-        description: 'List of image metadata',
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'number' },
-            taskId: { type: 'number' },
-            originalName: { type: 'string' },
-            contentType: { type: 'string' },
-            fileSize: { type: 'number' }
-          }
-        }
+const scopedProjectDeliverableParams = {
+  type: 'object',
+  required: ['code', 'delivId'],
+  properties: {
+    code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
+    delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
+  }
+};
+
+const scopedProjectDeliverableTaskParams = {
+  type: 'object',
+  required: ['code', 'delivId', 'taskId'],
+  properties: {
+    code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
+    delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
+    taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
+  }
+};
+
+const scopedImageIdParams = {
+  type: 'object',
+  required: ['code', 'id'],
+  properties: {
+    code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
+    id: { type: 'string', pattern: '^\\d+$', description: 'Numeric image id.' }
+  }
+};
+
+const imageUploadBody = {
+  type: 'object',
+  required: ['images'],
+  properties: {
+    images: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['originalName', 'contentType', 'fileSize', 'base64Data'],
+        properties: {
+          originalName: { type: 'string' },
+          contentType: { type: 'string', pattern: '^image/' },
+          fileSize: { type: 'integer', minimum: 1 },
+          base64Data: { type: 'string' }
+        },
+        additionalProperties: false
       }
     }
   },
+  additionalProperties: false
+};
 
-  uploadTaskImages: {
+const imageMetadataSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'number' },
+    taskId: { type: 'number', nullable: true },
+    deliverableId: { type: 'number', nullable: true },
+    originalName: { type: 'string' },
+    contentType: { type: 'string' },
+    fileSize: { type: 'number' },
+    url: { type: 'string' },
+    storageType: { type: 'string' },
+    createdAt: { type: 'string', format: 'date-time' }
+  }
+};
+
+const uploadResponseSchema = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    images: { type: 'array', items: imageMetadataSchema },
+    count: { type: 'number' }
+  }
+};
+
+export const imageSchemas = {
+  getScopedTaskImages: {
     tags: ['images'],
-    summary: 'Upload task images',
-    description: 'Upload one or more images as base64. Body: { images: [{ originalName, contentType, fileSize, base64Data }] }. contentType must be image/*.',
-    params: {
-      type: 'object',
-      required: ['taskId'],
-      properties: { taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' } }
-    },
-    body: {
-      type: 'object',
-      required: ['images'],
-      properties: {
-        images: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['originalName', 'contentType', 'fileSize', 'base64Data'],
-            properties: {
-              originalName: { type: 'string' },
-              contentType: { type: 'string', pattern: '^image/' },
-              fileSize: { type: 'integer', minimum: 1 },
-              base64Data: { type: 'string' }
-            }
-          }
-        }
-      }
-    },
+    summary: 'List task images (project scoped)',
+    description: 'Returns image metadata for a task scoped to project + deliverable + task.',
+    params: scopedProjectDeliverableTaskParams,
+    response: {
+      200: {
+        description: 'Task image metadata list',
+        type: 'array',
+        items: imageMetadataSchema
+      },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Task/deliverable scope mismatch' },
+      404: { description: 'Project, deliverable, or task not found' }
+    }
+  },
+
+  uploadScopedTaskImages: {
+    tags: ['images'],
+    summary: 'Upload task images (project scoped)',
+    description: 'Uploads one or more task-owned images scoped by project + deliverable + task.',
+    params: scopedProjectDeliverableTaskParams,
+    body: imageUploadBody,
     response: {
       201: {
-        description: 'Images uploaded',
-        type: 'object',
-        properties: {
-          success: { type: 'boolean' },
-          images: { type: 'array', items: { type: 'object' } },
-          count: { type: 'number' }
-        }
-      }
-    }
-  },
-
-  getImageById: {
-    tags: ['images'],
-    summary: 'Get image binary',
-    description: 'Returns image binary. Use id from GET /tasks/:taskId/images. Content-Type indicates format.',
-    params: {
-      type: 'object',
-      required: ['id'],
-      properties: { id: { type: 'string', pattern: '^\\d+$', description: 'Numeric image id.' } }
-    },
-    response: {
-      200: { description: 'Image binary' },
-      404: { description: 'Image not found' }
-    }
-  },
-
-  getImageMetadata: {
-    tags: ['images'],
-    summary: 'Get image metadata',
-    description: 'Returns image metadata (id, taskId, originalName, contentType, fileSize) without binary. Use when you need metadata only.',
-    params: {
-      type: 'object',
-      required: ['id'],
-      properties: { id: { type: 'string', pattern: '^\\d+$', description: 'Numeric image id.' } }
-    },
-    response: {
-      200: {
-        description: 'Image metadata',
-        type: 'object',
-        properties: {
-          id: { type: 'number' },
-          taskId: { type: 'number' },
-          originalName: { type: 'string' },
-          contentType: { type: 'string' },
-          fileSize: { type: 'number' }
-        }
+        description: 'Task images uploaded',
+        ...uploadResponseSchema
       },
-      404: { description: 'Image not found' }
+      401: { description: 'Unauthorized' },
+      403: { description: 'Task/deliverable scope mismatch' },
+      404: { description: 'Project, deliverable, or task not found' }
     }
   },
 
-  deleteTaskImage: {
+  deleteScopedTaskImage: {
     tags: ['images'],
-    summary: 'Delete task image',
-    description: 'Deletes an image. Verifies image belongs to the specified task. Returns 403 if image belongs to different task.',
+    summary: 'Delete task image (project scoped)',
+    description: 'Deletes a task-owned image scoped by project + deliverable + task.',
     params: {
       type: 'object',
-      required: ['taskId', 'imageId'],
+      required: ['code', 'delivId', 'taskId', 'imageId'],
       properties: {
-        taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' },
-        imageId: { type: 'string', pattern: '^\\d+$', description: 'Numeric image id.' }
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$' },
+        delivId: { type: 'string', pattern: '^\\d+$' },
+        taskId: { type: 'string', pattern: '^\\d+$' },
+        imageId: { type: 'string', pattern: '^\\d+$' }
       }
     },
     response: {
@@ -132,8 +134,100 @@ export const imageSchemas = {
           image: { type: 'object' }
         }
       },
-      403: { description: 'Image does not belong to the specified task' },
-      404: { description: 'Image not found' }
+      401: { description: 'Unauthorized' },
+      403: { description: 'Image/task scope mismatch' },
+      404: { description: 'Project, deliverable, task, or image not found' }
+    }
+  },
+
+  getScopedDeliverableImages: {
+    tags: ['images'],
+    summary: 'List deliverable images (project scoped)',
+    description: 'Returns image metadata for images attached directly to a deliverable.',
+    params: scopedProjectDeliverableParams,
+    response: {
+      200: {
+        description: 'Deliverable image metadata list',
+        type: 'array',
+        items: imageMetadataSchema
+      },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Deliverable does not belong to project' },
+      404: { description: 'Project or deliverable not found' }
+    }
+  },
+
+  uploadScopedDeliverableImages: {
+    tags: ['images'],
+    summary: 'Upload deliverable images (project scoped)',
+    description: 'Uploads one or more deliverable-owned images scoped by project + deliverable.',
+    params: scopedProjectDeliverableParams,
+    body: imageUploadBody,
+    response: {
+      201: {
+        description: 'Deliverable images uploaded',
+        ...uploadResponseSchema
+      },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Deliverable does not belong to project' },
+      404: { description: 'Project or deliverable not found' }
+    }
+  },
+
+  deleteScopedDeliverableImage: {
+    tags: ['images'],
+    summary: 'Delete deliverable image (project scoped)',
+    description: 'Deletes a deliverable-owned image scoped by project + deliverable.',
+    params: {
+      type: 'object',
+      required: ['code', 'delivId', 'imageId'],
+      properties: {
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$' },
+        delivId: { type: 'string', pattern: '^\\d+$' },
+        imageId: { type: 'string', pattern: '^\\d+$' }
+      }
+    },
+    response: {
+      200: {
+        description: 'Image deleted',
+        type: 'object',
+        properties: {
+          message: { type: 'string' },
+          image: { type: 'object' }
+        }
+      },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Image/deliverable scope mismatch' },
+      404: { description: 'Project, deliverable, or image not found' }
+    }
+  },
+
+  getScopedImageById: {
+    tags: ['images'],
+    summary: 'Get image binary (project scoped)',
+    description: 'Returns image binary for an image that belongs to the specified project.',
+    params: scopedImageIdParams,
+    response: {
+      200: { description: 'Image binary' },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Image belongs to a different project' },
+      404: { description: 'Project or image not found' }
+    }
+  },
+
+  getScopedImageMetadata: {
+    tags: ['images'],
+    summary: 'Get image metadata (project scoped)',
+    description: 'Returns image metadata for an image that belongs to the specified project.',
+    params: scopedImageIdParams,
+    response: {
+      200: {
+        description: 'Image metadata',
+        ...imageMetadataSchema
+      },
+      401: { description: 'Unauthorized' },
+      403: { description: 'Image belongs to a different project' },
+      404: { description: 'Project or image not found' }
     }
   }
 };

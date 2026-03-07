@@ -19,7 +19,7 @@ describe('Deliverables API', () => {
   it('should list project deliverables', async () => {
     await createTestDeliverable(1, { name: 'D1', status: 'PLANNING' });
     await createTestDeliverable(1, { name: 'D2', status: 'IN_PROGRESS' });
-    await createTestDeliverable(3,  { name: 'Other Project Deliverable' });
+    await createTestDeliverable(2,  { name: 'Other Project Deliverable' });
 
     const response = await spec()
       .get('/projects/ZAZZ/deliverables')
@@ -39,7 +39,7 @@ describe('Deliverables API', () => {
       .withJson({
         name: 'New Deliverable',
         type: 'FEATURE',
-        planFilePath: 'docs/new-deliverable-plan.md'
+        planFilepath: 'docs/new-deliverable-plan.md'
       })
       .expectStatus(201)
       .returns('res.body');
@@ -48,7 +48,7 @@ describe('Deliverables API', () => {
     expect(response.name).toBe('New Deliverable');
     expect(response.type).toBe('FEATURE');
     expect(response.status).toBe('PLANNING');
-    expect(response.deliverableId).toMatch(/^ZAZZ-\d+$/);
+    expect(response.deliverableCode).toMatch(/^ZAZZ-\d+$/);
   });
 
   it('should update and fetch a deliverable by id', async () => {
@@ -71,7 +71,7 @@ describe('Deliverables API', () => {
   it('should not move deliverable to IN_PROGRESS before approval and plan', async () => {
     const created = await createTestDeliverable(1, {
       name: 'Needs Approval',
-      planFilePath: null,
+      planFilepath: null,
       approvedAt: null,
       approvedBy: null
     });
@@ -85,7 +85,7 @@ describe('Deliverables API', () => {
 
   it('should approve then move deliverable to IN_PROGRESS', async () => {
     const created = await createTestDeliverable(1, {
-      planFilePath: 'docs/approved-plan.md',
+      planFilepath: 'docs/approved-plan.md',
       status: 'PLANNING'
     });
 

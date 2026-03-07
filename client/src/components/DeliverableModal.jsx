@@ -11,9 +11,8 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable, selec
     name: '',
     type: 'FEATURE',
     description: '',
-    dedFilePath: '',
-    planFilePath: '',
-    prdFilePath: '',
+    specFilepath: '',
+    planFilepath: '',
     gitWorktree: '',
     gitBranch: '',
     pullRequestUrl: ''
@@ -27,9 +26,8 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable, selec
         name: deliverable.name || '',
         type: deliverable.type || 'FEATURE',
         description: deliverable.description || '',
-        dedFilePath: deliverable.dedFilePath || '',
-        planFilePath: deliverable.planFilePath || '',
-        prdFilePath: deliverable.prdFilePath || '',
+        specFilepath: deliverable.specFilepath || '',
+        planFilepath: deliverable.planFilepath || '',
         gitWorktree: deliverable.gitWorktree || '',
         gitBranch: deliverable.gitBranch || '',
         pullRequestUrl: deliverable.pullRequestUrl || ''
@@ -39,9 +37,8 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable, selec
         name: '',
         type: 'FEATURE',
         description: '',
-        dedFilePath: '',
-        planFilePath: '',
-        prdFilePath: '',
+        specFilepath: '',
+        planFilepath: '',
         gitWorktree: '',
         gitBranch: '',
         pullRequestUrl: ''
@@ -114,24 +111,17 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable, selec
           />
 
           <TextInput
-            label={t('deliverables.dedFilePath')}
+            label={t('deliverables.specFilepath')}
             placeholder="path/to/SPEC.md"
-            value={formData.dedFilePath}
-            onChange={(e) => setFormData({ ...formData, dedFilePath: e.target.value })}
+            value={formData.specFilepath}
+            onChange={(e) => setFormData({ ...formData, specFilepath: e.target.value })}
           />
 
           <TextInput
-            label={t('deliverables.planFilePath')}
+            label={t('deliverables.planFilepath')}
             placeholder="path/to/PLAN.md"
-            value={formData.planFilePath}
-            onChange={(e) => setFormData({ ...formData, planFilePath: e.target.value })}
-          />
-
-          <TextInput
-            label={t('deliverables.prdFilePath')}
-            placeholder="path/to/PRD.md"
-            value={formData.prdFilePath}
-            onChange={(e) => setFormData({ ...formData, prdFilePath: e.target.value })}
+            value={formData.planFilepath}
+            onChange={(e) => setFormData({ ...formData, planFilepath: e.target.value })}
           />
 
           <TextInput

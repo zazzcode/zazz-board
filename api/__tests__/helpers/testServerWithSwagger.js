@@ -24,7 +24,14 @@ export async function createTestServerWithSwagger() {
       openapi: '3.1.0',
       info: {
         title: 'Zazz Board API',
-        description: 'Test',
+        description: `Kanban-style orchestration API for coordinating AI agents and humans.
+
+**Common operations (agent quick reference)**:
+- Create deliverable
+- Create task
+- Update deliverable
+- Change deliverable status
+- Change task status`,
         version: '1.0.0'
       },
       servers: [{ url: BASE_URL, description: 'Local' }],
@@ -41,6 +48,8 @@ export async function createTestServerWithSwagger() {
   await app.register(routes);
 
   await tokenService.initialize();
+
+  await app.ready();
 
   return app;
 }

@@ -8,8 +8,9 @@ import { useTaskActions } from '../hooks/useTaskActions.js';
 import { KanbanBoard } from '../components/KanbanBoard.jsx';
 import { KanbanDebug } from '../components/KanbanDebug.jsx';
 import { TaskDetailsPanel } from '../components/TaskDetailPanel.jsx';
+import { useProjectEvents } from '../hooks/useProjectEvents.js';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 export function KanbanPage({ selectedProject, refreshTrigger }) {
   const { t } = useTranslation();
@@ -41,6 +42,32 @@ export function KanbanPage({ selectedProject, refreshTrigger }) {
   const { handleTaskEdit, handlePanelClose, handleTaskSave } = useTaskActions({ 
     refreshTasks, openDetailPanel, closeDetailPanel, updateTaskPanel, selectedProject 
   });
+  const refreshTimerRef = useRef(null);
+
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current) return;
+    refreshTimerRef.current = setTimeout(async () => {
+      refreshTimerRef.current = null;
+      await refreshTasks();
+    }, 150);
+  }, [refreshTasks]);
+
+  useProjectEvents(selectedProject?.code, {
+    enabled: Boolean(selectedProject?.code),
+    onEvent: (event) => {
+      if (event.type === 'task' || event.type === 'relation') {
+        scheduleRefresh();
+      }
+    },
+  });
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
 
   if (loading) {
     return (

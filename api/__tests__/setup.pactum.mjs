@@ -2,6 +2,9 @@ import { beforeAll, afterAll } from 'vitest';
 import { createTestServer } from './helpers/testServer.js';
 import { validateTestEnvironment } from './helpers/testDatabase.js';
 import pactum from 'pactum';
+import { spawnSync } from 'child_process';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 
 // Fail fast if not in test environment
 if (process.env.NODE_ENV !== 'test') {
@@ -30,12 +33,27 @@ if (testDbName !== 'zazz_board_test') {
 
 let app;
 const PORT = 3031;
+const testDir = dirname(fileURLToPath(import.meta.url));
+const apiDir = resolve(testDir, '..');
 
 beforeAll(async () => {
   // Validate test environment before starting server
   await validateTestEnvironment();
   
   console.log('✅ Environment validation passed: zazz_board_test');
+
+  const resetResult = spawnSync('npm', ['run', 'db:reset'], {
+    cwd: apiDir,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      DATABASE_URL: process.env.DATABASE_URL_TEST
+    }
+  });
+  if (resetResult.status !== 0) {
+    throw new Error(`Failed to reset test database before suite start (exit ${resetResult.status ?? 'unknown'})`);
+  }
   
   app = await createTestServer();
   await app.listen({ port: PORT, host: '127.0.0.1' });

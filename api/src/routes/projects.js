@@ -2,10 +2,84 @@ import { projectSchemas } from '../schemas/validation.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 export default async function projectRoutes(fastify, options) {
-  const { dbService } = options;
+  const { dbService, realtimeService } = options;
+
+  const publishEvent = (projectCode, payload) => {
+    if (!realtimeService) return;
+    realtimeService.publish(projectCode, payload);
+  };
 
   // Add authentication middleware to all project routes
   fastify.addHook('preHandler', authMiddleware);
+
+  // GET /projects/:code/events - Subscribe to project-scoped realtime events (SSE)
+  fastify.get('/projects/:code/events', {
+    schema: {
+      tags: ['projects'],
+      summary: 'Subscribe to project realtime events (SSE)',
+      description: 'Streams task and deliverable updates for a project using Server-Sent Events. Requires TB_TOKEN auth.',
+      params: {
+        type: 'object',
+        required: ['code'],
+        properties: {
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
+        }
+      },
+      response: {
+        200: {
+          type: 'string',
+          description: 'SSE stream (text/event-stream)'
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { code } = request.params;
+    const project = await dbService.getProjectByCode(code);
+    if (!project) {
+      return reply.code(404).send({ error: 'Project not found' });
+    }
+
+    if (!realtimeService) {
+      return reply.code(503).send({ error: 'Realtime service unavailable' });
+    }
+
+    reply.hijack();
+
+    const projectCode = String(project.code).toUpperCase();
+    const rawReply = reply.raw;
+    rawReply.setHeader('Content-Type', 'text/event-stream');
+    rawReply.setHeader('Cache-Control', 'no-cache, no-transform');
+    rawReply.setHeader('Connection', 'keep-alive');
+    rawReply.setHeader('X-Accel-Buffering', 'no');
+    if (rawReply.flushHeaders) rawReply.flushHeaders();
+
+    const subscriberId = realtimeService.subscribe(projectCode, {
+      send: (message) => rawReply.write(message)
+    });
+
+    const heartbeat = setInterval(() => {
+      try {
+        rawReply.write(': keep-alive\n\n');
+      } catch (error) {
+        clearInterval(heartbeat);
+      }
+    }, 20000);
+
+    const cleanup = () => {
+      clearInterval(heartbeat);
+      realtimeService.unsubscribe(projectCode, subscriberId);
+    };
+
+    request.raw.on('close', cleanup);
+    request.raw.on('error', cleanup);
+
+    rawReply.write(
+      `event: connected\ndata: ${JSON.stringify({
+        projectCode,
+        connectedAt: new Date().toISOString(),
+      })}\n\n`
+    );
+  });
 
   // GET /projects - List all projects with details
   fastify.get('/projects', {
@@ -145,7 +219,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'status'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           status: { type: 'string', pattern: '^[A-Z_]+$', description: 'Column status.' }
         }
       },
@@ -180,6 +254,12 @@ export default async function projectRoutes(fastify, options) {
       }
       
       const updatedTasks = await dbService.updateColumnPositions(project.id, status, positionUpdates);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.column_reordered',
+        status,
+        taskIds: positionUpdates.map((item) => item.taskId),
+      });
       reply.send(updatedTasks);
     } catch (error) {
       fastify.log.error(error);
@@ -197,7 +277,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
       },
@@ -223,6 +303,16 @@ export default async function projectRoutes(fastify, options) {
       
       const taskIdNum = parseInt(taskId);
       const updatedTask = await dbService.updateTaskPosition(taskIdNum, newPosition, status);
+      const fullTask = updatedTask?.id ? await dbService.getTaskById(updatedTask.id) : null;
+
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.position_updated',
+        taskId: fullTask?.id || taskIdNum,
+        deliverableId: fullTask?.deliverableId || null,
+        status: fullTask?.status || status,
+        position: fullTask?.position || newPosition,
+      });
 
       reply.send(updatedTask);
     } catch (error) {
@@ -275,6 +365,14 @@ export default async function projectRoutes(fastify, options) {
       });
 
       request.log.info(`Task ${taskId} status changed from ${currentTask.status} to ${status}`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.status_changed',
+        taskId: updatedTask.id,
+        deliverableId: updatedTask.deliverableId,
+        status: updatedTask.status,
+        previousStatus: currentTask.status,
+      });
       reply.send(updatedTask);
     } catch (error) {
       request.log.error(error, 'Failed to change task status');
@@ -309,8 +407,19 @@ export default async function projectRoutes(fastify, options) {
       
       // Update task — updateTask handles auto-promotion on status change
       const updatedTask = await dbService.updateTask(currentTask.id, taskData);
+      const eventType = taskData.status && taskData.status !== currentTask.status
+        ? 'task.status_changed'
+        : 'task.updated';
 
       request.log.info(`Task ${taskId} updated`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType,
+        taskId: updatedTask.id,
+        deliverableId: updatedTask.deliverableId,
+        status: updatedTask.status,
+        previousStatus: currentTask.status,
+      });
       reply.send(updatedTask);
     } catch (error) {
       request.log.error(error, 'Failed to update task');
@@ -343,9 +452,16 @@ export default async function projectRoutes(fastify, options) {
       }
       
       // Delete task
-      const deletedTask = await dbService.deleteTask(currentTask.id);
+      await dbService.deleteTask(currentTask.id);
       
       request.log.info(`Task ${taskId} deleted`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.deleted',
+        taskId: currentTask.id,
+        deliverableId: currentTask.deliverableId,
+        status: currentTask.status,
+      });
       reply.send({ message: 'Task deleted successfully' });
     } catch (error) {
       request.log.error(error, 'Failed to delete task');
@@ -363,7 +479,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       response: {
@@ -404,7 +520,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       body: {
@@ -487,7 +603,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       }
     }
@@ -513,7 +629,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       body: {
@@ -603,6 +719,13 @@ export default async function projectRoutes(fastify, options) {
       };
 
       const task = await dbService.createTask(taskData);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.created',
+        taskId: task.id,
+        deliverableId: task.deliverableId,
+        status: task.status,
+      });
       reply.code(201).send(task);
     } catch (error) {
       request.log.error(error, 'Failed to create task');
@@ -664,8 +787,19 @@ export default async function projectRoutes(fastify, options) {
         ...currentTask,
         ...request.body
       });
+      const eventType = request.body.status && request.body.status !== currentTask.status
+        ? 'task.status_changed'
+        : 'task.updated';
 
       request.log.info(`Task ${taskId} updated in deliverable ${delivId}`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType,
+        taskId: updatedTask.id,
+        deliverableId: updatedTask.deliverableId,
+        status: updatedTask.status,
+        previousStatus: currentTask.status,
+      });
       reply.send(updatedTask);
     } catch (error) {
       request.log.error(error, 'Failed to update task');
@@ -683,7 +817,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
@@ -711,6 +845,13 @@ export default async function projectRoutes(fastify, options) {
       await dbService.deleteTask(taskIdNum);
 
       request.log.info(`Task ${taskId} deleted from deliverable ${delivId}`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.deleted',
+        taskId: currentTask.id,
+        deliverableId: currentTask.deliverableId,
+        status: currentTask.status,
+      });
       reply.send({ message: 'Task deleted successfully' });
     } catch (error) {
       request.log.error(error, 'Failed to delete task');
@@ -728,7 +869,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
@@ -774,6 +915,13 @@ export default async function projectRoutes(fastify, options) {
       });
 
       request.log.info(`Note appended to task ${taskId} in deliverable ${delivId}`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.updated',
+        taskId: updatedTask.id,
+        deliverableId: updatedTask.deliverableId,
+        status: updatedTask.status,
+      });
       reply.send(updatedTask);
     } catch (error) {
       request.log.error(error, 'Failed to append note to task');
@@ -791,7 +939,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id from create deliverable.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id from create task.' }
         }
@@ -854,6 +1002,14 @@ export default async function projectRoutes(fastify, options) {
       });
 
       request.log.info(`Task ${taskId} status changed from ${currentTask.status} to ${status}`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.status_changed',
+        taskId: updatedTask.id,
+        deliverableId: updatedTask.deliverableId,
+        status: updatedTask.status,
+        previousStatus: currentTask.status,
+      });
       reply.send(updatedTask);
     } catch (error) {
       request.log.error(error, 'Failed to change task status');
@@ -871,7 +1027,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
@@ -903,6 +1059,15 @@ export default async function projectRoutes(fastify, options) {
       });
 
       request.log.info(`Task ${taskId} cancelled in deliverable ${delivId}`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.status_changed',
+        taskId: updatedTask.id,
+        deliverableId: updatedTask.deliverableId,
+        status: updatedTask.status,
+        previousStatus: currentTask.status,
+        isCancelled: true,
+      });
       reply.send(updatedTask);
     } catch (error) {
       request.log.error(error, 'Failed to cancel task');
@@ -920,7 +1085,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
@@ -956,6 +1121,14 @@ export default async function projectRoutes(fastify, options) {
       const updatedTask = await dbService.reorderTask(taskIdNum, position);
 
       request.log.info(`Task ${taskId} reordered to position ${position}`);
+      publishEvent(project.code, {
+        type: 'task',
+        eventType: 'task.position_updated',
+        taskId: updatedTask.id,
+        deliverableId: currentTask.deliverableId,
+        status: updatedTask.status,
+        position: updatedTask.position,
+      });
       reply.send(updatedTask);
     } catch (error) {
       request.log.error(error, 'Failed to reorder task');
@@ -973,7 +1146,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }

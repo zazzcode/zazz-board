@@ -222,6 +222,56 @@ function AppContent() {
     console.log('==================');
   }, []);
 
+  // Hydrate last selected graph deliverable when switching projects.
+  useEffect(() => {
+    if (!selectedProject?.code) {
+      setSelectedDeliverableId(null);
+      return;
+    }
+    const savedDeliverableId = localStorage.getItem(
+      `taskGraph:lastDeliverable:${selectedProject.code}`
+    );
+    setSelectedDeliverableId(savedDeliverableId || null);
+  }, [selectedProject?.code]);
+
+  // Persist last selected graph deliverable per project.
+  useEffect(() => {
+    if (!selectedProject?.code || !selectedDeliverableId) return;
+    localStorage.setItem(
+      `taskGraph:lastDeliverable:${selectedProject.code}`,
+      String(selectedDeliverableId)
+    );
+  }, [selectedProject?.code, selectedDeliverableId]);
+
+  // Keep persisted deliverable selection valid as deliverables list changes.
+  useEffect(() => {
+    if (!selectedProject?.code) return;
+    if (!Array.isArray(deliverables) || deliverables.length === 0) return;
+    if (selectedDeliverableId) return;
+
+    const savedDeliverableId = localStorage.getItem(
+      `taskGraph:lastDeliverable:${selectedProject.code}`
+    );
+    if (!savedDeliverableId) return;
+
+    const exists = deliverables.some((deliverable) => String(deliverable.id) === savedDeliverableId);
+    if (!exists) {
+      localStorage.removeItem(`taskGraph:lastDeliverable:${selectedProject.code}`);
+      return;
+    }
+
+    setSelectedDeliverableId(savedDeliverableId);
+  }, [selectedProject?.code, deliverables, selectedDeliverableId]);
+
+  useEffect(() => {
+    if (!selectedProject?.code || !selectedDeliverableId) return;
+    if (!Array.isArray(deliverables) || deliverables.length === 0) return;
+    const exists = deliverables.some((deliverable) => String(deliverable.id) === String(selectedDeliverableId));
+    if (exists) return;
+    localStorage.removeItem(`taskGraph:lastDeliverable:${selectedProject.code}`);
+    setSelectedDeliverableId(null);
+  }, [selectedProject?.code, deliverables, selectedDeliverableId]);
+
   const toggleTheme = () => {
     const newTheme = colorScheme === 'dark' ? 'light' : 'dark';
     setColorScheme(newTheme);
@@ -576,11 +626,8 @@ function AppContent() {
             {isProjectPage && selectedProject && (
               isTaskGraphPage ? (
                 <Select
-                  placeholder="All tasks (project-wide)"
-                  data={[
-                    { value: '', label: 'All tasks (project-wide)' },
-                    ...deliverables.map(d => ({ value: String(d.id), label: d.name }))
-                  ]}
+                  placeholder="Select deliverable"
+                  data={deliverables.map(d => ({ value: String(d.id), label: d.name }))}
                   value={selectedDeliverableId ?? ''}
                   onChange={(val) => setSelectedDeliverableId(val || null)}
                   size="sm"

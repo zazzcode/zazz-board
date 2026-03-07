@@ -12,7 +12,7 @@ export const deliverableSchemas = {
     params: {
       type: 'object',
       required: ['projectCode'],
-      properties: { projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' } }
+      properties: { projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' } }
     },
     querystring: {
       type: 'object',
@@ -33,12 +33,12 @@ export const deliverableSchemas = {
   getDeliverableById: {
     tags: ['deliverables'],
     summary: 'Get deliverable by ID',
-    description: 'Returns deliverable with dedFilePath (SPEC), planFilePath (PLAN), prdFilePath for document retrieval.',
+    description: 'Returns deliverable with specFilepath (SPEC) and planFilepath (PLAN) for document retrieval.',
     params: {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },
@@ -50,12 +50,12 @@ export const deliverableSchemas = {
   createDeliverable: {
     tags: ['deliverables'],
     summary: 'Create deliverable',
-    description: 'Creates a new deliverable card in the project. Use this when starting work on a new feature, bug fix, or other work item. The response includes id (numeric—use for create task and other API paths) and deliverableId (string, e.g. ZAZZ-4—use for display). You can include dedFilePath and planFilePath on create if known, or add them later via update deliverable.',
+    description: 'Creates a new deliverable card in the project. Use this when starting work on a new feature, bug fix, or other work item. The response includes id (numeric—use for create task and other API paths) and deliverableCode (string, e.g. ZAZZ-4—use for display). You can include specFilepath and planFilepath on create if known, or add them later via update deliverable.',
     params: {
       type: 'object',
       required: ['projectCode'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ). Uppercase letters and numbers.' }
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ). Uppercase letters and numbers.' }
       }
     },
     body: {
@@ -65,9 +65,8 @@ export const deliverableSchemas = {
         name: { type: 'string', minLength: 1, maxLength: 30, description: 'Short name for the deliverable (e.g. "User Auth").' },
         description: { type: 'string', description: 'Optional longer description.' },
         type: { type: 'string', enum: ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION'], description: 'Type of work.' },
-        dedFilePath: { type: 'string', maxLength: 500, description: 'Relative path to the SPEC document (e.g. .zazz/deliverables/user-auth-SPEC.md). Add when SPEC exists.' },
-        planFilePath: { type: 'string', maxLength: 500, description: 'Relative path to the PLAN document (e.g. .zazz/deliverables/user-auth-PLAN.md). Add when PLAN exists.' },
-        prdFilePath: { type: 'string', maxLength: 500, description: 'Relative path to the PRD document.' },
+        specFilepath: { type: 'string', maxLength: 500, description: 'Relative path to the SPEC document (e.g. .zazz/deliverables/user-auth-SPEC.md). Add when SPEC exists.' },
+        planFilepath: { type: 'string', maxLength: 500, description: 'Relative path to the PLAN document (e.g. .zazz/deliverables/user-auth-PLAN.md). Add when PLAN exists.' },
         gitWorktree: { type: 'string', maxLength: 255, description: 'Git worktree name for implementation (e.g. feature-auth). Add when work begins.' },
         gitBranch: { type: 'string', maxLength: 255, description: 'Git branch name (e.g. feature-auth). Add when work begins.' },
         pullRequestUrl: { type: 'string', maxLength: 500, description: 'URL to the PR when ready for review.' }
@@ -75,19 +74,19 @@ export const deliverableSchemas = {
       additionalProperties: false
     },
     response: {
-      201: { description: 'Deliverable created. Use id for create task and update paths; deliverableId for display.', ...deliverableResponseSchema }
+      201: { description: 'Deliverable created. Use id for create task and update paths; deliverableCode for display.', ...deliverableResponseSchema }
     }
   },
 
   updateDeliverable: {
     tags: ['deliverables'],
     summary: 'Update deliverable',
-    description: 'Updates deliverable metadata. Use this to add or change: dedFilePath (after SPEC is written), planFilePath (after PLAN is approved), gitWorktree and gitBranch (when work begins), pullRequestUrl (when PR is opened). Send only the fields you are updating. id is the numeric id from create deliverable or list deliverables.',
+    description: 'Updates deliverable metadata. Use this to add or change: specFilepath (after SPEC is written), planFilepath (after PLAN is approved), gitWorktree and gitBranch (when work begins), pullRequestUrl (when PR is opened). Send only the fields you are updating. id is the numeric id from create deliverable or list deliverables.',
     params: {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id from create or list.' }
       }
     },
@@ -98,9 +97,8 @@ export const deliverableSchemas = {
         description: { type: 'string' },
         type: { type: 'string', enum: ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION'] },
         status: { type: 'string', pattern: '^[A-Z_]+$', description: 'Deliverable status (e.g. PLANNING, IN_PROGRESS, IN_REVIEW, STAGED, DONE). Use update deliverable status for status-only changes.' },
-        dedFilePath: { type: 'string', maxLength: 500, description: 'Relative path to SPEC (e.g. .zazz/deliverables/user-auth-SPEC.md). Set when SPEC is created.' },
-        planFilePath: { type: 'string', maxLength: 500, description: 'Relative path to PLAN (e.g. .zazz/deliverables/user-auth-PLAN.md). Set when PLAN is approved.' },
-        prdFilePath: { type: 'string', maxLength: 500, description: 'Relative path to PRD.' },
+        specFilepath: { type: 'string', maxLength: 500, description: 'Relative path to SPEC (e.g. .zazz/deliverables/user-auth-SPEC.md). Set when SPEC is created.' },
+        planFilepath: { type: 'string', maxLength: 500, description: 'Relative path to PLAN (e.g. .zazz/deliverables/user-auth-PLAN.md). Set when PLAN is approved.' },
         gitWorktree: { type: 'string', maxLength: 255, description: 'Git worktree name (e.g. feature-auth). Set when implementation begins.' },
         gitBranch: { type: 'string', maxLength: 255, description: 'Git branch name. Set when implementation begins.' },
         pullRequestUrl: { type: 'string', maxLength: 500, description: 'PR URL when ready for review.' },
@@ -121,7 +119,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$' },
         id: { type: 'string', pattern: '^\\d+$' }
       }
     },
@@ -138,7 +136,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },
@@ -161,7 +159,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },
@@ -178,7 +176,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },

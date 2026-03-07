@@ -1,4 +1,5 @@
 import DatabaseService from '../services/databaseService.js';
+import RealtimeService from '../services/realtimeService.js';
 import { tokenService } from '../services/tokenService.js';
 import { coreSchemas } from '../schemas/validation.js';
 
@@ -14,6 +15,7 @@ import taskGraphRoutes from './taskGraph.js';
 import deliverableRoutes from './deliverables.js';
 
 const dbService = new DatabaseService();
+const realtimeService = new RealtimeService();
 
 export default async function routes(fastify, options) {
   // Health check endpoint (public)
@@ -34,7 +36,7 @@ export default async function routes(fastify, options) {
     reply.send({ 
       message: 'Zazz Board API', 
       version: '1.0.0',
-      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/images', '/translations', '/status-definitions', '/coordination-types']
+      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/projects/:code/images/:id', '/translations', '/status-definitions', '/coordination-types']
     });
   });
 
@@ -61,7 +63,7 @@ export default async function routes(fastify, options) {
   });
 
   // Register route plugins with shared database service
-  const pluginOptions = { dbService };
+  const pluginOptions = { dbService, realtimeService };
   
   await fastify.register(userRoutes, pluginOptions);
   await fastify.register(projectRoutes, pluginOptions);
