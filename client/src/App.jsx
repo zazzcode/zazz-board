@@ -222,10 +222,17 @@ function AppContent() {
     console.log('==================');
   }, []);
 
-  // Reset graph deliverable scope when switching projects.
+  // Hydrate last selected graph deliverable when switching projects.
   useEffect(() => {
-    setSelectedDeliverableId(null);
-  }, [selectedProject?.id]);
+    if (!selectedProject?.code) {
+      setSelectedDeliverableId(null);
+      return;
+    }
+    const savedDeliverableId = localStorage.getItem(
+      `taskGraph:lastDeliverable:${selectedProject.code}`
+    );
+    setSelectedDeliverableId(savedDeliverableId || null);
+  }, [selectedProject?.code]);
 
   // Persist last selected graph deliverable per project.
   useEffect(() => {
@@ -236,10 +243,9 @@ function AppContent() {
     );
   }, [selectedProject?.code, selectedDeliverableId]);
 
-  // Restore last selected graph deliverable for the current project when graph view loads.
+  // Keep persisted deliverable selection valid as deliverables list changes.
   useEffect(() => {
     if (!selectedProject?.code) return;
-    if (!location.pathname.includes('/task-graph')) return;
     if (!Array.isArray(deliverables) || deliverables.length === 0) return;
     if (selectedDeliverableId) return;
 
@@ -255,7 +261,16 @@ function AppContent() {
     }
 
     setSelectedDeliverableId(savedDeliverableId);
-  }, [selectedProject?.code, deliverables, selectedDeliverableId, location.pathname]);
+  }, [selectedProject?.code, deliverables, selectedDeliverableId]);
+
+  useEffect(() => {
+    if (!selectedProject?.code || !selectedDeliverableId) return;
+    if (!Array.isArray(deliverables) || deliverables.length === 0) return;
+    const exists = deliverables.some((deliverable) => String(deliverable.id) === String(selectedDeliverableId));
+    if (exists) return;
+    localStorage.removeItem(`taskGraph:lastDeliverable:${selectedProject.code}`);
+    setSelectedDeliverableId(null);
+  }, [selectedProject?.code, deliverables, selectedDeliverableId]);
 
   const toggleTheme = () => {
     const newTheme = colorScheme === 'dark' ? 'light' : 'dark';
