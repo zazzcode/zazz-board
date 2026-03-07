@@ -1464,7 +1464,7 @@ class DatabaseService {
       taskId: lock.task_id,
       phaseStep: lock.phase_step,
       agentName: lock.agent_name,
-      filePath: lock.file_path,
+      filePath: lock.filepath,
       acquiredAt: lock.acquired_at,
       heartbeatAt: lock.heartbeat_at,
       leaseExpiresAt: lock.lease_expires_at,
@@ -1498,7 +1498,7 @@ class DatabaseService {
             sql`${FILE_LOCKS.lease_expires_at} > NOW()`
           )
         )
-        .orderBy(asc(FILE_LOCKS.file_path));
+        .orderBy(asc(FILE_LOCKS.filepath));
       return rows.map((row) => this.mapFileLock(row));
     });
   }
@@ -1536,7 +1536,7 @@ class DatabaseService {
         .where(
           and(
             eq(FILE_LOCKS.deliverable_id, deliverableId),
-            inArray(FILE_LOCKS.file_path, normalizedFilePaths),
+            inArray(FILE_LOCKS.filepath, normalizedFilePaths),
             sql`${FILE_LOCKS.lease_expires_at} > NOW()`
           )
         );
@@ -1544,7 +1544,7 @@ class DatabaseService {
       const conflicts = existingLocks
         .filter((lock) => !(lock.task_id === taskId && lock.agent_name === normalizedAgentName))
         .map((lock) => ({
-          filePath: lock.file_path,
+          filePath: lock.filepath,
           taskId: lock.task_id,
           phaseStep: lock.phase_step,
           agentName: lock.agent_name,
@@ -1564,7 +1564,7 @@ class DatabaseService {
       const leaseExpiresAt = new Date(now.getTime() + ttl * 1000);
 
       for (const filePath of normalizedFilePaths) {
-        const existing = existingLocks.find((lock) => lock.file_path === filePath);
+        const existing = existingLocks.find((lock) => lock.filepath === filePath);
         if (existing) {
           await tx
             .update(FILE_LOCKS)
@@ -1585,7 +1585,7 @@ class DatabaseService {
               task_id: taskId,
               phase_step: phaseStep,
               agent_name: normalizedAgentName,
-              file_path: filePath,
+              filepath: filePath,
               acquired_at: now,
               heartbeat_at: now,
               lease_expires_at: leaseExpiresAt,
@@ -1605,11 +1605,11 @@ class DatabaseService {
             eq(FILE_LOCKS.deliverable_id, deliverableId),
             eq(FILE_LOCKS.task_id, taskId),
             eq(FILE_LOCKS.agent_name, normalizedAgentName),
-            inArray(FILE_LOCKS.file_path, normalizedFilePaths),
+            inArray(FILE_LOCKS.filepath, normalizedFilePaths),
             sql`${FILE_LOCKS.lease_expires_at} > NOW()`
           )
         )
-        .orderBy(asc(FILE_LOCKS.file_path));
+        .orderBy(asc(FILE_LOCKS.filepath));
 
       return {
         acquired: true,
@@ -1642,7 +1642,7 @@ class DatabaseService {
       ];
 
       if (normalizedFilePaths.length > 0) {
-        conditions.push(inArray(FILE_LOCKS.file_path, normalizedFilePaths));
+        conditions.push(inArray(FILE_LOCKS.filepath, normalizedFilePaths));
       }
 
       const refreshedRows = await tx
@@ -1681,7 +1681,7 @@ class DatabaseService {
         eq(FILE_LOCKS.agent_name, normalizedAgentName),
       ];
       if (normalizedFilePaths.length > 0) {
-        conditions.push(inArray(FILE_LOCKS.file_path, normalizedFilePaths));
+        conditions.push(inArray(FILE_LOCKS.filepath, normalizedFilePaths));
       }
 
       const releasedRows = await tx

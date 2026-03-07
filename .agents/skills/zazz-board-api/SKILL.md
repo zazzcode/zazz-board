@@ -46,6 +46,7 @@ Core capabilities:
 - Get deliverable graph
 - Create task relations (`DEPENDS_ON`, `COORDINATES_WITH`)
 - Check task readiness
+- Acquire/heartbeat/release/list deliverable file locks
 - Get deliverable status workflow
 - Image operations (list/upload/delete/fetch/metadata) using project-scoped routes
 
@@ -53,7 +54,7 @@ Core capabilities:
 
 ## Deterministic route resolution rules
 For each capability:
-1. Filter operations by tags relevant to agent workflows: `deliverables`, `projects`, `task-graph`, `images`.
+1. Filter operations by tags relevant to agent workflows: `deliverables`, `projects`, `task-graph`, `file-locks`, `images`.
 2. Match method + intent keywords in `summary`/`description`.
 3. Prefer project/deliverable-scoped routes over global/legacy routes.
 4. If multiple matches remain, choose the most specific path (more scoped params).
@@ -75,6 +76,9 @@ These capabilities must resolve for normal agent workflows:
 - Approve deliverable
 - Create task in deliverable
 - Change task status in deliverable
+- Acquire file locks
+- Heartbeat file locks
+- Release file locks
 - Get deliverable graph
 - Check task readiness
 
@@ -100,11 +104,11 @@ Task lifecycle (required):
 1. Create task in deliverable (`POST /projects/{code}/deliverables/{delivId}/tasks`) with:
    - `title`
    - `phase`
-   - `phaseTaskId`
+   - `phaseStep`
    - `prompt`
-2. If task begins execution, set status to `IN_PROGRESS` immediately (`PATCH .../tasks/{taskId}/status`).
-3. On implementation completion, set status to `QA`.
-4. After QA passes, set status to `COMPLETED`.
+2. If task begins execution, set status to `IN_PROGRESS` (`PATCH .../tasks/{taskId}/status`) once execution preconditions are met.
+3. On implementation completion, move status according to live workflow (some projects include `QA`, others transition directly to `COMPLETED`).
+4. Use task update route (not status route) for task-level blockers: `isBlocked` and `blockedReason`.
 
 Deliverable lifecycle (required):
 - Resolve project deliverable workflow from API/OpenAPI-capable endpoints.
@@ -115,10 +119,17 @@ Dependency lifecycle (required):
 - Treat `DEPENDS_ON` in PLAN as required `TASK_RELATIONS` rows.
 - Do not assume task create `dependencies` field is sufficient for graph lines.
 - After task creation, create each dependency edge explicitly via relation endpoint.
+- Since dependency edges are created as predecessors complete, unresolved dependencies should not be represented as blocked status.
 - Solo tasks are valid and visible without dependencies.
 
+File lock lifecycle (required for worker execution):
+- Acquire required file locks before task claim: `POST /projects/{code}/deliverables/{delivId}/locks/acquire`.
+- On `409 FILE_LOCK_CONFLICT`, set task `isBlocked=true` and `blockedReason='FILE_LOCK'`, poll every 3 seconds, and retry.
+- While work is active, refresh lease with `POST /projects/{code}/deliverables/{delivId}/locks/heartbeat`.
+- On completion/handoff, release with `POST /projects/{code}/deliverables/{delivId}/locks/release`.
+
 Verification lifecycle (required):
-- After creating/updating tasks, re-fetch deliverable task list and confirm task `id`, `phaseTaskId`, and `status`.
+- After creating/updating tasks, re-fetch deliverable task list and confirm task `id`, `phaseStep`, `status`, and blocker fields when used.
 - Re-fetch deliverable graph and confirm task presence and relation edges.
 - If mismatch appears, report exact endpoint + payload + response.
 
@@ -140,12 +151,17 @@ Verification lifecycle (required):
   - Return both numeric `id` and display `deliverableId`
 - Create task:
   - Required inputs: `code`, `delivId`, `title`
-  - Required operational fields for planning execution: `phase`, `phaseTaskId`, `prompt`
+  - Required operational fields for planning execution: `phase`, `phaseStep`, `prompt`
   - Respect deliverable approval prerequisites
   - For each planned dependency, create explicit relation (`DEPENDS_ON`) after task creation
 - Update task status:
-  - Use explicit transitions: `READY` -> `IN_PROGRESS` -> `QA` -> `COMPLETED`
+  - Resolve valid transitions from live workflow; common path is `READY` -> `IN_PROGRESS` -> (`QA` optional) -> `COMPLETED`
   - Include `agentName` when moving to `IN_PROGRESS` to claim work
+- File locks:
+  - Resolve lock routes from OpenAPI (`acquire`, `heartbeat`, `release`, `list`)
+  - Treat heartbeat as required during active work to avoid stale lock reclamation
+- Blockers:
+  - Blocking is task metadata (`isBlocked`, `blockedReason`), not a workflow status column
 - Update deliverable status:
   - Use deliverable status endpoint, validate allowed values from workflow
 - Append note:

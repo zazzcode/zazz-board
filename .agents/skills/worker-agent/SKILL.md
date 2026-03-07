@@ -41,7 +41,7 @@ If any required input is missing, stop and ask the Owner.
 You MUST execute in this order:
 
 1. Read SPEC and PLAN fully.
-2. Build a step map from PLAN (`phase.step` IDs, dependencies, parallel groups).
+2. Build a step map from PLAN (`phaseStep` IDs, dependencies, parallel groups).
 3. Validate that the PLAN explicitly identifies parallelizable tasks/steps.
    - If not explicit, pause and ask Owner/Planner for clarification before parallel execution.
 4. Compute the dependency-ready set.
@@ -104,6 +104,7 @@ If API write operations are unavailable, pause and request Owner direction inste
 ## File Lock API (Required)
 
 Before changing any task from `READY` to `IN_PROGRESS`, the worker MUST lock intended files via API.
+Do not create or rely on local lock files in `.zazz`; lock ownership source of truth is the Board API.
 
 Routes:
 1. `POST /projects/:code/deliverables/:delivId/locks/acquire`
@@ -123,6 +124,7 @@ Lock workflow:
    - move task to `IN_PROGRESS`
 5. While working, send periodic `heartbeat`.
 6. On completion or handoff, `release` locks.
+7. If worker process crashes/restarts, re-resolve task state from API and reacquire before resuming edits.
 
 ---
 

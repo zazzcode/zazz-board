@@ -187,7 +187,7 @@ export const FILE_LOCKS = pgTable('FILE_LOCKS', {
   task_id: integer('task_id').notNull().references(() => TASKS.id, { onDelete: 'cascade' }),
   phase_step: varchar('phase_step', { length: 20 }),
   agent_name: varchar('agent_name', { length: 100 }).notNull(),
-  file_path: varchar('file_path', { length: 1000 }).notNull(),
+  filepath: varchar('filepath', { length: 1000 }).notNull(),
   acquired_at: timestamp('acquired_at', { withTimezone: true }).defaultNow().notNull(),
   heartbeat_at: timestamp('heartbeat_at', { withTimezone: true }).defaultNow().notNull(),
   lease_expires_at: timestamp('lease_expires_at', { withTimezone: true }).notNull(),
@@ -195,7 +195,7 @@ export const FILE_LOCKS = pgTable('FILE_LOCKS', {
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
-  unique('uq_file_locks_deliverable_file').on(table.deliverable_id, table.file_path),
+  unique('uq_file_locks_deliverable_file').on(table.deliverable_id, table.filepath),
   index('idx_file_locks_deliv_expiry').on(table.deliverable_id, table.lease_expires_at),
   index('idx_file_locks_task_id').on(table.task_id),
 ]);
