@@ -1,4 +1,5 @@
 import DatabaseService from '../services/databaseService.js';
+import RealtimeService from '../services/realtimeService.js';
 import { tokenService } from '../services/tokenService.js';
 import { coreSchemas } from '../schemas/validation.js';
 
@@ -14,6 +15,7 @@ import taskGraphRoutes from './taskGraph.js';
 import deliverableRoutes from './deliverables.js';
 
 const dbService = new DatabaseService();
+const realtimeService = new RealtimeService();
 
 export default async function routes(fastify, options) {
   // Health check endpoint (public)
@@ -61,7 +63,7 @@ export default async function routes(fastify, options) {
   });
 
   // Register route plugins with shared database service
-  const pluginOptions = { dbService };
+  const pluginOptions = { dbService, realtimeService };
   
   await fastify.register(userRoutes, pluginOptions);
   await fastify.register(projectRoutes, pluginOptions);

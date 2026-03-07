@@ -2,7 +2,12 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 import { deliverableSchemas } from '../schemas/validation.js';
 
 export default async function deliverableRoutes(fastify, options) {
-  const { dbService } = options;
+  const { dbService, realtimeService } = options;
+
+  const publishEvent = (projectCode, payload) => {
+    if (!realtimeService) return;
+    realtimeService.publish(projectCode, payload);
+  };
   fastify.addHook('preHandler', authMiddleware);
 
   fastify.get('/projects/:projectCode/deliverables', { schema: deliverableSchemas.getProjectDeliverables }, async (request, reply) => {
@@ -40,6 +45,12 @@ export default async function deliverableRoutes(fastify, options) {
       const project = await dbService.getProjectByCode(projectCode);
       if (!project) return reply.code(404).send({ error: 'Project not found' });
       const created = await dbService.createDeliverable(project.id, request.body, request.user.id);
+      publishEvent(project.code, {
+        type: 'deliverable',
+        eventType: 'deliverable.created',
+        deliverableId: created.id,
+        status: created.status,
+      });
       reply.code(201).send(created);
     } catch (error) {
       request.log.error(error);
@@ -57,6 +68,12 @@ export default async function deliverableRoutes(fastify, options) {
       const existing = await dbService.getDeliverableById(deliverableId);
       if (!existing || existing.projectId !== project.id) return reply.code(404).send({ error: 'Deliverable not found' });
       const updated = await dbService.updateDeliverable(deliverableId, request.body, request.user.id);
+      publishEvent(project.code, {
+        type: 'deliverable',
+        eventType: 'deliverable.updated',
+        deliverableId: updated.id,
+        status: updated.status,
+      });
       reply.send(updated);
     } catch (error) {
       request.log.error(error);
@@ -72,7 +89,13 @@ export default async function deliverableRoutes(fastify, options) {
       if (!project) return reply.code(404).send({ error: 'Project not found' });
       const existing = await dbService.getDeliverableById(deliverableId);
       if (!existing || existing.projectId !== project.id) return reply.code(404).send({ error: 'Deliverable not found' });
-      const deleted = await dbService.deleteDeliverable(deliverableId);
+      await dbService.deleteDeliverable(deliverableId);
+      publishEvent(project.code, {
+        type: 'deliverable',
+        eventType: 'deliverable.deleted',
+        deliverableId: deliverableId,
+        status: existing.status,
+      });
       reply.send({ message: 'Deliverable deleted successfully' });
     } catch (error) {
       request.log.error(error);
@@ -91,6 +114,13 @@ export default async function deliverableRoutes(fastify, options) {
       const statusDef = await dbService.getStatusDefinitionByCode(request.body.status);
       if (!statusDef) return reply.code(400).send({ error: `Invalid status: ${request.body.status}` });
       const updated = await dbService.updateDeliverableStatus(deliverableId, request.body.status, request.user.id);
+      publishEvent(project.code, {
+        type: 'deliverable',
+        eventType: 'deliverable.status_changed',
+        deliverableId: updated.id,
+        status: updated.status,
+        previousStatus: existing.status,
+      });
       reply.send(updated);
     } catch (error) {
       request.log.error(error);
@@ -108,6 +138,13 @@ export default async function deliverableRoutes(fastify, options) {
       const existing = await dbService.getDeliverableById(deliverableId);
       if (!existing || existing.projectId !== project.id) return reply.code(404).send({ error: 'Deliverable not found' });
       const updated = await dbService.approveDeliverablePlan(deliverableId, request.user.id);
+      publishEvent(project.code, {
+        type: 'deliverable',
+        eventType: 'deliverable.updated',
+        deliverableId: updated.id,
+        status: updated.status,
+        approved: true,
+      });
       reply.send(updated);
     } catch (error) {
       request.log.error(error);

@@ -4,52 +4,54 @@ export function useDeliverables(selectedProject) {
   const [deliverables, setDeliverables] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch deliverables from API
-  useEffect(() => {
+  const refreshDeliverables = useCallback(async () => {
     if (!selectedProject) {
       setDeliverables([]);
       return;
     }
 
     setLoading(true);
-    
-    const fetchDeliverables = async () => {
-      try {
-        const token = localStorage.getItem('TB_TOKEN');
-        if (!token) {
-          console.error('No access token found');
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/deliverables`, {
-          method: 'GET',
-          headers: {
-            'TB_TOKEN': token,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Fetched deliverables:', data);
-          setDeliverables(data);
-        } else if (response.status === 401) {
-          console.error('Unauthorized - access token invalid');
-        } else {
-          console.error('Failed to fetch deliverables:', response.status);
-          setDeliverables([]);
-        }
-      } catch (error) {
-        console.error('Error fetching deliverables:', error);
-        setDeliverables([]);
-      } finally {
-        setLoading(false);
+    try {
+      const token = localStorage.getItem('TB_TOKEN');
+      if (!token) {
+        console.error('No access token found');
+        return;
       }
-    };
 
-    fetchDeliverables();
+      const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/deliverables`, {
+        method: 'GET',
+        headers: {
+          'TB_TOKEN': token,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched deliverables:', data);
+        setDeliverables(data);
+      } else if (response.status === 401) {
+        console.error('Unauthorized - access token invalid');
+      } else {
+        console.error('Failed to fetch deliverables:', response.status);
+        setDeliverables([]);
+      }
+    } catch (error) {
+      console.error('Error fetching deliverables:', error);
+      setDeliverables([]);
+    } finally {
+      setLoading(false);
+    }
   }, [selectedProject]);
+
+  // Fetch deliverables from API
+  useEffect(() => {
+    if (!selectedProject) {
+      setDeliverables([]);
+      return;
+    }
+    refreshDeliverables();
+  }, [selectedProject, refreshDeliverables]);
 
   const createDeliverable = useCallback(async (deliverableData) => {
     try {
@@ -216,6 +218,7 @@ export function useDeliverables(selectedProject) {
     updateDeliverable,
     updateDeliverableStatus,
     approveDeliverable,
-    deleteDeliverable
+    deleteDeliverable,
+    refreshDeliverables
   };
 }

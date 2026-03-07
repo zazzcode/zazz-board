@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Container, Text, Loader, Center, Stack, Alert } from '@mantine/core';
 import {
   ReactFlow,
@@ -10,6 +10,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useTaskGraph } from '../hooks/useTaskGraph.js';
+import { useProjectEvents } from '../hooks/useProjectEvents.js';
 import { generateGraphLayout } from '../utils/graphLayoutUtils.js';
 import { TaskNode } from '../components/graph/TaskNode.jsx';
 import { SyncPointNode } from '../components/graph/SyncPointNode.jsx';
@@ -34,6 +35,41 @@ function TaskGraphContent({ selectedProject, selectedDeliverableId }) {
   const [openPanels, setOpenPanels] = useState([]);
 
   const { graphData, loading, error, refreshGraph } = useTaskGraph(projectCode, selectedDeliverableId);
+  const refreshTimerRef = useRef(null);
+
+  const scheduleGraphRefresh = useCallback(() => {
+    if (refreshTimerRef.current) return;
+    refreshTimerRef.current = setTimeout(async () => {
+      refreshTimerRef.current = null;
+      await refreshGraph();
+    }, 120);
+  }, [refreshGraph]);
+
+  useProjectEvents(projectCode, {
+    enabled: Boolean(projectCode && selectedDeliverableId),
+    onEvent: (event) => {
+      if (event.type === 'relation') {
+        if (String(event.deliverableId) === String(selectedDeliverableId)) {
+          scheduleGraphRefresh();
+        }
+        return;
+      }
+
+      if (event.type === 'task') {
+        if (String(event.deliverableId) === String(selectedDeliverableId)) {
+          scheduleGraphRefresh();
+        }
+      }
+    },
+  });
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
 
   // Generate layout from API data
   const { nodes, edges } = useMemo(() => {

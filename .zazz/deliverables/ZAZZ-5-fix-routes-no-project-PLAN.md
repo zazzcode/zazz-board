@@ -253,7 +253,13 @@ Completion signal:
 - Additional graph UX follow-up was completed:
   - Step `4.2` (task `26`): persist Task Graph deliverable selection on reload.
   - Step `4.3` (task `27`): harden selection restore timing against project/deliverable hydration order.
+  - Step `4.4` (task `28`): keep completed tasks visible with green outline in Task Graph.
+  - Step `4.5` (task `29`): make API skill lifecycle + dependency relation workflow explicit.
+- Realtime multi-client follow-up completed:
+  - Step `5.1` (task `30`): add SSE stream endpoint and API event emits for task/deliverable/relation changes.
+  - Step `5.2` (task `31`): wire UI SSE subscriptions for Task Kanban, Task Graph, and Deliverable Kanban.
+  - Step `5.3` (task `32`): add SSE integration tests and targeted regression verification.
 - Live task statuses:
-  - Completed: `13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27`
+  - Completed: `13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32`
 - Dependency relations verified in DB (`TASK_RELATIONS`):
-  - `15->14`, `16->13`, `17->16`, `18->17`, `20->18`, `21->16`, `21->18`, `22->14`, `23->14`, `23->18`, `24->15`, `24->19`, `24->20`, `24->21`, `24->22`, `24->23`, `25->24`, `26->15`, `27->26`
+  - `15->14`, `16->13`, `17->16`, `18->17`, `20->18`, `21->16`, `21->18`, `22->14`, `23->14`, `23->18`, `24->15`, `24->19`, `24->20`, `24->21`, `24->22`, `24->23`, `25->24`, `26->15`, `27->26`, `28->27`, `29->28`, `31->30`, `32->30`, `32->31`

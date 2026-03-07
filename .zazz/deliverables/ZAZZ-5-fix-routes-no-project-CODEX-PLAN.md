@@ -496,6 +496,100 @@ Acceptance criteria mapped:
 Completion signal:
 - Database lifecycle commands run successfully without symlink creation.
 
+### Phase 5 - Realtime Multi-Client Status Sync (SSE Follow-up)
+#### Step 5.1
+Objective: Add project-scoped SSE stream and emit events on task/deliverable/relation mutations.
+
+Files affected:
+- `api/src/services/realtimeService.js` (new)
+- `api/src/routes/index.js`
+- `api/src/routes/projects.js`
+- `api/src/routes/deliverables.js`
+- `api/src/routes/taskGraph.js`
+
+Deliverables/output:
+- New `GET /projects/:code/events` SSE endpoint (authenticated).
+- Realtime emits for:
+  - task status/position/create/update/delete events
+  - deliverable status updates
+  - relation create/delete (including `DEPENDS_ON`)
+
+DEPENDS_ON: Step `3.5`  
+COORDINATES_WITH: Step `5.2`  
+Parallelizable with: none (shared route files)
+
+TDD: tests to write first:
+- Add failing API integration test(s) asserting status and relation events are emitted.
+
+TDD: tests to run for completion:
+- `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- __tests__/routes/realtime-events.test.mjs`
+
+Acceptance criteria mapped:
+- AC2 (live UX consistency), plus multi-client follow-up hardening
+
+Completion signal:
+- API publishes SSE payloads on every status/graph mutation path.
+
+#### Step 5.2
+Objective: Subscribe UI views to SSE and refresh board/graph state immediately.
+
+Files affected:
+- `client/src/hooks/useProjectEvents.js` (new)
+- `client/src/pages/KanbanPage.jsx`
+- `client/src/pages/TaskGraphPage.jsx`
+- `client/src/hooks/useDeliverables.js`
+- `client/src/pages/DeliverableKanbanPage.jsx`
+
+Deliverables/output:
+- Task Kanban auto-refreshes on task/relation events.
+- Task Graph auto-refreshes on task/relation events scoped to selected deliverable.
+- Deliverable Kanban auto-refreshes on deliverable status events.
+
+DEPENDS_ON: Step `5.1`  
+COORDINATES_WITH: Step `5.3`  
+Parallelizable with: none (shared UI pages/hooks)
+
+TDD: tests to write first:
+- Manual verification checklist for cross-client immediate updates.
+
+TDD: tests to run for completion:
+- `cd client && npm run build`
+
+Acceptance criteria mapped:
+- AC2 UX stability + live board synchronization follow-up
+
+Completion signal:
+- Status color/column/graph updates appear without manual page refresh.
+
+#### Step 5.3
+Objective: Add SSE integration regression tests and validate targeted suite.
+
+Files affected:
+- `api/__tests__/routes/realtime-events.test.mjs` (new)
+
+Deliverables/output:
+- New tests covering:
+  - auth required for SSE stream
+  - task status change events
+  - deliverable status change events
+  - `DEPENDS_ON` relation events
+
+DEPENDS_ON: Steps `5.1`, `5.2`  
+COORDINATES_WITH: none  
+Parallelizable with: none
+
+TDD: tests to write first:
+- Test file itself (failing first before route/event implementation).
+
+TDD: tests to run for completion:
+- `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- __tests__/routes/realtime-events.test.mjs __tests__/routes/task-graph-scoping.test.mjs __tests__/routes/project-id-routes-regression.test.mjs __tests__/routes/openapi.test.mjs`
+
+Acceptance criteria mapped:
+- Regression guard for realtime follow-up work
+
+Completion signal:
+- SSE regression suite passes and protects status/graph event behavior.
+
 ## Implementation Status Snapshot (2026-03-07)
 | Step | Live Task ID | Status | DEPENDS_ON plan | DB relation check |
 | --- | --- | --- | --- | --- |
@@ -514,17 +608,23 @@ Completion signal:
 | 4.1 | 25 | COMPLETED | 3.5 | `25 -> 24` |
 | 4.2 | 26 | COMPLETED | 1.3 | `26 -> 15` |
 | 4.3 | 27 | COMPLETED | 4.2 | `27 -> 26` |
+| 4.4 | 28 | COMPLETED | 4.3 | `28 -> 27` |
+| 4.5 | 29 | COMPLETED | 4.4 | `29 -> 28` |
+| 5.1 | 30 | COMPLETED | 3.5 | N/A |
+| 5.2 | 31 | COMPLETED | 5.1 | `31 -> 30` |
+| 5.3 | 32 | COMPLETED | 5.1, 5.2 | `32 -> 30`, `32 -> 31` |
 
 DB verification command used:
-- `docker exec zazz_board_postgres psql -U postgres -d zazz_board_db -c "SELECT task_id, related_task_id, relation_type, updated_at FROM \"TASK_RELATIONS\" WHERE task_id BETWEEN 13 AND 30 ORDER BY task_id, related_task_id;"`
+- `docker exec zazz_board_postgres psql -U postgres -d zazz_board_db -c "SELECT task_id, related_task_id, relation_type, updated_at FROM \"TASK_RELATIONS\" WHERE task_id BETWEEN 13 AND 32 ORDER BY task_id, related_task_id;"`
 
 ## 7. Test Command Matrix (Execution Order)
 1. `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- task-graph-scoping.test.mjs`
 2. `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- image-scoping.test.mjs`
 3. `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- project-id-routes-regression.test.mjs`
 4. `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- openapi.test.mjs`
-5. `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test`
-6. `cd client && npm run lint`
+5. `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- __tests__/routes/realtime-events.test.mjs __tests__/routes/task-graph-scoping.test.mjs __tests__/routes/project-id-routes-regression.test.mjs __tests__/routes/openapi.test.mjs`
+6. `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test`
+7. `cd client && npm run build`
 
 ## 8. Risks and Mitigations
 - Risk: Existing tests do not currently cover image routes.
