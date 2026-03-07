@@ -227,6 +227,36 @@ function AppContent() {
     setSelectedDeliverableId(null);
   }, [selectedProject?.id]);
 
+  // Persist last selected graph deliverable per project.
+  useEffect(() => {
+    if (!selectedProject?.code || !selectedDeliverableId) return;
+    localStorage.setItem(
+      `taskGraph:lastDeliverable:${selectedProject.code}`,
+      String(selectedDeliverableId)
+    );
+  }, [selectedProject?.code, selectedDeliverableId]);
+
+  // Restore last selected graph deliverable for the current project when graph view loads.
+  useEffect(() => {
+    if (!selectedProject?.code) return;
+    if (!location.pathname.includes('/task-graph')) return;
+    if (!Array.isArray(deliverables) || deliverables.length === 0) return;
+    if (selectedDeliverableId) return;
+
+    const savedDeliverableId = localStorage.getItem(
+      `taskGraph:lastDeliverable:${selectedProject.code}`
+    );
+    if (!savedDeliverableId) return;
+
+    const exists = deliverables.some((deliverable) => String(deliverable.id) === savedDeliverableId);
+    if (!exists) {
+      localStorage.removeItem(`taskGraph:lastDeliverable:${selectedProject.code}`);
+      return;
+    }
+
+    setSelectedDeliverableId(savedDeliverableId);
+  }, [selectedProject?.code, deliverables, selectedDeliverableId, location.pathname]);
+
   const toggleTheme = () => {
     const newTheme = colorScheme === 'dark' ? 'light' : 'dark';
     setColorScheme(newTheme);

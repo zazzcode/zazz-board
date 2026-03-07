@@ -250,7 +250,9 @@ Completion signal:
 ## 6. Execution Update (2026-03-07)
 - Additional completed post-plan hardening step was executed:
   - Step `4.1` (task `25`): replace manual `drizzle-orm` symlink workaround with worktree-safe dependency setup and documentation updates.
+- Additional graph UX follow-up was completed:
+  - Step `4.2` (task `26`): persist Task Graph deliverable selection on reload.
 - Live task statuses:
-  - Completed: `13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25`
+  - Completed: `13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26`
 - Dependency relations verified in DB (`TASK_RELATIONS`):
-  - `15->14`, `16->13`, `17->16`, `18->17`, `20->18`, `21->16`, `21->18`, `22->14`, `23->14`, `23->18`, `24->15`, `24->19`, `24->20`, `24->21`, `24->22`, `24->23`, `25->24`
+  - `15->14`, `16->13`, `17->16`, `18->17`, `20->18`, `21->16`, `21->18`, `22->14`, `23->14`, `23->18`, `24->15`, `24->19`, `24->20`, `24->21`, `24->22`, `24->23`, `25->24`, `26->15`
