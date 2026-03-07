@@ -3,6 +3,7 @@ Project Code: `ZAZZ`
 Deliverable Code: `ZAZZ-5`
 Deliverable ID (integer): `8`
 SPEC Reference: `.zazz/deliverables/ZAZZ-5-fix-routes-no-project-SPEC.md`
+Status: `IMPLEMENTED_COMPLETED`
 
 ## 1. Current State and Repository Impact
 The current codebase still supports project-wide graph access and legacy non-project-scoped image routes.
@@ -241,5 +242,15 @@ Completion signal:
 
 ## 5. Execution Notes for Coordinator
 - Create tasks using `phase.step` IDs aligned to this PLAN (`1.1`, `1.2`, ...).
+- For every non-`none` `DEPENDS_ON` entry, create explicit `DEPENDS_ON` relations via `POST /projects/{code}/tasks/{taskId}/relations`; do not rely on task-create `dependencies` payload to render graph edges.
+- Validate dependency edges directly in DB with `psql` against `"TASK_RELATIONS"` before final QA closure.
 - Run Phase 1 and Phase 2 streams with parallelization noted above, but serialize high-conflict files.
 - Preserve SPEC as read-only during execution unless Owner-approved change mechanism is invoked.
+
+## 6. Execution Update (2026-03-07)
+- Additional completed post-plan hardening step was executed:
+  - Step `4.1` (task `25`): replace manual `drizzle-orm` symlink workaround with worktree-safe dependency setup and documentation updates.
+- Live task statuses:
+  - Completed: `13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25`
+- Dependency relations verified in DB (`TASK_RELATIONS`):
+  - `15->14`, `16->13`, `17->16`, `18->17`, `20->18`, `21->16`, `21->18`, `22->14`, `23->14`, `23->18`, `24->15`, `24->19`, `24->20`, `24->21`, `24->22`, `24->23`, `25->24`

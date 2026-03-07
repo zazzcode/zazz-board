@@ -3,7 +3,7 @@ Project Code: `ZAZZ`
 Deliverable Code: `ZAZZ-5`  
 Deliverable ID (integer): `8`  
 SPEC Reference: `.zazz/deliverables/ZAZZ-5-fix-routes-no-project-SPEC.md`  
-Status: `DRAFT_FOR_OWNER_APPROVAL`  
+Status: `IMPLEMENTED_COMPLETED`  
 Planning basis: repository audit + standards (`testing.md`, `coding-styles.md`, `system-architecture.md`, `data-architecture.md`) + API skill constraints from `.agents/skills/zazz-board-api/SKILL.md`
 
 ## 1. Scope Guardrails
@@ -69,6 +69,16 @@ Serialization hotspots:
 Merge points:
 - Stream C depends on final contracts from Stream A + Stream B.
 - Stream D should run after Stream A/B contracts stabilize and OpenAPI assertions are green.
+
+### Mandatory Dependency Edge Sync (Live Task Graph)
+- `DEPENDS_ON` in this plan must be reflected as explicit `TASK_RELATIONS` rows (`relation_type = DEPENDS_ON`).
+- Do not rely on task-create payload `dependencies` to draw graph lines; create each edge explicitly via:
+  - `POST /projects/{code}/tasks/{taskId}/relations`
+  - body: `{ "relatedTaskId": <upstreamTaskId>, "relationType": "DEPENDS_ON" }`
+- Verification gate for every phase transition:
+  - Query DB directly with `psql`:
+  - `SELECT task_id, related_task_id, relation_type FROM "TASK_RELATIONS" WHERE task_id BETWEEN <min> AND <max> ORDER BY task_id, related_task_id;`
+  - Ensure every non-`none` `DEPENDS_ON` line in this plan has a matching DB row.
 
 ## 5. AC Traceability Matrix
 | AC | Implementation steps | Tests/evidence |
@@ -453,6 +463,58 @@ Acceptance criteria mapped:
 
 Completion signal:
 - Automated checks pass, docs/skills match implementation, and owner confirms graph UX behavior.
+
+### Phase 4 - Worktree Dependency Hardening (Post-Plan Improvement)
+#### Step 4.1
+Objective: Remove manual `drizzle-orm` symlink workaround and harden worktree dependency setup.
+
+Files affected:
+- `package.json`
+- `package-lock.json`
+- `AGENTS.md`
+- `CONTRIBUTOR_SETUP.md`
+
+Deliverables/output:
+- Root dependency install path supports `drizzle-kit` execution without manual symlinks.
+- Troubleshooting/setup docs explicitly direct install workflow and prohibit manual `node_modules` symlink hacks.
+- DB reset/push commands succeed without symlink dependency.
+
+DEPENDS_ON: Step `3.5`  
+COORDINATES_WITH: none  
+Parallelizable with: none
+
+TDD: tests to write first:
+- N/A (operational hardening/documentation step).
+
+TDD: tests to run for completion:
+- `cd api && DATABASE_URL=postgres://postgres:password@localhost:5433/zazz_board_test npm run db:push`
+- `cd api && DATABASE_URL=postgres://postgres:password@localhost:5433/zazz_board_test npm run db:reset`
+
+Acceptance criteria mapped:
+- Operational hardening (worktree setup reliability)
+
+Completion signal:
+- Database lifecycle commands run successfully without symlink creation.
+
+## Implementation Status Snapshot (2026-03-07)
+| Step | Live Task ID | Status | DEPENDS_ON plan | DB relation check |
+| --- | --- | --- | --- | --- |
+| 1.1 | 13 | COMPLETED | none | N/A |
+| 1.2 | 14 | COMPLETED | none | N/A |
+| 1.3 | 15 | COMPLETED | 1.2 | `15 -> 14` |
+| 2.1 | 16 | COMPLETED | 1.1 | `16 -> 13` |
+| 2.2 | 17 | COMPLETED | 2.1 | `17 -> 16` |
+| 2.3 | 18 | COMPLETED | 2.2 | `18 -> 17` |
+| 2.4 | 20 | COMPLETED | 2.3 | `20 -> 18` |
+| 3.1 | 21 | COMPLETED | 2.1, 2.3 | `21 -> 16`, `21 -> 18` |
+| 3.2 | 19 | COMPLETED | none | N/A |
+| 3.3 | 22 | COMPLETED | 1.2 | `22 -> 14` |
+| 3.4 | 23 | COMPLETED | 1.2, 2.3 | `23 -> 14`, `23 -> 18` |
+| 3.5 | 24 | COMPLETED | 1.3, 2.4, 3.1, 3.2, 3.3, 3.4 | `24 -> 15/20/21/19/22/23` |
+| 4.1 | 25 | COMPLETED | 3.5 | `25 -> 24` |
+
+DB verification command used:
+- `docker exec zazz_board_postgres psql -U postgres -d zazz_board_db -c "SELECT task_id, related_task_id, relation_type, updated_at FROM \"TASK_RELATIONS\" WHERE task_id BETWEEN 13 AND 30 ORDER BY task_id, related_task_id;"`
 
 ## 7. Test Command Matrix (Execution Order)
 1. `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- task-graph-scoping.test.mjs`
