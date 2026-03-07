@@ -18,7 +18,7 @@ export async function seedTaskTags() {
     const tagSet = new Set(tags.map(t => t.tag));
 
     const deliverables = await db
-      .select({ id: DELIVERABLES.id, key: DELIVERABLES.deliverable_id })
+      .select({ id: DELIVERABLES.id, key: DELIVERABLES.deliverable_code })
       .from(DELIVERABLES);
     const deliverableKeyByDbId = new Map(deliverables.map((deliverable) => [deliverable.id, deliverable.key]));
 
@@ -57,10 +57,10 @@ export async function seedTaskTags() {
       if (!tagSet.has(tagLink.tag)) continue;
 
       const taskId = tagLink.phase_step
-        ? byDeliverableAndPhaseTask.get(`${tagLink.deliverable_id}::${tagLink.phase_step}`)
+        ? byDeliverableAndPhaseTask.get(`${tagLink.deliverable_code}::${tagLink.phase_step}`)
         : null;
 
-      const resolvedTaskId = taskId || byDeliverableAndTitle.get(`${tagLink.deliverable_id}::${tagLink.title}`);
+      const resolvedTaskId = taskId || byDeliverableAndTitle.get(`${tagLink.deliverable_code}::${tagLink.title}`);
       if (!resolvedTaskId) continue;
 
       const dedupeKey = `${resolvedTaskId}::${tagLink.tag}`;

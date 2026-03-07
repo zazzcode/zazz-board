@@ -97,13 +97,15 @@ export async function createTestDeliverable(projectId, overrides = {}) {
 
   const [deliverable] = await db.insert(DELIVERABLES).values({
     project_id: projectId,
-    deliverable_id: overrides.deliverableId || `${project.code}-T${sequence}`,
+    project_code: overrides.projectCode || project.code,
+    deliverable_code: overrides.deliverableCode || `${project.code}-T${sequence}`,
     name: overrides.name || `Test Deliverable ${sequence}`,
     description: overrides.description || null,
     type: overrides.type || 'FEATURE',
     status: overrides.status || 'PLANNING',
     status_history: overrides.statusHistory || [{ status: overrides.status || 'PLANNING', changedAt: new Date().toISOString(), changedBy: 1 }],
-    plan_file_path: overrides.planFilePath || null,
+    spec_filepath: overrides.specFilepath || null,
+    plan_filepath: overrides.planFilepath || null,
     approved_by: overrides.approvedBy || null,
     approved_at: overrides.approvedAt || null,
     position: overrides.position ?? sequence * 10,

@@ -26,29 +26,29 @@ export async function seedDeliverables() {
     const excludedDeliverableIds = new Set(['ZAZZ-2']);
 
     const zazzDeliverables = snapshot.deliverables
-      .filter((deliverable) => !excludedDeliverableIds.has(deliverable.deliverable_id))
+      .filter((deliverable) => !excludedDeliverableIds.has(deliverable.deliverable_code))
       .map((deliverable, index) => ({
-      project_id: zazzProjectId,
-      deliverable_id: deliverable.deliverable_id,
-      name: deliverable.name,
-      description: deliverable.description,
-      type: deliverable.type,
-      status: deliverable.status,
-      position: deliverable.position ?? (index + 1) * 10,
-      status_history: deliverable.status_history ?? [],
-      ded_file_path: deliverable.ded_file_path,
-      plan_file_path: deliverable.plan_file_path,
-      prd_file_path: deliverable.prd_file_path,
-      approved_by: deliverable.approved_by,
-      approved_at: toDateOrNull(deliverable.approved_at),
-      git_worktree: deliverable.git_worktree,
-      git_branch: deliverable.git_branch,
-      pull_request_url: deliverable.pull_request_url,
-      created_by: deliverable.created_by ?? 5,
-      created_at: toDateOrNull(deliverable.created_at) || new Date(),
-      updated_by: deliverable.updated_by,
-      updated_at: toDateOrNull(deliverable.updated_at) || new Date(),
-    }));
+        project_id: zazzProjectId,
+        project_code: deliverable.project_code,
+        deliverable_code: deliverable.deliverable_code,
+        name: deliverable.name,
+        description: deliverable.description,
+        type: deliverable.type,
+        status: deliverable.status,
+        position: deliverable.position ?? (index + 1) * 10,
+        status_history: deliverable.status_history ?? [],
+        spec_filepath: deliverable.spec_filepath,
+        plan_filepath: deliverable.plan_filepath,
+        approved_by: deliverable.approved_by,
+        approved_at: toDateOrNull(deliverable.approved_at),
+        git_worktree: deliverable.git_worktree,
+        git_branch: deliverable.git_branch,
+        pull_request_url: deliverable.pull_request_url,
+        created_by: deliverable.created_by ?? 5,
+        created_at: toDateOrNull(deliverable.created_at) || new Date(),
+        updated_by: deliverable.updated_by,
+        updated_at: toDateOrNull(deliverable.updated_at) || new Date(),
+      }));
 
     await db.insert(DELIVERABLES).values([
       ...zazzDeliverables

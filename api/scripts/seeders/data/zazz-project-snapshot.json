@@ -22,8 +22,8 @@
             "story_points": null,
             "phase_step": "1.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-1",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-1"
         },
         {
             "id": 2,
@@ -47,8 +47,8 @@
             "story_points": null,
             "phase_step": "2.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-1",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-1"
         },
         {
             "id": 3,
@@ -72,8 +72,8 @@
             "story_points": null,
             "phase_step": "1.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 4,
@@ -97,8 +97,8 @@
             "story_points": null,
             "phase_step": "1.2",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 5,
@@ -122,8 +122,8 @@
             "story_points": null,
             "phase_step": "1.3",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 6,
@@ -147,8 +147,8 @@
             "story_points": null,
             "phase_step": "2.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 7,
@@ -172,8 +172,8 @@
             "story_points": null,
             "phase_step": "2.2",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 8,
@@ -197,8 +197,8 @@
             "story_points": null,
             "phase_step": "2.3",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 9,
@@ -222,8 +222,8 @@
             "story_points": null,
             "phase_step": "3.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 10,
@@ -247,8 +247,8 @@
             "story_points": null,
             "phase_step": "3.2",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 11,
@@ -272,8 +272,8 @@
             "story_points": null,
             "phase_step": "3.3",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-3",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "id": 13,
@@ -297,8 +297,8 @@
             "story_points": null,
             "phase_step": "1.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 14,
@@ -322,8 +322,8 @@
             "story_points": null,
             "phase_step": "1.2",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 15,
@@ -347,8 +347,8 @@
             "story_points": null,
             "phase_step": "1.3",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 16,
@@ -372,8 +372,8 @@
             "story_points": null,
             "phase_step": "2.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 17,
@@ -397,8 +397,8 @@
             "story_points": null,
             "phase_step": "2.2",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 18,
@@ -422,8 +422,8 @@
             "story_points": null,
             "phase_step": "2.3",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 20,
@@ -447,8 +447,8 @@
             "story_points": null,
             "phase_step": "2.4",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 21,
@@ -472,8 +472,8 @@
             "story_points": null,
             "phase_step": "3.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 19,
@@ -497,8 +497,8 @@
             "story_points": null,
             "phase_step": "3.2",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 22,
@@ -522,8 +522,8 @@
             "story_points": null,
             "phase_step": "3.3",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 23,
@@ -547,8 +547,8 @@
             "story_points": null,
             "phase_step": "3.4",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 24,
@@ -572,8 +572,8 @@
             "story_points": null,
             "phase_step": "3.5",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 25,
@@ -597,8 +597,8 @@
             "story_points": null,
             "phase_step": "4.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 26,
@@ -622,8 +622,8 @@
             "story_points": null,
             "phase_step": "4.2",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 27,
@@ -647,8 +647,8 @@
             "story_points": null,
             "phase_step": "4.3",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 28,
@@ -672,8 +672,8 @@
             "story_points": null,
             "phase_step": "4.4",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 29,
@@ -697,8 +697,8 @@
             "story_points": null,
             "phase_step": "4.5",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 30,
@@ -722,8 +722,8 @@
             "story_points": null,
             "phase_step": "5.1",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 31,
@@ -747,8 +747,8 @@
             "story_points": null,
             "phase_step": "5.2",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 32,
@@ -772,8 +772,8 @@
             "story_points": null,
             "phase_step": "5.3",
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         },
         {
             "id": 12,
@@ -797,8 +797,8 @@
             "story_points": null,
             "phase_step": null,
             "blocked_reason": null,
-            "deliverable_id": "ZAZZ-5",
-            "coordination_code": null
+            "coordination_code": null,
+            "deliverable_code": "ZAZZ-5"
         }
     ],
     "project": {
@@ -806,7 +806,7 @@
         "title": "Zazz Board",
         "leader_id": 5,
         "created_by": 5,
-        "description": "Zazz-Board application development — primary test project",
+        "description": "Zazz-Board application development \u2014 primary test project",
         "status_workflow": [
             "READY",
             "IN_PROGRESS",
@@ -829,31 +829,31 @@
             "tag": "backend",
             "title": "ZAZZ-1: Foundation completed (schema + API read paths)",
             "phase_step": "1.1",
-            "deliverable_id": "ZAZZ-1"
+            "deliverable_code": "ZAZZ-1"
         },
         {
             "tag": "frontend",
             "title": "ZAZZ-1: Remaining work (UI polish + edge cases)",
             "phase_step": "2.1",
-            "deliverable_id": "ZAZZ-1"
+            "deliverable_code": "ZAZZ-1"
         },
         {
             "tag": "bug-fix",
             "title": "ZAZZ-3: Reproduce bug and capture failing cases",
             "phase_step": "1.1",
-            "deliverable_id": "ZAZZ-3"
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "tag": "testing",
             "title": "ZAZZ-3: Add regression tests for invalid tag formats",
             "phase_step": "1.2",
-            "deliverable_id": "ZAZZ-3"
+            "deliverable_code": "ZAZZ-3"
         },
         {
             "tag": "bug-fix",
             "title": "ZAZZ-3: Fix validation for trailing hyphen and edge cases",
             "phase_step": "2.1",
-            "deliverable_id": "ZAZZ-3"
+            "deliverable_code": "ZAZZ-3"
         }
     ],
     "deliverables": [
@@ -872,10 +872,6 @@
             "approved_by": 5,
             "description": "Add deliverable entity, Kanban board, and task graph swim lanes",
             "git_worktree": "deliverables-mvp",
-            "ded_file_path": ".zazz/deliverables/deliverables-feature-SPEC.md",
-            "prd_file_path": null,
-            "deliverable_id": "ZAZZ-1",
-            "plan_file_path": ".zazz/deliverables/deliverables-feature-PLAN.md",
             "status_history": [
                 {
                     "status": "PLANNING",
@@ -888,7 +884,11 @@
                     "changedBy": 5
                 }
             ],
-            "pull_request_url": null
+            "pull_request_url": null,
+            "deliverable_code": "ZAZZ-1",
+            "spec_filepath": ".zazz/deliverables/deliverables-feature-SPEC.md",
+            "plan_filepath": ".zazz/deliverables/deliverables-feature-PLAN.md",
+            "project_code": "ZAZZ"
         },
         {
             "id": 2,
@@ -905,10 +905,6 @@
             "approved_by": null,
             "description": "Define and register agent skills for task creation and QA",
             "git_worktree": null,
-            "ded_file_path": "docs/agent-skills-SPEC.md",
-            "prd_file_path": null,
-            "deliverable_id": "ZAZZ-2",
-            "plan_file_path": null,
             "status_history": [
                 {
                     "status": "PLANNING",
@@ -916,7 +912,11 @@
                     "changedBy": 5
                 }
             ],
-            "pull_request_url": null
+            "pull_request_url": null,
+            "deliverable_code": "ZAZZ-2",
+            "spec_filepath": "docs/agent-skills-SPEC.md",
+            "plan_filepath": null,
+            "project_code": "ZAZZ"
         },
         {
             "id": 3,
@@ -933,10 +933,6 @@
             "approved_by": 5,
             "description": "Tags with trailing hyphens bypass API validation",
             "git_worktree": "fix-tag-validation",
-            "ded_file_path": "docs/fix-tag-validation-SPEC.md",
-            "prd_file_path": null,
-            "deliverable_id": "ZAZZ-3",
-            "plan_file_path": "docs/fix-tag-validation-plan.md",
             "status_history": [
                 {
                     "status": "PLANNING",
@@ -954,7 +950,11 @@
                     "changedBy": null
                 }
             ],
-            "pull_request_url": "https://github.com/zazzcode/zazz-board/pull/12"
+            "pull_request_url": "https://github.com/zazzcode/zazz-board/pull/12",
+            "deliverable_code": "ZAZZ-3",
+            "spec_filepath": "docs/fix-tag-validation-SPEC.md",
+            "plan_filepath": "docs/fix-tag-validation-plan.md",
+            "project_code": "ZAZZ"
         },
         {
             "id": 8,
@@ -971,10 +971,6 @@
             "approved_by": 5,
             "description": null,
             "git_worktree": null,
-            "ded_file_path": ".zazz/deliverables/ZAZZ-5-fix-routes-no-project-SPEC.md",
-            "prd_file_path": null,
-            "deliverable_id": "ZAZZ-5",
-            "plan_file_path": ".zazz/deliverables/ZAZZ-5-fix-routes-no-project-PLAN.md",
             "status_history": [
                 {
                     "status": "PLANNING",
@@ -992,7 +988,11 @@
                     "changedBy": 5
                 }
             ],
-            "pull_request_url": null
+            "pull_request_url": null,
+            "deliverable_code": "ZAZZ-5",
+            "spec_filepath": ".zazz/deliverables/ZAZZ-5-fix-routes-no-project-SPEC.md",
+            "plan_filepath": ".zazz/deliverables/ZAZZ-5-fix-routes-no-project-PLAN.md",
+            "project_code": "ZAZZ"
         },
         {
             "id": 9,
@@ -1009,10 +1009,6 @@
             "approved_by": null,
             "description": null,
             "git_worktree": null,
-            "ded_file_path": ".zazz/deliverables/ZAZZ-6-multiple-agent-tokens-feature-SPEC.md",
-            "prd_file_path": null,
-            "deliverable_id": "ZAZZ-6",
-            "plan_file_path": null,
             "status_history": [
                 {
                     "status": "PLANNING",
@@ -1020,7 +1016,11 @@
                     "changedBy": 5
                 }
             ],
-            "pull_request_url": null
+            "pull_request_url": null,
+            "deliverable_code": "ZAZZ-6",
+            "spec_filepath": ".zazz/deliverables/ZAZZ-6-multiple-agent-tokens-feature-SPEC.md",
+            "plan_filepath": null,
+            "project_code": "ZAZZ"
         }
     ],
     "task_relations": [
@@ -1031,9 +1031,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.1",
-            "to_deliverable_id": "ZAZZ-1",
             "from_phase_step": "2.1",
-            "from_deliverable_id": "ZAZZ-1"
+            "from_deliverable_code": "ZAZZ-1",
+            "to_deliverable_code": "ZAZZ-1"
         },
         {
             "to_title": "ZAZZ-3: Reproduce bug and capture failing cases",
@@ -1042,9 +1042,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.1",
-            "to_deliverable_id": "ZAZZ-3",
             "from_phase_step": "1.2",
-            "from_deliverable_id": "ZAZZ-3"
+            "from_deliverable_code": "ZAZZ-3",
+            "to_deliverable_code": "ZAZZ-3"
         },
         {
             "to_title": "ZAZZ-3: Add regression tests for invalid tag formats",
@@ -1053,9 +1053,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.2",
-            "to_deliverable_id": "ZAZZ-3",
             "from_phase_step": "1.3",
-            "from_deliverable_id": "ZAZZ-3"
+            "from_deliverable_code": "ZAZZ-3",
+            "to_deliverable_code": "ZAZZ-3"
         },
         {
             "to_title": "ZAZZ-3: Confirm API validation contract + error messaging",
@@ -1064,9 +1064,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.3",
-            "to_deliverable_id": "ZAZZ-3",
             "from_phase_step": "2.1",
-            "from_deliverable_id": "ZAZZ-3"
+            "from_deliverable_code": "ZAZZ-3",
+            "to_deliverable_code": "ZAZZ-3"
         },
         {
             "to_title": "ZAZZ-3: Fix validation for trailing hyphen and edge cases",
@@ -1075,9 +1075,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.1",
-            "to_deliverable_id": "ZAZZ-3",
             "from_phase_step": "2.2",
-            "from_deliverable_id": "ZAZZ-3"
+            "from_deliverable_code": "ZAZZ-3",
+            "to_deliverable_code": "ZAZZ-3"
         },
         {
             "to_title": "ZAZZ-3: Add server-side canonicalization (lowercase + hyphens)",
@@ -1086,9 +1086,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.2",
-            "to_deliverable_id": "ZAZZ-3",
             "from_phase_step": "2.3",
-            "from_deliverable_id": "ZAZZ-3"
+            "from_deliverable_code": "ZAZZ-3",
+            "to_deliverable_code": "ZAZZ-3"
         },
         {
             "to_title": "ZAZZ-3: Ensure tag creation/upsert handles collisions",
@@ -1097,9 +1097,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.3",
-            "to_deliverable_id": "ZAZZ-3",
             "from_phase_step": "3.1",
-            "from_deliverable_id": "ZAZZ-3"
+            "from_deliverable_code": "ZAZZ-3",
+            "to_deliverable_code": "ZAZZ-3"
         },
         {
             "to_title": "ZAZZ-3: QA run (API + UI) for tag flows",
@@ -1108,9 +1108,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "3.1",
-            "to_deliverable_id": "ZAZZ-3",
             "from_phase_step": "3.2",
-            "from_deliverable_id": "ZAZZ-3"
+            "from_deliverable_code": "ZAZZ-3",
+            "to_deliverable_code": "ZAZZ-3"
         },
         {
             "to_title": "ZAZZ-3: Address review feedback / small refactor",
@@ -1119,9 +1119,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "3.2",
-            "to_deliverable_id": "ZAZZ-3",
             "from_phase_step": "3.3",
-            "from_deliverable_id": "ZAZZ-3"
+            "from_deliverable_code": "ZAZZ-3",
+            "to_deliverable_code": "ZAZZ-3"
         },
         {
             "to_title": "CODEX 1.2: Remove Project-Wide Graph Endpoint + Add Scoping Tests",
@@ -1130,9 +1130,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.2",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "1.3",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 1.1: Test Harness Cleanup for Image Routes",
@@ -1141,9 +1141,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.1",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "2.1",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 2.1: IMAGE_METADATA Single-Owner Schema Constraint",
@@ -1152,9 +1152,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.1",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "2.2",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 2.2: Refactor Image Service for Project/Owner Validation",
@@ -1163,9 +1163,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.2",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "2.3",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 2.3: Replace Legacy Image Routes with Scoped Contracts",
@@ -1174,9 +1174,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.3",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "2.4",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 2.1: IMAGE_METADATA Single-Owner Schema Constraint",
@@ -1185,9 +1185,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.1",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.1",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 2.3: Replace Legacy Image Routes with Scoped Contracts",
@@ -1196,9 +1196,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.3",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.1",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 1.2: Remove Project-Wide Graph Endpoint + Add Scoping Tests",
@@ -1207,9 +1207,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.2",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.3",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 1.2: Remove Project-Wide Graph Endpoint + Add Scoping Tests",
@@ -1218,9 +1218,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.2",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.4",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 2.3: Replace Legacy Image Routes with Scoped Contracts",
@@ -1229,9 +1229,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.3",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.4",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 1.3: Deliverable-Only Graph UI (No Null Fetch)",
@@ -1240,9 +1240,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.3",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.5",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 2.4: Align API Metadata Text for Scoped Image Contract",
@@ -1251,9 +1251,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "2.4",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.5",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 3.1: Add Image Scoping Integration Tests",
@@ -1262,9 +1262,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "3.1",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.5",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 3.2: Regression Tests for Unchanged Project-ID Routes",
@@ -1273,9 +1273,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "3.2",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.5",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 3.3: Finalize Graph Removal Regression Tests",
@@ -1284,9 +1284,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "3.3",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.5",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 3.4: Harden OpenAPI Assertions for Graph/Image Contract",
@@ -1295,9 +1295,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "3.4",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "3.5",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 3.5: Update API Skill Docs + Final Verification",
@@ -1306,9 +1306,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "3.5",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "4.1",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 1.3: Deliverable-Only Graph UI (No Null Fetch)",
@@ -1317,9 +1317,9 @@
             "updated_by": null,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "1.3",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "4.2",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 4.2: Persist Task Graph deliverable selection",
@@ -1328,9 +1328,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "4.2",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "4.3",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 4.3: Harden Task Graph selection restore timing",
@@ -1339,9 +1339,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "4.3",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "4.4",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 4.4: Keep completed tasks visible with green outline",
@@ -1350,9 +1350,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "4.4",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "4.5",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 5.1: Add SSE stream + status/relation event emits",
@@ -1361,9 +1361,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "5.1",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "5.2",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 5.1: Add SSE stream + status/relation event emits",
@@ -1372,9 +1372,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "5.1",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "5.3",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         },
         {
             "to_title": "CODEX 5.2: Wire UI realtime subscriptions for Kanban + Graph",
@@ -1383,9 +1383,9 @@
             "updated_by": 5,
             "relation_type": "DEPENDS_ON",
             "to_phase_step": "5.2",
-            "to_deliverable_id": "ZAZZ-5",
             "from_phase_step": "5.3",
-            "from_deliverable_id": "ZAZZ-5"
+            "from_deliverable_code": "ZAZZ-5",
+            "to_deliverable_code": "ZAZZ-5"
         }
     ]
 }

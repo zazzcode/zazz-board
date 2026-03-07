@@ -367,15 +367,15 @@ class DatabaseService {
     const rows = await db.select({
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
-      deliverableId: DELIVERABLES.deliverable_id,
+      projectCode: DELIVERABLES.project_code,
+      deliverableCode: DELIVERABLES.deliverable_code,
       name: DELIVERABLES.name,
       description: DELIVERABLES.description,
       type: DELIVERABLES.type,
       status: DELIVERABLES.status,
       statusHistory: DELIVERABLES.status_history,
-      dedFilePath: DELIVERABLES.ded_file_path,
-      planFilePath: DELIVERABLES.plan_file_path,
-      prdFilePath: DELIVERABLES.prd_file_path,
+      specFilepath: DELIVERABLES.spec_filepath,
+      planFilepath: DELIVERABLES.plan_filepath,
       approvedBy: DELIVERABLES.approved_by,
       approvedByName: USERS.full_name,
       approvedAt: DELIVERABLES.approved_at,
@@ -397,15 +397,15 @@ class DatabaseService {
     .groupBy(
       DELIVERABLES.id,
       DELIVERABLES.project_id,
-      DELIVERABLES.deliverable_id,
+      DELIVERABLES.project_code,
+      DELIVERABLES.deliverable_code,
       DELIVERABLES.name,
       DELIVERABLES.description,
       DELIVERABLES.type,
       DELIVERABLES.status,
       DELIVERABLES.status_history,
-      DELIVERABLES.ded_file_path,
-      DELIVERABLES.plan_file_path,
-      DELIVERABLES.prd_file_path,
+      DELIVERABLES.spec_filepath,
+      DELIVERABLES.plan_filepath,
       DELIVERABLES.approved_by,
       USERS.full_name,
       DELIVERABLES.approved_at,
@@ -427,16 +427,15 @@ class DatabaseService {
     const [deliverable] = await db.select({
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
-      projectCode: PROJECTS.code,
-      deliverableId: DELIVERABLES.deliverable_id,
+      projectCode: DELIVERABLES.project_code,
+      deliverableCode: DELIVERABLES.deliverable_code,
       name: DELIVERABLES.name,
       description: DELIVERABLES.description,
       type: DELIVERABLES.type,
       status: DELIVERABLES.status,
       statusHistory: DELIVERABLES.status_history,
-      dedFilePath: DELIVERABLES.ded_file_path,
-      planFilePath: DELIVERABLES.plan_file_path,
-      prdFilePath: DELIVERABLES.prd_file_path,
+      specFilepath: DELIVERABLES.spec_filepath,
+      planFilepath: DELIVERABLES.plan_filepath,
       approvedBy: DELIVERABLES.approved_by,
       approvedByName: USERS.full_name,
       approvedAt: DELIVERABLES.approved_at,
@@ -452,12 +451,12 @@ class DatabaseService {
       completedTaskCount: sql`COUNT(CASE WHEN ${TASKS.status} = 'COMPLETED' THEN 1 END)`.as('completedTaskCount')
     })
     .from(DELIVERABLES)
-    .leftJoin(PROJECTS, eq(DELIVERABLES.project_id, PROJECTS.id))
     .leftJoin(USERS, eq(DELIVERABLES.approved_by, USERS.id))
     .leftJoin(TASKS, eq(DELIVERABLES.id, TASKS.deliverable_id))
     .where(eq(DELIVERABLES.id, id))
     .groupBy(
-      DELIVERABLES.id, PROJECTS.code, USERS.full_name
+      DELIVERABLES.id,
+      USERS.full_name
     )
     .limit(1);
     return deliverable || null;
@@ -468,7 +467,7 @@ class DatabaseService {
       const [project] = await tx.select().from(PROJECTS).where(eq(PROJECTS.id, projectId)).limit(1);
       if (!project) throw new Error('Project not found');
 
-      const deliverableId = `${project.code}-${project.next_deliverable_sequence}`;
+      const deliverableCode = `${project.code}-${project.next_deliverable_sequence}`;
       await tx.update(PROJECTS)
         .set({ next_deliverable_sequence: project.next_deliverable_sequence + 1, updated_by: userId, updated_at: new Date() })
         .where(eq(PROJECTS.id, projectId));
@@ -479,15 +478,15 @@ class DatabaseService {
 
       const [row] = await tx.insert(DELIVERABLES).values({
         project_id: projectId,
-        deliverable_id: deliverableId,
+        project_code: project.code,
+        deliverable_code: deliverableCode,
         name: data.name,
         description: data.description,
         type: data.type,
         status: 'PLANNING',
         status_history: [{ status: 'PLANNING', changedAt: new Date().toISOString(), changedBy: userId }],
-        ded_file_path: data.dedFilePath,
-        plan_file_path: data.planFilePath,
-        prd_file_path: data.prdFilePath,
+        spec_filepath: data.specFilepath,
+        plan_filepath: data.planFilepath,
         git_worktree: data.gitWorktree,
         git_branch: data.gitBranch,
         pull_request_url: data.pullRequestUrl,
@@ -508,9 +507,8 @@ class DatabaseService {
     if (data.description !== undefined) updateData.description = data.description;
     if (data.type !== undefined) updateData.type = data.type;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.dedFilePath !== undefined) updateData.ded_file_path = data.dedFilePath;
-    if (data.planFilePath !== undefined) updateData.plan_file_path = data.planFilePath;
-    if (data.prdFilePath !== undefined) updateData.prd_file_path = data.prdFilePath;
+    if (data.specFilepath !== undefined) updateData.spec_filepath = data.specFilepath;
+    if (data.planFilepath !== undefined) updateData.plan_filepath = data.planFilepath;
     if (data.gitWorktree !== undefined) updateData.git_worktree = data.gitWorktree;
     if (data.gitBranch !== undefined) updateData.git_branch = data.gitBranch;
     if (data.pullRequestUrl !== undefined) updateData.pull_request_url = data.pullRequestUrl;
@@ -531,7 +529,7 @@ class DatabaseService {
   async approveDeliverablePlan(id, userId) {
     const deliverable = await this.getDeliverableById(id);
     if (!deliverable) throw new Error('Deliverable not found');
-    if (!deliverable.planFilePath) throw new Error('plan_file_path must be set before approval');
+    if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before approval');
     if (deliverable.approvedAt) throw new Error('Deliverable already approved');
     if (deliverable.status !== 'PLANNING') throw new Error('Only PLANNING deliverables can be approved');
 
@@ -552,7 +550,7 @@ class DatabaseService {
     if (!project?.workflow?.includes(status)) throw new Error(`Status ${status} not allowed for this project`);
 
     if (status === 'IN_PROGRESS') {
-      if (!deliverable.planFilePath) throw new Error('plan_file_path must be set before moving to IN_PROGRESS');
+      if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before moving to IN_PROGRESS');
       if (!deliverable.approvedAt) throw new Error('Deliverable must be approved before moving to IN_PROGRESS');
     }
 

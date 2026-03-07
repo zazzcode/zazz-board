@@ -62,7 +62,8 @@ export const deliverableResponseSchema = {
   properties: {
     id: { type: 'number', description: 'Numeric primary key. Use this for API paths (e.g. create task, update deliverable).' },
     projectId: { type: 'number' },
-    deliverableId: { type: 'string', description: 'Human-readable ID (e.g. ZAZZ-4). Use for display; use id for API calls.' },
+    projectCode: { type: 'string' },
+    deliverableCode: { type: 'string', description: 'Human-readable code (e.g. ZAZZ-4). Use for display; use id for API calls.' },
     name: { type: 'string' },
     description: { type: 'string', nullable: true },
     type: { type: 'string', enum: ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION'] },
@@ -78,9 +79,8 @@ export const deliverableResponseSchema = {
         }
       }
     },
-    dedFilePath: { type: 'string', nullable: true, description: 'Relative path or URL to the deliverable specification (SPEC) document.' },
-    planFilePath: { type: 'string', nullable: true, description: 'Relative path or URL to the implementation plan (PLAN) document.' },
-    prdFilePath: { type: 'string', nullable: true, description: 'Relative path or URL to the PRD document.' },
+    specFilepath: { type: 'string', nullable: true, description: 'Relative path or URL to the deliverable specification (SPEC) document.' },
+    planFilepath: { type: 'string', nullable: true, description: 'Relative path or URL to the implementation plan (PLAN) document.' },
     gitWorktree: { type: 'string', nullable: true, description: 'Git worktree name used for implementation (e.g. feature-auth).' },
     gitBranch: { type: 'string', nullable: true, description: 'Git branch name for the deliverable work (e.g. feature-auth).' },
     pullRequestUrl: { type: 'string', nullable: true },

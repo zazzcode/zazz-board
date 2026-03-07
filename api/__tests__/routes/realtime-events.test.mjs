@@ -132,7 +132,7 @@ describe('Realtime SSE events', () => {
     const deliverable = await createTestDeliverable(1, {
       status: 'PLANNING',
       name: 'RT Deliverable Status',
-      planFilePath: '/tmp/test-plan.md',
+      planFilepath: '/tmp/test-plan.md',
       approvedBy: 1,
       approvedAt: new Date(),
     });

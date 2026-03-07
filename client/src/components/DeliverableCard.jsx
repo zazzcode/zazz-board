@@ -78,7 +78,7 @@ export function DeliverableCard({ deliverable, onEdit, onDelete, isOverlay }) {
               textTransform: 'none',
             }}
           >
-            {deliverable.deliverableId || `D-${deliverable.id}`}
+            {deliverable.deliverableCode}
           </Badge>
         </Box>
 
@@ -183,7 +183,7 @@ export function DeliverableCard({ deliverable, onEdit, onDelete, isOverlay }) {
       >
         <Stack gap="md">
           <Text>
-            {t('common.confirmDelete')} <strong>{deliverable.deliverableId}</strong>?
+            {t('common.confirmDelete')} <strong>{deliverable.deliverableCode}</strong>?
           </Text>
           <Text size="sm" c="dimmed">
             This will also delete all tasks associated with this deliverable.

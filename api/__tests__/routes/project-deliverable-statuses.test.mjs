@@ -166,7 +166,7 @@ describe('Project Deliverable Status Workflow Configuration', () => {
     // Try to transition deliverable to a status not in the workflow
     const deliverable = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test.md'
+      planFilepath: 'docs/test.md'
     });
 
     await spec()

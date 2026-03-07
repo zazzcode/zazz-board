@@ -44,10 +44,10 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path.post).toBeDefined();
     expect(path.post.summary).toBeDefined();
     expect(path.post.description).toContain('id');
-    expect(path.post.description).toContain('deliverableId');
+    expect(path.post.description).toContain('deliverableCode');
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.name).toBeDefined();
-    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.dedFilePath).toBeDefined();
-    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.planFilePath).toBeDefined();
+    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.specFilepath).toBeDefined();
+    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.planFilepath).toBeDefined();
   });
 
   it('should document core agent operations: create task', async () => {
@@ -66,8 +66,8 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path).toBeDefined();
     expect(path.put).toBeDefined();
     const bodySchema = path.put.requestBody?.content?.['application/json']?.schema;
-    expect(bodySchema?.properties?.dedFilePath).toBeDefined();
-    expect(bodySchema?.properties?.planFilePath).toBeDefined();
+    expect(bodySchema?.properties?.specFilepath).toBeDefined();
+    expect(bodySchema?.properties?.planFilepath).toBeDefined();
     expect(bodySchema?.properties?.gitWorktree).toBeDefined();
   });
 

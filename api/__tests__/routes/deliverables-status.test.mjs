@@ -29,7 +29,7 @@ describe('Deliverables Status Transitions', () => {
   it('should transition from PLANNING to IN_PROGRESS after approval', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md'
+      planFilepath: 'docs/test-plan.md'
     });
 
     // First approve the plan
@@ -53,7 +53,7 @@ describe('Deliverables Status Transitions', () => {
   it('should block transition to IN_PROGRESS without plan approval', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: null
+      planFilepath: null
     });
 
     await spec()
@@ -126,7 +126,7 @@ describe('Deliverables Status Transitions', () => {
   it('should track status history on each transition', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md'
+      planFilepath: 'docs/test-plan.md'
     });
 
     // Approve

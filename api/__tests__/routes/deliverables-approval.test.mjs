@@ -10,10 +10,10 @@ describe('Deliverables Plan Approval', () => {
     await resetProjectDefaults();
   });
 
-  it('should require plan_file_path to be set before approval', async () => {
+  it('should require plan_filepath to be set before approval', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: null
+      planFilepath: null
     });
 
     await spec()
@@ -22,10 +22,10 @@ describe('Deliverables Plan Approval', () => {
       .expectStatus(400);
   });
 
-  it('should approve plan when plan_file_path is set', async () => {
+  it('should approve plan when plan_filepath is set', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md',
+      planFilepath: 'docs/test-plan.md',
       approvedAt: null,
       approvedBy: null
     });
@@ -43,7 +43,7 @@ describe('Deliverables Plan Approval', () => {
   it('should set approvedBy to current user on approval', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md'
+      planFilepath: 'docs/test-plan.md'
     });
 
     const response = await spec()
@@ -59,7 +59,7 @@ describe('Deliverables Plan Approval', () => {
   it('should prevent approval if already approved', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md',
+      planFilepath: 'docs/test-plan.md',
       approvedAt: new Date(),
       approvedBy: 1
     });
@@ -73,7 +73,7 @@ describe('Deliverables Plan Approval', () => {
   it('should only allow approval in PLANNING status', async () => {
     const created = await createTestDeliverable(1, {
       status: 'IN_PROGRESS',
-      planFilePath: 'docs/test-plan.md'
+      planFilepath: 'docs/test-plan.md'
     });
 
     await spec()
@@ -85,7 +85,7 @@ describe('Deliverables Plan Approval', () => {
   it('should require authentication for approval', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md'
+      planFilepath: 'docs/test-plan.md'
     });
 
     await spec()
@@ -104,7 +104,7 @@ describe('Deliverables Plan Approval', () => {
     // Create without approval
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md',
+      planFilepath: 'docs/test-plan.md',
       approvedAt: null,
       approvedBy: null
     });
@@ -134,11 +134,11 @@ describe('Deliverables Plan Approval', () => {
   it('should approve multiple deliverables independently', async () => {
     const d1 = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/plan1.md'
+      planFilepath: 'docs/plan1.md'
     });
     const d2 = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/plan2.md'
+      planFilepath: 'docs/plan2.md'
     });
 
     // Approve only d1
@@ -167,7 +167,7 @@ describe('Deliverables Plan Approval', () => {
   it('should record approval timestamp', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md'
+      planFilepath: 'docs/test-plan.md'
     });
 
     const beforeTime = new Date();

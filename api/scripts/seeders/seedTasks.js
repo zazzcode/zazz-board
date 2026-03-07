@@ -11,7 +11,7 @@ async function getProjectId(code) {
 
 async function getDeliverableIdMap(projectId) {
   const deliverables = await db
-    .select({ id: DELIVERABLES.id, key: DELIVERABLES.deliverable_id })
+    .select({ id: DELIVERABLES.id, key: DELIVERABLES.deliverable_code })
     .from(DELIVERABLES)
     .where(eq(DELIVERABLES.project_id, projectId));
 
@@ -46,9 +46,9 @@ export async function seedTasks() {
     const now = new Date();
 
     const tasks = snapshot.tasks.map((task, index) => {
-      const deliverableDbId = deliverableIdMap.get(task.deliverable_id);
+      const deliverableDbId = deliverableIdMap.get(task.deliverable_code);
       if (!deliverableDbId) {
-        throw new Error(`Deliverable not found for task seed: ${task.deliverable_id}`);
+        throw new Error(`Deliverable not found for task seed: ${task.deliverable_code}`);
       }
 
       return {
