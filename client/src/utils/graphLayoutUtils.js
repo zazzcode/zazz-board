@@ -447,6 +447,9 @@ function positionForCell(col, row, direction) {
  * Determine if a task has reached or passed the completion criteria status.
  */
 function computeIsComplete(task, completionCriteriaStatus, statusWorkflow) {
+  // Always treat terminal completed statuses as complete for graph styling.
+  if (task.status === 'COMPLETED' || task.status === 'DONE') return true;
+
   if (!statusWorkflow || statusWorkflow.length === 0) return false;
   const criteriaStatus = completionCriteriaStatus || 'DONE';
   const criteriaIndex = statusWorkflow.indexOf(criteriaStatus);
