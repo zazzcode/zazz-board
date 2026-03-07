@@ -28,7 +28,7 @@ export async function seedTaskRelations() {
       .select({
         id: TASKS.id,
         title: TASKS.title,
-        phaseTaskId: TASKS.phase_task_id,
+        phaseStep: TASKS.phase_step,
         deliverableDbId: TASKS.deliverable_id,
       })
       .from(TASKS);
@@ -44,16 +44,16 @@ export async function seedTaskRelations() {
       const deliverableKey = deliverableKeyByDbId.get(task.deliverableDbId);
       if (!deliverableKey) continue;
 
-      if (task.phaseTaskId) {
-        byDeliverableAndPhaseTask.set(`${deliverableKey}::${task.phaseTaskId}`, task.id);
+      if (task.phaseStep) {
+        byDeliverableAndPhaseTask.set(`${deliverableKey}::${task.phaseStep}`, task.id);
       }
 
       byDeliverableAndTitle.set(`${deliverableKey}::${task.title}`, task.id);
     }
 
-    const resolveTaskId = (deliverableId, phaseTaskId, title) => {
-      if (phaseTaskId) {
-        const byPhaseTask = byDeliverableAndPhaseTask.get(`${deliverableId}::${phaseTaskId}`);
+    const resolveTaskId = (deliverableId, phaseStep, title) => {
+      if (phaseStep) {
+        const byPhaseTask = byDeliverableAndPhaseTask.get(`${deliverableId}::${phaseStep}`);
         if (byPhaseTask) return byPhaseTask;
       }
       return byDeliverableAndTitle.get(`${deliverableId}::${title}`) || null;
@@ -66,12 +66,12 @@ export async function seedTaskRelations() {
     for (const relation of snapshot.task_relations) {
       const taskId = resolveTaskId(
         relation.from_deliverable_id,
-        relation.from_phase_task_id,
+        relation.from_phase_step,
         relation.from_title
       );
       const relatedTaskId = resolveTaskId(
         relation.to_deliverable_id,
-        relation.to_phase_task_id,
+        relation.to_phase_step,
         relation.to_title
       );
 

@@ -19,7 +19,7 @@ describe('Deliverables API', () => {
   it('should list project deliverables', async () => {
     await createTestDeliverable(1, { name: 'D1', status: 'PLANNING' });
     await createTestDeliverable(1, { name: 'D2', status: 'IN_PROGRESS' });
-    await createTestDeliverable(3,  { name: 'Other Project Deliverable' });
+    await createTestDeliverable(2,  { name: 'Other Project Deliverable' });
 
     const response = await spec()
       .get('/projects/ZAZZ/deliverables')

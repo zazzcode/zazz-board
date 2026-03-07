@@ -623,7 +623,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -698,7 +698,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -741,7 +741,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -777,7 +777,7 @@ class DatabaseService {
   }
 
   /**
-   * Create new task with phase_task_id generation, dependency wiring, and auto-promotion.
+   * Create new task with phase_step generation, dependency wiring, and auto-promotion.
    * Leader provides phase + optional dependencies array; system handles the rest.
    */
   async createTask(taskData) {
@@ -803,16 +803,16 @@ class DatabaseService {
       .where(and(eq(TASKS.project_id, projectId), eq(TASKS.status, status)));
       const nextPosition = Math.floor(maxPos.max / 10) * 10 + 10;
 
-      // --- phase_task_id generation ---
+      // --- phase_step generation ---
       // Format: "{phase}.{seq}" e.g. "1.1", "1.2"
-      // Rework tasks can be created with explicit phaseTaskId like "1.2.1"
-      let phaseTaskId = taskData.phaseTaskId || null;
+      // Rework tasks can be created with explicit phaseStep like "1.2.1"
+      let phaseStep = taskData.phaseStep || null;
       const phase = taskData.phase ?? null;
 
-      if (phase !== null && !phaseTaskId) {
-        // Find all existing phase_task_ids for this deliverable+phase to determine next seq
+      if (phase !== null && !phaseStep) {
+        // Find all existing phase_steps for this deliverable+phase to determine next seq
         // Match format "{phase}.{digits}" (direct children only, not rework like "1.2.1")
-        const existing = await tx.select({ phaseTaskId: TASKS.phase_task_id })
+        const existing = await tx.select({ phaseStep: TASKS.phase_step })
           .from(TASKS)
           .where(
             and(
@@ -825,12 +825,12 @@ class DatabaseService {
         let maxSeq = 0;
         const directPattern = new RegExp(`^${phase}\\.(\\d+)$`);
         for (const row of existing) {
-          if (row.phaseTaskId) {
-            const m = row.phaseTaskId.match(directPattern);
+          if (row.phaseStep) {
+            const m = row.phaseStep.match(directPattern);
             if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
           }
         }
-        phaseTaskId = `${phase}.${maxSeq + 1}`;
+        phaseStep = `${phase}.${maxSeq + 1}`;
       }
 
       // --- Insert task ---
@@ -846,7 +846,7 @@ class DatabaseService {
         prompt: taskData.prompt,
         notes: taskData.notes || null,
         phase,
-        phase_task_id: phaseTaskId,
+        phase_step: phaseStep,
         is_blocked: taskData.isBlocked || false,
         blocked_reason: taskData.blockedReason,
         is_cancelled: taskData.isCancelled || false,
@@ -1667,7 +1667,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,
@@ -1708,7 +1708,7 @@ class DatabaseService {
       id: TASKS.id,
       taskId: TASKS.id,
       phase: TASKS.phase,
-      phaseTaskId: TASKS.phase_task_id,
+      phaseStep: TASKS.phase_step,
       title: TASKS.title,
       status: TASKS.status,
       priority: TASKS.priority,

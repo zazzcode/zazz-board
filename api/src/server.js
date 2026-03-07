@@ -48,7 +48,7 @@ const start = async () => {
 
 **Common operations (agent quick reference)**:
 - Create deliverable: POST /projects/{projectCode}/deliverables — body: name, type; optional: dedFilePath, planFilePath. Response id = use for create task.
-- Create task: POST /projects/{code}/deliverables/{delivId}/tasks — delivId = numeric id from create deliverable. Body: title, prompt, phase, phaseTaskId.
+- Create task: POST /projects/{code}/deliverables/{delivId}/tasks — delivId = numeric id from create deliverable. Body: title, prompt, phase, phaseStep.
 - Update deliverable: PUT /projects/{projectCode}/deliverables/{id} — add dedFilePath (spec path), planFilePath (plan path), gitWorktree, gitBranch when known.
 - Change deliverable status: PATCH /projects/{projectCode}/deliverables/{id}/status — body: { status }.
 - Change task status: PATCH /projects/{code}/deliverables/{delivId}/tasks/{taskId}/status — body: { status }; optional agentName to claim.`,

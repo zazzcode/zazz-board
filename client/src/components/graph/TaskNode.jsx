@@ -83,7 +83,7 @@ function TaskNodeComponent({ data }) {
           overflow: 'hidden',
         }}
       >
-        {/* Top row: phaseTaskId centered + priority right */}
+        {/* Top row: phaseStep centered + priority right */}
         <div
           style={{
             display: 'flex',
@@ -104,7 +104,7 @@ function TaskNodeComponent({ data }) {
               whiteSpace: 'nowrap',
             }}
           >
-            {task.phaseTaskId || `#${task.id}`}
+            {task.phaseStep || `#${task.id}`}
           </span>
           {task.priority && (
             <span

@@ -130,7 +130,7 @@ export async function createTestTask(projectId, overrides = {}) {
     story_points: overrides.storyPoints || null,
     git_worktree: overrides.gitWorktree || null,
     phase: overrides.phase || null,
-    phase_task_id: overrides.phaseTaskId || null,
+    phase_step: overrides.phaseStep || null,
     notes: overrides.notes || null,
     is_cancelled: overrides.isCancelled || false,
     created_by: overrides.createdBy || 1,

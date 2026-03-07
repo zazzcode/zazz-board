@@ -95,7 +95,7 @@ export const projectSchemas = {
       type: 'object',
       required: ['code', 'taskId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
       }
     },
@@ -119,7 +119,7 @@ export const projectSchemas = {
       type: 'object',
       required: ['code', 'taskId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
       }
     },
@@ -152,7 +152,7 @@ export const projectSchemas = {
       type: 'object',
       required: ['code', 'taskId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$' },
         taskId: { type: 'string', pattern: '^\\d+$' }
       }
     }
@@ -161,12 +161,12 @@ export const projectSchemas = {
   createDeliverableTask: {
     tags: ['projects'],
     summary: 'Create task in deliverable',
-    description: 'Creates a task within a deliverable. delivId is the numeric id from the create deliverable response (not deliverableId). The deliverable must be approved before creating tasks. Include prompt with goal, instructions, and acceptance criteria. Use phase and phaseTaskId to align with PLAN structure (e.g. phase 1, phaseTaskId "1.2").',
+    description: 'Creates a task within a deliverable. delivId is the numeric id from the create deliverable response (not deliverableId). The deliverable must be approved before creating tasks. Include prompt with goal, instructions, and acceptance criteria. Use phase and phaseStep to align with PLAN structure (e.g. phase 1, phaseStep "1.2").',
     params: {
       type: 'object',
       required: ['code', 'delivId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id from create deliverable response. Use the id field, not deliverableId.' }
       }
     },
@@ -181,10 +181,10 @@ export const projectSchemas = {
         agentName: { type: 'string', maxLength: 50, description: 'Agent name if pre-assigning.' },
         storyPoints: { type: 'integer', minimum: 1, maximum: 21 },
         position: { type: 'integer', minimum: 0 },
-        phaseTaskId: {
+        phaseStep: {
           type: 'string',
           maxLength: 20,
-          description: 'Phase task ID from PLAN (e.g. "1.2"). Auto-generated from phase if omitted. Use "1.2.1" for rework tasks.'
+          description: 'Phase step from PLAN (e.g. "1.2"). Auto-generated from phase if omitted. Use "1.2.1" for rework tasks.'
         },
         prompt: { type: 'string', maxLength: 10000, description: 'Goal, instructions, and acceptance criteria for the agent.' },
         gitWorktree: { type: 'string', maxLength: 255 },
@@ -211,7 +211,7 @@ export const projectSchemas = {
       type: 'object',
       required: ['code', 'delivId', 'taskId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
         taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
       }
@@ -229,7 +229,7 @@ export const projectSchemas = {
       type: 'object',
       required: ['code', 'delivId', 'taskId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
         taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
       }

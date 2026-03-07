@@ -55,7 +55,7 @@ export async function seedTasks() {
         project_id: projectId,
         deliverable_id: deliverableDbId,
         phase: task.phase,
-        phase_task_id: task.phase_task_id,
+        phase_step: task.phase_step,
         title: task.title,
         status: task.status || 'READY',
         priority: task.priority || 'MEDIUM',

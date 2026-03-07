@@ -21,8 +21,8 @@ describe('Task graph scoping', () => {
 
   it('should return deliverable-scoped graph for a valid project and deliverable', async () => {
     const deliverable = await createTestDeliverable(1, { name: 'Scoped graph deliverable' });
-    await createTestTask(1, { title: 'Task A', deliverableId: deliverable.id, phase: 1, phaseTaskId: '1.1' });
-    await createTestTask(1, { title: 'Task B', deliverableId: deliverable.id, phase: 1, phaseTaskId: '1.2' });
+    await createTestTask(1, { title: 'Task A', deliverableId: deliverable.id, phase: 1, phaseStep: '1.1' });
+    await createTestTask(1, { title: 'Task B', deliverableId: deliverable.id, phase: 1, phaseStep: '1.2' });
 
     const graph = await spec()
       .get(`/projects/ZAZZ/deliverables/${deliverable.id}/graph`)

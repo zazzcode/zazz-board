@@ -119,7 +119,7 @@ export const TASKS = pgTable('TASKS', {
   phase: integer('phase'),
   // Human-readable display ID within a deliverable: "1.1", "1.2", "1.2.1" (rework)
   // Unique per deliverable — enforced by constraint below
-  phase_task_id: varchar('phase_task_id', { length: 20 }),
+  phase_step: varchar('phase_step', { length: 20 }),
 
   // --- Core task fields ---
   title: varchar('title', { length: 255 }).notNull(),
@@ -156,8 +156,8 @@ export const TASKS = pgTable('TASKS', {
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
-  // phase_task_id must be unique within a deliverable (e.g. "1.1" unique per deliverable)
-  unique('uq_tasks_deliverable_phase_task_id').on(table.deliverable_id, table.phase_task_id),
+  // phase_step must be unique within a deliverable (e.g. "1.1" unique per deliverable)
+  unique('uq_tasks_deliverable_phase_step').on(table.deliverable_id, table.phase_step),
 ]);
 
 // Task-Tags junction table

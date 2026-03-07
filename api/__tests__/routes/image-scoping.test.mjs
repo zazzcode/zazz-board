@@ -106,7 +106,7 @@ describe('Project-scoped image routes', () => {
   it('should return 403 for cross-project image fetch by id', async () => {
     const deliverable = await createTestDeliverable(2, { name: 'Other project deliverable' });
     const task = await createTestTask(2, { deliverableId: deliverable.id, title: 'Other project task' });
-    const uploaded = await uploadTaskImage('MOBDEV', deliverable.id, task.id);
+    const uploaded = await uploadTaskImage('ZED_MER', deliverable.id, task.id);
 
     await spec()
       .get(`/projects/ZAZZ/images/${uploaded.id}`)
@@ -122,8 +122,8 @@ describe('Project-scoped image routes', () => {
   it('should return 403 for cross-project image mutation routes', async () => {
     const deliverable = await createTestDeliverable(2, { name: 'Cross project mutate' });
     const task = await createTestTask(2, { deliverableId: deliverable.id, title: 'Cross project mutation task' });
-    const taskImage = await uploadTaskImage('MOBDEV', deliverable.id, task.id);
-    const deliverableImage = await uploadDeliverableImage('MOBDEV', deliverable.id);
+    const taskImage = await uploadTaskImage('ZED_MER', deliverable.id, task.id);
+    const deliverableImage = await uploadDeliverableImage('ZED_MER', deliverable.id);
 
     await spec()
       .delete(`/projects/ZAZZ/deliverables/${deliverable.id}/tasks/${task.id}/images/${taskImage.id}`)

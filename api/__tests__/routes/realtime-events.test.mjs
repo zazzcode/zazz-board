@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { spec } from 'pactum';
-import { clearTaskData, createTestDeliverable, createTestTask } from '../helpers/testDatabase.js';
+import { clearTaskData, createTestDeliverable, createTestTask, resetProjectDefaults } from '../helpers/testDatabase.js';
 import { getTestToken } from '../helpers/testServer.js';
 
 const VALID_TOKEN = getTestToken();
@@ -92,6 +92,7 @@ async function waitForProjectEvent({ projectCode, predicate, trigger, timeoutMs 
 describe('Realtime SSE events', () => {
   beforeEach(async () => {
     await clearTaskData();
+    await resetProjectDefaults();
   });
 
   it('requires authentication for project event stream', async () => {

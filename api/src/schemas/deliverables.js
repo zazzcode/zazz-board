@@ -12,7 +12,7 @@ export const deliverableSchemas = {
     params: {
       type: 'object',
       required: ['projectCode'],
-      properties: { projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' } }
+      properties: { projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' } }
     },
     querystring: {
       type: 'object',
@@ -38,7 +38,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },
@@ -55,7 +55,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ). Uppercase letters and numbers.' }
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ). Uppercase letters and numbers.' }
       }
     },
     body: {
@@ -87,7 +87,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id from create or list.' }
       }
     },
@@ -121,7 +121,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$' },
         id: { type: 'string', pattern: '^\\d+$' }
       }
     },
@@ -138,7 +138,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },
@@ -161,7 +161,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },
@@ -178,7 +178,7 @@ export const deliverableSchemas = {
       type: 'object',
       required: ['projectCode', 'id'],
       properties: {
-        projectCode: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+        projectCode: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
         id: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
       }
     },

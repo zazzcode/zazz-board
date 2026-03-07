@@ -6,7 +6,7 @@ const scopedProjectDeliverableParams = {
   type: 'object',
   required: ['code', 'delivId'],
   properties: {
-    code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+    code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
     delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' }
   }
 };
@@ -15,7 +15,7 @@ const scopedProjectDeliverableTaskParams = {
   type: 'object',
   required: ['code', 'delivId', 'taskId'],
   properties: {
-    code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+    code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
     delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
     taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
   }
@@ -25,7 +25,7 @@ const scopedImageIdParams = {
   type: 'object',
   required: ['code', 'id'],
   properties: {
-    code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+    code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
     id: { type: 'string', pattern: '^\\d+$', description: 'Numeric image id.' }
   }
 };
@@ -119,7 +119,7 @@ export const imageSchemas = {
       type: 'object',
       required: ['code', 'delivId', 'taskId', 'imageId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$' },
         delivId: { type: 'string', pattern: '^\\d+$' },
         taskId: { type: 'string', pattern: '^\\d+$' },
         imageId: { type: 'string', pattern: '^\\d+$' }
@@ -182,7 +182,7 @@ export const imageSchemas = {
       type: 'object',
       required: ['code', 'delivId', 'imageId'],
       properties: {
-        code: { type: 'string', pattern: '^[A-Z0-9]+$' },
+        code: { type: 'string', pattern: '^[A-Z0-9_]+$' },
         delivId: { type: 'string', pattern: '^\\d+$' },
         imageId: { type: 'string', pattern: '^\\d+$' }
       }

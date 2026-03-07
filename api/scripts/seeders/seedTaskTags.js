@@ -26,7 +26,7 @@ export async function seedTaskTags() {
       .select({
         id: TASKS.id,
         title: TASKS.title,
-        phaseTaskId: TASKS.phase_task_id,
+        phaseStep: TASKS.phase_step,
         deliverableDbId: TASKS.deliverable_id,
       })
       .from(TASKS);
@@ -43,8 +43,8 @@ export async function seedTaskTags() {
       const deliverableKey = deliverableKeyByDbId.get(task.deliverableDbId);
       if (!deliverableKey) continue;
 
-      if (task.phaseTaskId) {
-        byDeliverableAndPhaseTask.set(`${deliverableKey}::${task.phaseTaskId}`, task.id);
+      if (task.phaseStep) {
+        byDeliverableAndPhaseTask.set(`${deliverableKey}::${task.phaseStep}`, task.id);
       }
 
       byDeliverableAndTitle.set(`${deliverableKey}::${task.title}`, task.id);
@@ -56,8 +56,8 @@ export async function seedTaskTags() {
     for (const tagLink of snapshot.task_tags) {
       if (!tagSet.has(tagLink.tag)) continue;
 
-      const taskId = tagLink.phase_task_id
-        ? byDeliverableAndPhaseTask.get(`${tagLink.deliverable_id}::${tagLink.phase_task_id}`)
+      const taskId = tagLink.phase_step
+        ? byDeliverableAndPhaseTask.get(`${tagLink.deliverable_id}::${tagLink.phase_step}`)
         : null;
 
       const resolvedTaskId = taskId || byDeliverableAndTitle.get(`${tagLink.deliverable_id}::${tagLink.title}`);

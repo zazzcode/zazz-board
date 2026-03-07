@@ -22,7 +22,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       response: {
@@ -219,7 +219,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'status'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           status: { type: 'string', pattern: '^[A-Z_]+$', description: 'Column status.' }
         }
       },
@@ -277,7 +277,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
       },
@@ -479,7 +479,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       response: {
@@ -520,7 +520,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       body: {
@@ -603,7 +603,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       }
     }
@@ -629,7 +629,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' }
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' }
         }
       },
       body: {
@@ -817,7 +817,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
@@ -869,7 +869,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
@@ -939,7 +939,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id from create deliverable.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id from create task.' }
         }
@@ -1027,7 +1027,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
@@ -1085,7 +1085,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }
@@ -1146,7 +1146,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'object',
         required: ['code', 'delivId', 'taskId'],
         properties: {
-          code: { type: 'string', pattern: '^[A-Z0-9]+$', description: 'Project code (e.g. ZAZZ).' },
+          code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
           delivId: { type: 'string', pattern: '^\\d+$', description: 'Numeric deliverable id.' },
           taskId: { type: 'string', pattern: '^\\d+$', description: 'Numeric task id.' }
         }

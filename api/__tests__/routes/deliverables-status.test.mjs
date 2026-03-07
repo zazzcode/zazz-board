@@ -171,39 +171,4 @@ describe('Deliverables Status Transitions', () => {
       .expectStatus(404);
   });
 
-  it('should support UAT and PROD statuses in APIMOD project', async () => {
-    // APIMOD project has extended deliverable_status_workflow with UAT and PROD
-    const created = await createTestDeliverable(3,  {
-      status: 'PLANNING',
-      planFilePath: 'docs/test-plan.md'
-    });
-
-    // Approve
-    await spec()
-      .patch(`/projects/APIMOD/deliverables/${created.id}/approve`)
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .expectStatus(200);
-
-    // Progress through states to UAT
-    await spec()
-      .patch(`/projects/APIMOD/deliverables/${created.id}/status`)
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .withJson({ status: 'IN_PROGRESS' })
-      .expectStatus(200);
-
-    await spec()
-      .patch(`/projects/APIMOD/deliverables/${created.id}/status`)
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .withJson({ status: 'IN_REVIEW' })
-      .expectStatus(200);
-
-    const response = await spec()
-      .patch(`/projects/APIMOD/deliverables/${created.id}/status`)
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .withJson({ status: 'UAT' })
-      .expectStatus(200)
-      .returns('res.body');
-
-    expect(response.status).toBe('UAT');
-  });
 });

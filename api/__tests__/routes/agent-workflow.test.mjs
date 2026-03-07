@@ -60,9 +60,9 @@ const h = {
       .returns('res.body'),
 };
 
-/** Sort tasks by phaseTaskId for deterministic comparison */
+/** Sort tasks by phaseStep for deterministic comparison */
 function byPhaseTaskId(tasks) {
-  return [...tasks].sort((a, b) => (a.phaseTaskId ?? '').localeCompare(b.phaseTaskId ?? ''));
+  return [...tasks].sort((a, b) => (a.phaseStep ?? '').localeCompare(b.phaseStep ?? ''));
 }
 
 // ── Test suite ─────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ describe('Agent Workflow Simulation', () => {
       });
       expect(task1.status).toBe('READY');
       expect(task1.phase).toBe(1);
-      expect(task1.phaseTaskId).toBe('1.1');
+      expect(task1.phaseStep).toBe('1.1');
 
       // ── WORKER AGENT: picks up 1.1, starts it ──────────────────────────
       const working = await h.setStatus(dId, task1.id, 'IN_PROGRESS');
@@ -114,7 +114,7 @@ describe('Agent Workflow Simulation', () => {
         prompt: 'Build JWT auth middleware using scaffold from 1.1'
       });
       expect(task2.status).toBe('READY');   // born READY — dep already complete
-      expect(task2.phaseTaskId).toBe('2.1');
+      expect(task2.phaseStep).toBe('2.1');
 
       // ── WORKER AGENT: executes 2.1 ──────────────────────────────────────
       await h.setStatus(dId, task2.id, 'IN_PROGRESS');
@@ -129,8 +129,8 @@ describe('Agent Workflow Simulation', () => {
       expect(graph.tasks).toHaveLength(2);
       expect(graph.relations).toHaveLength(1);
 
-      const g1 = graph.tasks.find(t => t.phaseTaskId === '1.1');
-      const g2 = graph.tasks.find(t => t.phaseTaskId === '2.1');
+      const g1 = graph.tasks.find(t => t.phaseStep === '1.1');
+      const g2 = graph.tasks.find(t => t.phaseStep === '2.1');
       expect(g1.status).toBe('COMPLETED');
       expect(g2.status).toBe('COMPLETED');
 
@@ -143,8 +143,8 @@ describe('Agent Workflow Simulation', () => {
       const allTasks = byPhaseTaskId(await h.getTasks(dId));
       expect(allTasks).toHaveLength(2);
       expect(allTasks).toEqual([
-        expect.objectContaining({ phaseTaskId: '1.1', phase: 1, status: 'COMPLETED', title: 'Set up project scaffold' }),
-        expect.objectContaining({ phaseTaskId: '2.1', phase: 2, status: 'COMPLETED', title: 'Implement auth middleware' }),
+        expect.objectContaining({ phaseStep: '1.1', phase: 1, status: 'COMPLETED', title: 'Set up project scaffold' }),
+        expect.objectContaining({ phaseStep: '2.1', phase: 2, status: 'COMPLETED', title: 'Implement auth middleware' }),
       ]);
     });
   });
@@ -169,9 +169,9 @@ describe('Agent Workflow Simulation', () => {
       });
 
       expect(task1a.status).toBe('READY');
-      expect(task1a.phaseTaskId).toBe('1.1');
+      expect(task1a.phaseStep).toBe('1.1');
       expect(task1b.status).toBe('READY');
-      expect(task1b.phaseTaskId).toBe('1.2');  // sequential IDs within same phase
+      expect(task1b.phaseStep).toBe('1.2');  // sequential IDs within same phase
 
       // ── WORKER AGENTS: execute 1.1 and 1.2 in parallel (simulated serially) ─
       await h.setStatus(dId, task1a.id, 'IN_PROGRESS');
@@ -190,7 +190,7 @@ describe('Agent Workflow Simulation', () => {
         prompt: 'Wire ingestion and validation modules together in the pipeline runner'
       });
       expect(task2.status).toBe('READY');
-      expect(task2.phaseTaskId).toBe('2.1');
+      expect(task2.phaseStep).toBe('2.1');
 
       // ── WORKER AGENT: executes integration task ──────────────────────────
       await h.setStatus(dId, task2.id, 'IN_PROGRESS');
@@ -215,9 +215,9 @@ describe('Agent Workflow Simulation', () => {
       const allTasks = byPhaseTaskId(await h.getTasks(dId));
       expect(allTasks).toHaveLength(3);
       expect(allTasks).toEqual([
-        expect.objectContaining({ phaseTaskId: '1.1', phase: 1, status: 'COMPLETED', title: 'Build data ingestion module' }),
-        expect.objectContaining({ phaseTaskId: '1.2', phase: 1, status: 'COMPLETED', title: 'Build data validation module' }),
-        expect.objectContaining({ phaseTaskId: '2.1', phase: 2, status: 'COMPLETED', title: 'Integrate ingestion + validation into pipeline runner' }),
+        expect.objectContaining({ phaseStep: '1.1', phase: 1, status: 'COMPLETED', title: 'Build data ingestion module' }),
+        expect.objectContaining({ phaseStep: '1.2', phase: 1, status: 'COMPLETED', title: 'Build data validation module' }),
+        expect.objectContaining({ phaseStep: '2.1', phase: 2, status: 'COMPLETED', title: 'Integrate ingestion + validation into pipeline runner' }),
       ]);
     });
   });
@@ -344,13 +344,13 @@ describe('Agent Workflow Simulation', () => {
         dependencies: [task1.id]
       });
       expect(task2.status).toBe('READY');
-      expect(task2.phaseTaskId).toBe('2.1');
+      expect(task2.phaseStep).toBe('2.1');
 
       // Final state
       const allTasks = byPhaseTaskId(await h.getTasks(dId));
       expect(allTasks).toEqual([
-        expect.objectContaining({ phaseTaskId: '1.1', status: 'COMPLETED', isCancelled: true }),
-        expect.objectContaining({ phaseTaskId: '2.1', status: 'READY',     isCancelled: false }),
+        expect.objectContaining({ phaseStep: '1.1', status: 'COMPLETED', isCancelled: true }),
+        expect.objectContaining({ phaseStep: '2.1', status: 'READY',     isCancelled: false }),
       ]);
     });
   });
@@ -370,7 +370,7 @@ describe('Agent Workflow Simulation', () => {
         prompt: 'Define all tables and FK constraints'
       });
       expect(t1.status).toBe('READY');
-      expect(t1.phaseTaskId).toBe('1.1');
+      expect(t1.phaseStep).toBe('1.1');
 
       // schema-agent works it
       await h.setStatus(dId, t1.id, 'IN_PROGRESS');
@@ -389,7 +389,7 @@ describe('Agent Workflow Simulation', () => {
         prompt: 'Build CRUD endpoints for deliverables'
       });
       expect(t2.status).toBe('READY');       // t1 is COMPLETED so dep is satisfied
-      expect(t2.phaseTaskId).toBe('2.1');
+      expect(t2.phaseStep).toBe('2.1');
 
       await h.setStatus(dId, t2.id, 'IN_PROGRESS');
       await h.appendNote(dId, t2.id, 'All 8 endpoints implemented', 'api-agent');
@@ -413,9 +413,9 @@ describe('Agent Workflow Simulation', () => {
         prompt: 'React components for deliverable list and graph filter'
       });
       expect(t3.status).toBe('READY');
-      expect(t3.phaseTaskId).toBe('3.1');
+      expect(t3.phaseStep).toBe('3.1');
       expect(t4.status).toBe('READY');
-      expect(t4.phaseTaskId).toBe('3.2');
+      expect(t4.phaseStep).toBe('3.2');
 
       // test-agent and ui-agent work in parallel (simulated serially)
       await h.setStatus(dId, t3.id, 'IN_PROGRESS');
@@ -438,7 +438,7 @@ describe('Agent Workflow Simulation', () => {
         prompt: 'End-to-end tests across API and UI'
       });
       expect(t5.status).toBe('READY');       // both t3 and t4 COMPLETED
-      expect(t5.phaseTaskId).toBe('4.1');
+      expect(t5.phaseStep).toBe('4.1');
 
       await h.setStatus(dId, t5.id, 'IN_PROGRESS');
       await h.appendNote(dId, t5.id, 'All integration tests passing — 12/12', 'qa-agent');
@@ -471,11 +471,11 @@ describe('Agent Workflow Simulation', () => {
       const allTasks = byPhaseTaskId(await h.getTasks(dId));
       expect(allTasks).toHaveLength(5);
       expect(allTasks).toEqual([
-        expect.objectContaining({ phaseTaskId: '1.1', phase: 1, status: 'COMPLETED', title: 'Design database schema' }),
-        expect.objectContaining({ phaseTaskId: '2.1', phase: 2, status: 'COMPLETED', title: 'Implement API endpoints' }),
-        expect.objectContaining({ phaseTaskId: '3.1', phase: 3, status: 'COMPLETED', title: 'Write unit tests' }),
-        expect.objectContaining({ phaseTaskId: '3.2', phase: 3, status: 'COMPLETED', title: 'Build UI components' }),
-        expect.objectContaining({ phaseTaskId: '4.1', phase: 4, status: 'COMPLETED', title: 'Integration testing' }),
+        expect.objectContaining({ phaseStep: '1.1', phase: 1, status: 'COMPLETED', title: 'Design database schema' }),
+        expect.objectContaining({ phaseStep: '2.1', phase: 2, status: 'COMPLETED', title: 'Implement API endpoints' }),
+        expect.objectContaining({ phaseStep: '3.1', phase: 3, status: 'COMPLETED', title: 'Write unit tests' }),
+        expect.objectContaining({ phaseStep: '3.2', phase: 3, status: 'COMPLETED', title: 'Build UI components' }),
+        expect.objectContaining({ phaseStep: '4.1', phase: 4, status: 'COMPLETED', title: 'Integration testing' }),
       ]);
     });
   });
