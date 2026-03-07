@@ -1,0 +1,952 @@
+#!/usr/bin/env sh
+set -eu
+
+ZAZZ_API_BASE_URL="${ZAZZ_API_BASE_URL:-http://localhost:3030}"
+ZAZZ_API_TOKEN="${ZAZZ_API_TOKEN:-550e8400-e29b-41d4-a716-446655440000}"
+ZAZZ_PROJECT_CODE="${ZAZZ_PROJECT_CODE:-ZAZZ}"
+ZAZZCTL_PRETTY="${ZAZZCTL_PRETTY:-1}"
+
+LAST_HTTP=""
+LAST_BODY=""
+
+usage() {
+  cat <<'USAGE'
+Usage: zazzctl <resource> <action> [options]
+
+Resources:
+  deliverable  list|get|create|status|approve|tasks
+  task         list|create|get|update|status|block|unblock|note|delete|readiness
+  relation     list|add|delete
+  graph        get
+  lock         list|acquire|heartbeat|release
+  exec         begin|tick|complete
+
+Global env defaults:
+  ZAZZ_API_BASE_URL (default: http://localhost:3030)
+  ZAZZ_API_TOKEN    (default: demo token)
+  ZAZZ_PROJECT_CODE (default: ZAZZ)
+  ZAZZCTL_PRETTY    (1 pretty JSON, 0 raw)
+
+Examples:
+  zazzctl task create --deliverable-id 8 --title "Implement API" --phase 2 --phase-step 2.1 --prompt "..."
+  zazzctl task status --deliverable-id 8 --task-id 25 --status IN_PROGRESS --agent-name worker-1
+  zazzctl lock acquire --deliverable-id 8 --task-id 25 --agent-name worker-1 --file api/src/routes/fileLocks.js
+  zazzctl exec begin --deliverable-id 8 --task-id 25 --agent-name worker-1 --file api/src/routes/fileLocks.js
+
+Exit codes:
+  0 success
+  2 usage error
+  10 lock conflict (409 FILE_LOCK_CONFLICT)
+  20 API/client error (4xx)
+  30 server/network error
+USAGE
+}
+
+err() {
+  echo "zazzctl: $*" >&2
+}
+
+die_usage() {
+  err "$*"
+  usage >&2
+  exit 2
+}
+
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    die_usage "Missing required dependency: $1"
+  fi
+}
+
+require_value() {
+  name="$1"
+  value="$2"
+  if [ -z "$value" ]; then
+    die_usage "Missing required option: $name"
+  fi
+}
+
+is_success_http() {
+  code="$1"
+  [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
+}
+
+print_json() {
+  body="$1"
+  if [ "$ZAZZCTL_PRETTY" = "1" ] && printf '%s' "$body" | jq -e . >/dev/null 2>&1; then
+    printf '%s\n' "$body" | jq .
+  else
+    printf '%s\n' "$body"
+  fi
+}
+
+http_to_exit() {
+  code="$1"
+  if is_success_http "$code"; then
+    echo 0
+    return
+  fi
+
+  if [ "$code" -eq 409 ] && printf '%s' "$LAST_BODY" | jq -e '.error == "FILE_LOCK_CONFLICT"' >/dev/null 2>&1; then
+    echo 10
+    return
+  fi
+
+  if [ "$code" -ge 400 ] && [ "$code" -lt 500 ]; then
+    echo 20
+    return
+  fi
+
+  echo 30
+}
+
+exit_with_last_response() {
+  print_json "$LAST_BODY"
+  exit "$(http_to_exit "$LAST_HTTP")"
+}
+
+api_request() {
+  method="$1"
+  path="$2"
+  body="${3:-}"
+  url="${ZAZZ_API_BASE_URL%/}${path}"
+
+  if [ -n "$body" ]; then
+    if ! response=$(curl -sS -X "$method" \
+      -H "TB_TOKEN: ${ZAZZ_API_TOKEN}" \
+      -H "Authorization: Bearer ${ZAZZ_API_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "$body" \
+      "$url" \
+      -w "\n__HTTP_STATUS__:%{http_code}"); then
+      LAST_HTTP="000"
+      LAST_BODY='{"error":"NETWORK_ERROR","message":"Failed to reach API"}'
+      return 1
+    fi
+  else
+    if ! response=$(curl -sS -X "$method" \
+      -H "TB_TOKEN: ${ZAZZ_API_TOKEN}" \
+      -H "Authorization: Bearer ${ZAZZ_API_TOKEN}" \
+      "$url" \
+      -w "\n__HTTP_STATUS__:%{http_code}"); then
+      LAST_HTTP="000"
+      LAST_BODY='{"error":"NETWORK_ERROR","message":"Failed to reach API"}'
+      return 1
+    fi
+  fi
+
+  LAST_HTTP=$(printf '%s\n' "$response" | awk -F: '/__HTTP_STATUS__/{print $2}' | tail -n1)
+  LAST_BODY=$(printf '%s\n' "$response" | sed '/__HTTP_STATUS__:/d')
+  [ -n "$LAST_HTTP" ] || LAST_HTTP="000"
+  return 0
+}
+
+call_api() {
+  if ! api_request "$@"; then
+    print_json "$LAST_BODY"
+    exit 30
+  fi
+}
+
+csv_files_to_json() {
+  input="$1"
+  printf '%s' "$input" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$";"")) | map(select(length>0))'
+}
+
+csv_ints_to_json() {
+  input="$1"
+  printf '%s' "$input" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$";"")) | map(select(length>0) | tonumber)'
+}
+
+append_csv() {
+  current="$1"
+  value="$2"
+  if [ -z "$current" ]; then
+    printf '%s' "$value"
+  else
+    printf '%s,%s' "$current" "$value"
+  fi
+}
+
+require_cmd curl
+require_cmd jq
+
+if [ "$#" -lt 2 ]; then
+  usage
+  exit 2
+fi
+
+resource="$1"
+action="$2"
+shift 2
+
+case "$resource:$action" in
+  deliverable:list)
+    project="$ZAZZ_PROJECT_CODE"
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    call_api GET "/projects/${project}/deliverables"
+    exit_with_last_response
+    ;;
+
+  deliverable:get)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    call_api GET "/projects/${project}/deliverables/${deliverable_id}"
+    exit_with_last_response
+    ;;
+
+  deliverable:create)
+    project="$ZAZZ_PROJECT_CODE"
+    name=""
+    type=""
+    description=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --name) name="$2"; shift 2 ;;
+        --type) type="$2"; shift 2 ;;
+        --description) description="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--name" "$name"
+    require_value "--type" "$type"
+    body=$(jq -n \
+      --arg name "$name" \
+      --arg type "$type" \
+      --arg description "$description" \
+      '{name:$name,type:$type} + (if $description != "" then {description:$description} else {} end)')
+    call_api POST "/projects/${project}/deliverables" "$body"
+    exit_with_last_response
+    ;;
+
+  deliverable:status)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    status=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --status) status="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--status" "$status"
+    body=$(jq -n --arg status "$status" '{status:$status}')
+    call_api PATCH "/projects/${project}/deliverables/${deliverable_id}/status" "$body"
+    exit_with_last_response
+    ;;
+
+  deliverable:approve)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    call_api PATCH "/projects/${project}/deliverables/${deliverable_id}/approve" '{}'
+    exit_with_last_response
+    ;;
+
+  deliverable:tasks|task:list)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    call_api GET "/projects/${project}/deliverables/${deliverable_id}/tasks"
+    exit_with_last_response
+    ;;
+
+  task:create)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    title=""
+    prompt=""
+    description=""
+    status=""
+    priority=""
+    agent_name=""
+    phase=""
+    phase_step=""
+    dependencies_csv=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --title) title="$2"; shift 2 ;;
+        --prompt) prompt="$2"; shift 2 ;;
+        --description) description="$2"; shift 2 ;;
+        --status) status="$2"; shift 2 ;;
+        --priority) priority="$2"; shift 2 ;;
+        --agent-name) agent_name="$2"; shift 2 ;;
+        --phase) phase="$2"; shift 2 ;;
+        --phase-step) phase_step="$2"; shift 2 ;;
+        --dependencies) dependencies_csv="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--title" "$title"
+
+    dependencies_json='[]'
+    if [ -n "$dependencies_csv" ]; then
+      dependencies_json=$(csv_ints_to_json "$dependencies_csv")
+    fi
+
+    body=$(jq -n \
+      --arg title "$title" \
+      --arg prompt "$prompt" \
+      --arg description "$description" \
+      --arg status "$status" \
+      --arg priority "$priority" \
+      --arg agentName "$agent_name" \
+      --arg phase "$phase" \
+      --arg phaseStep "$phase_step" \
+      --argjson dependencies "$dependencies_json" \
+      '{title:$title}
+      + (if $prompt != "" then {prompt:$prompt} else {} end)
+      + (if $description != "" then {description:$description} else {} end)
+      + (if $status != "" then {status:$status} else {} end)
+      + (if $priority != "" then {priority:$priority} else {} end)
+      + (if $agentName != "" then {agentName:$agentName} else {} end)
+      + (if $phase != "" then {phase:($phase|tonumber)} else {} end)
+      + (if $phaseStep != "" then {phaseStep:$phaseStep} else {} end)
+      + (if (dependencies|length) > 0 then {dependencies:dependencies} else {} end)')
+
+    call_api POST "/projects/${project}/deliverables/${deliverable_id}/tasks" "$body"
+    exit_with_last_response
+    ;;
+
+  task:get)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    call_api GET "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}"
+    exit_with_last_response
+    ;;
+
+  task:update)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    json_payload=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --json) json_payload="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    require_value "--json" "$json_payload"
+    if ! printf '%s' "$json_payload" | jq -e . >/dev/null 2>&1; then
+      die_usage "--json must be valid JSON"
+    fi
+    call_api PUT "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}" "$json_payload"
+    exit_with_last_response
+    ;;
+
+  task:status)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    status=""
+    agent_name=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --status) status="$2"; shift 2 ;;
+        --agent-name) agent_name="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    require_value "--status" "$status"
+    body=$(jq -n --arg status "$status" --arg agentName "$agent_name" '{status:$status} + (if $agentName != "" then {agentName:$agentName} else {} end)')
+    call_api PATCH "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}/status" "$body"
+    exit_with_last_response
+    ;;
+
+  task:block)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    reason=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --reason) reason="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    require_value "--reason" "$reason"
+    body=$(jq -n --arg reason "$reason" '{isBlocked:true,blockedReason:$reason}')
+    call_api PUT "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}" "$body"
+    exit_with_last_response
+    ;;
+
+  task:unblock)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    body='{"isBlocked":false,"blockedReason":null}'
+    call_api PUT "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}" "$body"
+    exit_with_last_response
+    ;;
+
+  task:note)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    note=""
+    agent_name=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --note) note="$2"; shift 2 ;;
+        --agent-name) agent_name="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    require_value "--note" "$note"
+    body=$(jq -n --arg note "$note" --arg agentName "$agent_name" '{note:$note} + (if $agentName != "" then {agentName:$agentName} else {} end)')
+    call_api PATCH "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}/notes" "$body"
+    exit_with_last_response
+    ;;
+
+  task:delete)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    call_api DELETE "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}"
+    exit_with_last_response
+    ;;
+
+  task:readiness)
+    project="$ZAZZ_PROJECT_CODE"
+    task_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--task-id" "$task_id"
+    call_api GET "/projects/${project}/tasks/${task_id}/readiness"
+    exit_with_last_response
+    ;;
+
+  relation:list)
+    project="$ZAZZ_PROJECT_CODE"
+    task_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--task-id" "$task_id"
+    call_api GET "/projects/${project}/tasks/${task_id}/relations"
+    exit_with_last_response
+    ;;
+
+  relation:add)
+    project="$ZAZZ_PROJECT_CODE"
+    task_id=""
+    related_task_id=""
+    relation_type=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --related-task-id) related_task_id="$2"; shift 2 ;;
+        --type) relation_type="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--task-id" "$task_id"
+    require_value "--related-task-id" "$related_task_id"
+    require_value "--type" "$relation_type"
+    body=$(jq -n --argjson relatedTaskId "$related_task_id" --arg relationType "$relation_type" '{relatedTaskId:$relatedTaskId, relationType:$relationType}')
+    call_api POST "/projects/${project}/tasks/${task_id}/relations" "$body"
+    exit_with_last_response
+    ;;
+
+  relation:delete)
+    project="$ZAZZ_PROJECT_CODE"
+    task_id=""
+    related_task_id=""
+    relation_type=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --related-task-id) related_task_id="$2"; shift 2 ;;
+        --type) relation_type="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--task-id" "$task_id"
+    require_value "--related-task-id" "$related_task_id"
+    require_value "--type" "$relation_type"
+    call_api DELETE "/projects/${project}/tasks/${task_id}/relations/${related_task_id}/${relation_type}"
+    exit_with_last_response
+    ;;
+
+  graph:get)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    call_api GET "/projects/${project}/deliverables/${deliverable_id}/graph"
+    exit_with_last_response
+    ;;
+
+  lock:list)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+    require_value "--deliverable-id" "$deliverable_id"
+    call_api GET "/projects/${project}/deliverables/${deliverable_id}/locks"
+    exit_with_last_response
+    ;;
+
+  lock:acquire|lock:heartbeat|lock:release)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    agent_name=""
+    phase_step=""
+    ttl_seconds=""
+    files_csv=""
+
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --agent-name) agent_name="$2"; shift 2 ;;
+        --phase-step) phase_step="$2"; shift 2 ;;
+        --ttl-seconds) ttl_seconds="$2"; shift 2 ;;
+        --file)
+          files_csv=$(append_csv "$files_csv" "$2")
+          shift 2
+          ;;
+        --files)
+          files_csv=$(append_csv "$files_csv" "$2")
+          shift 2
+          ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    require_value "--agent-name" "$agent_name"
+
+    files_json='[]'
+    if [ -n "$files_csv" ]; then
+      files_json=$(csv_files_to_json "$files_csv")
+    fi
+
+    case "$resource:$action" in
+      lock:acquire)
+        if [ "$files_json" = "[]" ]; then
+          die_usage "lock acquire requires at least one --file or --files"
+        fi
+        body=$(jq -n \
+          --argjson taskId "$task_id" \
+          --arg agentName "$agent_name" \
+          --arg phaseStep "$phase_step" \
+          --arg ttl "$ttl_seconds" \
+          --argjson filePaths "$files_json" \
+          '{taskId:$taskId,agentName:$agentName,filePaths:$filePaths}
+          + (if $phaseStep != "" then {phaseStep:$phaseStep} else {} end)
+          + (if $ttl != "" then {ttlSeconds:($ttl|tonumber)} else {} end)')
+        call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/acquire" "$body"
+        exit_with_last_response
+        ;;
+      lock:heartbeat)
+        body=$(jq -n \
+          --argjson taskId "$task_id" \
+          --arg agentName "$agent_name" \
+          --arg ttl "$ttl_seconds" \
+          --argjson filePaths "$files_json" \
+          '{taskId:$taskId,agentName:$agentName}
+          + (if (filePaths|length) > 0 then {filePaths:filePaths} else {} end)
+          + (if $ttl != "" then {ttlSeconds:($ttl|tonumber)} else {} end)')
+        call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/heartbeat" "$body"
+        exit_with_last_response
+        ;;
+      lock:release)
+        body=$(jq -n \
+          --argjson taskId "$task_id" \
+          --arg agentName "$agent_name" \
+          --argjson filePaths "$files_json" \
+          '{taskId:$taskId,agentName:$agentName}
+          + (if (filePaths|length) > 0 then {filePaths:filePaths} else {} end)')
+        call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/release" "$body"
+        exit_with_last_response
+        ;;
+    esac
+    ;;
+
+  exec:begin)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    agent_name=""
+    phase_step=""
+    ttl_seconds=""
+    target_status="IN_PROGRESS"
+    files_csv=""
+
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --agent-name) agent_name="$2"; shift 2 ;;
+        --phase-step) phase_step="$2"; shift 2 ;;
+        --ttl-seconds) ttl_seconds="$2"; shift 2 ;;
+        --status) target_status="$2"; shift 2 ;;
+        --file)
+          files_csv=$(append_csv "$files_csv" "$2")
+          shift 2
+          ;;
+        --files)
+          files_csv=$(append_csv "$files_csv" "$2")
+          shift 2
+          ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    require_value "--agent-name" "$agent_name"
+
+    files_json=$(csv_files_to_json "$files_csv")
+    if [ "$files_json" = "[]" ]; then
+      die_usage "exec begin requires at least one --file or --files"
+    fi
+
+    acquire_body=$(jq -n \
+      --argjson taskId "$task_id" \
+      --arg agentName "$agent_name" \
+      --arg phaseStep "$phase_step" \
+      --arg ttl "$ttl_seconds" \
+      --argjson filePaths "$files_json" \
+      '{taskId:$taskId,agentName:$agentName,filePaths:$filePaths}
+      + (if $phaseStep != "" then {phaseStep:$phaseStep} else {} end)
+      + (if $ttl != "" then {ttlSeconds:($ttl|tonumber)} else {} end)')
+
+    call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/acquire" "$acquire_body"
+    acquire_http="$LAST_HTTP"
+    acquire_resp="$LAST_BODY"
+
+    if [ "$acquire_http" -eq 409 ] && printf '%s' "$acquire_resp" | jq -e '.error == "FILE_LOCK_CONFLICT"' >/dev/null 2>&1; then
+      block_body='{"isBlocked":true,"blockedReason":"FILE_LOCK"}'
+      call_api PUT "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}" "$block_body"
+      block_http="$LAST_HTTP"
+      block_resp="$LAST_BODY"
+
+      LAST_BODY=$(jq -n \
+        --argjson acquire "$acquire_resp" \
+        --arg acquireHttp "$acquire_http" \
+        --argjson block "$block_resp" \
+        --arg blockHttp "$block_http" \
+        '{acquire:$acquire,acquireHttp:($acquireHttp|tonumber),blockUpdate:$block,blockHttp:($blockHttp|tonumber)}')
+      LAST_HTTP=409
+      print_json "$LAST_BODY"
+      exit 10
+    fi
+
+    if ! is_success_http "$acquire_http"; then
+      LAST_HTTP="$acquire_http"
+      LAST_BODY="$acquire_resp"
+      exit_with_last_response
+    fi
+
+    unblock_body='{"isBlocked":false,"blockedReason":null}'
+    call_api PUT "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}" "$unblock_body"
+    unblock_http="$LAST_HTTP"
+    unblock_resp="$LAST_BODY"
+
+    status_body=$(jq -n --arg status "$target_status" --arg agentName "$agent_name" '{status:$status,agentName:$agentName}')
+    call_api PATCH "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}/status" "$status_body"
+    status_http="$LAST_HTTP"
+    status_resp="$LAST_BODY"
+
+    LAST_BODY=$(jq -n \
+      --argjson acquire "$acquire_resp" \
+      --arg acquireHttp "$acquire_http" \
+      --argjson unblock "$unblock_resp" \
+      --arg unblockHttp "$unblock_http" \
+      --argjson status "$status_resp" \
+      --arg statusHttp "$status_http" \
+      '{acquire:$acquire,acquireHttp:($acquireHttp|tonumber),unblock:$unblock,unblockHttp:($unblockHttp|tonumber),status:$status,statusHttp:($statusHttp|tonumber)}')
+
+    if is_success_http "$unblock_http" && is_success_http "$status_http"; then
+      LAST_HTTP=200
+    elif [ "$unblock_http" -ge 400 ] && [ "$unblock_http" -lt 500 ] || [ "$status_http" -ge 400 ] && [ "$status_http" -lt 500 ]; then
+      LAST_HTTP=400
+    else
+      LAST_HTTP=500
+    fi
+
+    exit_with_last_response
+    ;;
+
+  exec:tick)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    agent_name=""
+    ttl_seconds=""
+    note=""
+    files_csv=""
+
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --agent-name) agent_name="$2"; shift 2 ;;
+        --ttl-seconds) ttl_seconds="$2"; shift 2 ;;
+        --note) note="$2"; shift 2 ;;
+        --file)
+          files_csv=$(append_csv "$files_csv" "$2")
+          shift 2
+          ;;
+        --files)
+          files_csv=$(append_csv "$files_csv" "$2")
+          shift 2
+          ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    require_value "--agent-name" "$agent_name"
+
+    files_json='[]'
+    if [ -n "$files_csv" ]; then
+      files_json=$(csv_files_to_json "$files_csv")
+    fi
+
+    heartbeat_body=$(jq -n \
+      --argjson taskId "$task_id" \
+      --arg agentName "$agent_name" \
+      --arg ttl "$ttl_seconds" \
+      --argjson filePaths "$files_json" \
+      '{taskId:$taskId,agentName:$agentName}
+      + (if (filePaths|length) > 0 then {filePaths:filePaths} else {} end)
+      + (if $ttl != "" then {ttlSeconds:($ttl|tonumber)} else {} end)')
+
+    call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/heartbeat" "$heartbeat_body"
+    heartbeat_http="$LAST_HTTP"
+    heartbeat_resp="$LAST_BODY"
+
+    note_http=0
+    note_resp='{}'
+    if [ -n "$note" ]; then
+      note_body=$(jq -n --arg note "$note" --arg agentName "$agent_name" '{note:$note,agentName:$agentName}')
+      call_api PATCH "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}/notes" "$note_body"
+      note_http="$LAST_HTTP"
+      note_resp="$LAST_BODY"
+    fi
+
+    LAST_BODY=$(jq -n \
+      --argjson heartbeat "$heartbeat_resp" \
+      --arg heartbeatHttp "$heartbeat_http" \
+      --argjson note "$note_resp" \
+      --arg noteHttp "$note_http" \
+      '{heartbeat:$heartbeat,heartbeatHttp:($heartbeatHttp|tonumber),note:$note,noteHttp:($noteHttp|tonumber)}')
+
+    if is_success_http "$heartbeat_http" && { [ "$note_http" -eq 0 ] || is_success_http "$note_http"; }; then
+      LAST_HTTP=200
+    elif [ "$heartbeat_http" -ge 400 ] && [ "$heartbeat_http" -lt 500 ] || { [ "$note_http" -ne 0 ] && [ "$note_http" -ge 400 ] && [ "$note_http" -lt 500 ]; }; then
+      LAST_HTTP=400
+    else
+      LAST_HTTP=500
+    fi
+
+    exit_with_last_response
+    ;;
+
+  exec:complete)
+    project="$ZAZZ_PROJECT_CODE"
+    deliverable_id=""
+    task_id=""
+    agent_name=""
+    status="COMPLETED"
+    note=""
+    files_csv=""
+
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --project) project="$2"; shift 2 ;;
+        --deliverable-id) deliverable_id="$2"; shift 2 ;;
+        --task-id) task_id="$2"; shift 2 ;;
+        --agent-name) agent_name="$2"; shift 2 ;;
+        --status) status="$2"; shift 2 ;;
+        --note) note="$2"; shift 2 ;;
+        --file)
+          files_csv=$(append_csv "$files_csv" "$2")
+          shift 2
+          ;;
+        --files)
+          files_csv=$(append_csv "$files_csv" "$2")
+          shift 2
+          ;;
+        *) die_usage "Unknown option: $1" ;;
+      esac
+    done
+
+    require_value "--deliverable-id" "$deliverable_id"
+    require_value "--task-id" "$task_id"
+    require_value "--agent-name" "$agent_name"
+
+    note_http=0
+    note_resp='{}'
+    if [ -n "$note" ]; then
+      note_body=$(jq -n --arg note "$note" --arg agentName "$agent_name" '{note:$note,agentName:$agentName}')
+      call_api PATCH "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}/notes" "$note_body"
+      note_http="$LAST_HTTP"
+      note_resp="$LAST_BODY"
+    fi
+
+    status_body=$(jq -n --arg status "$status" --arg agentName "$agent_name" '{status:$status,agentName:$agentName}')
+    call_api PATCH "/projects/${project}/deliverables/${deliverable_id}/tasks/${task_id}/status" "$status_body"
+    status_http="$LAST_HTTP"
+    status_resp="$LAST_BODY"
+
+    files_json='[]'
+    if [ -n "$files_csv" ]; then
+      files_json=$(csv_files_to_json "$files_csv")
+    fi
+    release_body=$(jq -n \
+      --argjson taskId "$task_id" \
+      --arg agentName "$agent_name" \
+      --argjson filePaths "$files_json" \
+      '{taskId:$taskId,agentName:$agentName}
+      + (if (filePaths|length) > 0 then {filePaths:filePaths} else {} end)')
+
+    call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/release" "$release_body"
+    release_http="$LAST_HTTP"
+    release_resp="$LAST_BODY"
+
+    LAST_BODY=$(jq -n \
+      --argjson note "$note_resp" \
+      --arg noteHttp "$note_http" \
+      --argjson status "$status_resp" \
+      --arg statusHttp "$status_http" \
+      --argjson release "$release_resp" \
+      --arg releaseHttp "$release_http" \
+      '{note:$note,noteHttp:($noteHttp|tonumber),status:$status,statusHttp:($statusHttp|tonumber),release:$release,releaseHttp:($releaseHttp|tonumber)}')
+
+    if { [ "$note_http" -eq 0 ] || is_success_http "$note_http"; } && is_success_http "$status_http" && is_success_http "$release_http"; then
+      LAST_HTTP=200
+    elif { [ "$note_http" -ne 0 ] && [ "$note_http" -ge 400 ] && [ "$note_http" -lt 500 ]; } || [ "$status_http" -ge 400 ] && [ "$status_http" -lt 500 ] || [ "$release_http" -ge 400 ] && [ "$release_http" -lt 500 ]; then
+      LAST_HTTP=400
+    else
+      LAST_HTTP=500
+    fi
+
+    exit_with_last_response
+    ;;
+
+  help:*|*:help)
+    usage
+    exit 0
+    ;;
+
+  *)
+    die_usage "Unknown command: ${resource} ${action}"
+    ;;
+esac

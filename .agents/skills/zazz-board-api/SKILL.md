@@ -33,6 +33,7 @@ Rules:
 - Parse `paths` + operation metadata (`tags`, `summary`, `description`, params, requestBody, responses).
 - Do not trust stale hardcoded route lists when OpenAPI differs.
 - Do not invent routes; derive from live spec.
+- If using a local command adapter (e.g. worker `zazzctl`), keep behavior aligned with OpenAPI-derived routes and schemas.
 
 ---
 

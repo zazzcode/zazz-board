@@ -23,6 +23,21 @@ Live OpenAPI is the route contract source of truth.
 
 ---
 
+## Required Worker CLI Adapter
+
+Canonical command adapter path:
+- `.agents/skills/worker-agent/scripts/zazzctl`
+- setup guide: `.agents/skills/worker-agent/scripts/README.md`
+
+Convenience wrapper:
+- `scripts/zazzctl` (delegates to the canonical skill script)
+
+Rule:
+- Use `zazzctl` for worker board API writes/reads (tasks, relations, status, blockers, notes, graph checks, locks).
+- Do not handcraft ad-hoc curl calls for normal worker execution when `zazzctl` is available.
+
+---
+
 ## Required Inputs
 
 Before execution, you MUST have:
@@ -47,9 +62,9 @@ You MUST execute in this order:
 4. Compute the dependency-ready set.
 5. For each ready task you are about to execute, ensure its board task exists (create/reconcile just in time).
 6. Ensure all required `DEPENDS_ON` edges for that task exist before starting.
-7. Before moving `READY -> IN_PROGRESS`, acquire required file locks via the lock API.
+7. Before moving `READY -> IN_PROGRESS`, run `zazzctl exec begin ...` (acquire locks + block/unblock synchronization + claim status).
 8. If lock acquire conflicts, set `isBlocked=true` with `blockedReason='FILE_LOCK'`, poll every 3 seconds, and retry acquire until success.
-9. When locks are acquired, clear block flags and execute with TDD.
+9. While task is active, run periodic `zazzctl exec tick ...` heartbeats and keep notes current.
 10. Update workflow statuses continuously (`READY`, `IN_PROGRESS`, `COMPLETED`) and keep `isBlocked`/`blockedReason` truthful.
 11. If course correction/rework appears after completion, add new follow-up tasks + relations to the graph; do not reopen completed tasks.
 12. Recompute which tasks are now dependency-ready and repeat.
@@ -114,7 +129,7 @@ Routes:
 
 Lock workflow:
 1. Determine the file list before work starts.
-2. Attempt `acquire` for the full file list (atomic batch).
+2. Attempt `acquire` for the full file list (atomic batch), preferably via `zazzctl exec begin`.
 3. If `409 FILE_LOCK_CONFLICT`:
    - keep workflow status unchanged
    - set `isBlocked=true`, `blockedReason='FILE_LOCK'`
@@ -122,8 +137,8 @@ Lock workflow:
 4. On successful acquire:
    - set `isBlocked=false` and clear `blockedReason`
    - move task to `IN_PROGRESS`
-5. While working, send periodic `heartbeat`.
-6. On completion or handoff, `release` locks.
+5. While working, send periodic `heartbeat` via `zazzctl exec tick`.
+6. On completion or handoff, run `zazzctl exec complete` (status + release).
 7. If worker process crashes/restarts, re-resolve task state from API and reacquire before resuming edits.
 
 ---
