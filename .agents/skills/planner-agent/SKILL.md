@@ -103,6 +103,9 @@ Optional sections (for updating an existing active plan, not mandatory on first 
 6. **No dependency cycles**.
 7. **Reality over assumptions**: mark non-existent files/tests as new.
 8. **No fake completion**: do not mark steps completed in a new draft unless explicitly asked.
+9. **No hidden parallelism inside a step**: if work can be assigned to different owners on disjoint files and completed independently, it MUST be split into separate PLAN steps.
+10. **Parallel work needs explicit merge planning**: when parallel streams converge on a shared contract, shared file, or integrated UX/API outcome, add a downstream merge/integration step with explicit `DEPENDS_ON` edges.
+11. **Use PLAN step IDs, not execution-time suffixes**: parallel worker-visible work must be represented as separate numbered PLAN steps, not improvised labels like `4.2a`/`4.2b` during execution.
 
 ## Step Format (Use for every step)
 Every step (`1.1`, `1.2`, ...) MUST include:
@@ -117,6 +120,10 @@ Every step (`1.1`, `1.2`, ...) MUST include:
 - Acceptance criteria mapped
 - Completion signal
 
+Step-level planning rule:
+- `Parallelizable with` may only reference other explicit PLAN step IDs.
+- Do not describe multiple independently executable work items inside one step and call that "parallelizable"; split them into separate steps first.
+
 ## Dependency Edge Sync Requirement (Zazz Task Graph)
 When the plan is instantiated as Zazz tasks:
 - Each non-`none` `DEPENDS_ON` must map to explicit `TASK_RELATIONS` edges (`relation_type = DEPENDS_ON`).
@@ -127,6 +134,9 @@ When the plan is instantiated as Zazz tasks:
 - Maximize concurrency across disjoint files/subsystems.
 - Call out merge points where parallel streams converge.
 - Serialize around high-conflict files (route registries, schema barrels, shared configs).
+- If one provisional step contains multiple disjoint ownership sets, rewrite it into multiple steps before finalizing the PLAN.
+- Prefer one primary owned file set per step; if a step spans multiple independent owned file sets, that is usually a decomposition failure.
+- When UI work naturally splits into trigger/wiring/modal/i18n/test slices with disjoint ownership, plan those as separate steps if they can be executed independently.
 - Prefer stream decomposition:
   - API route stream
   - data/schema stream
@@ -150,6 +160,8 @@ A PLAN is complete only if all conditions below are true:
 - Includes development + testing + validation work
 - Includes AC traceability and test traceability
 - Explicitly documents dependencies and parallelizable groups
+- Splits independently parallelizable owned work into separate numbered steps instead of burying it inside a single broad step
+- Includes explicit merge/integration steps wherever parallel streams converge
 - Includes concrete commands for required verification runs
 - Includes risks/mitigations and owner approval checkpoints for non-trivial work
 - Avoids speculative routes/files and aligns to repository reality
