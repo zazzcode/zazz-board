@@ -161,13 +161,13 @@ export const projectSchemas = {
   createDeliverableTask: {
     tags: ['projects'],
     summary: 'Create task in deliverable',
-    description: 'Creates a task within a deliverable. delivId is the numeric id from the create deliverable response (not deliverableCode). The deliverable must be approved before creating tasks. Include prompt with goal, instructions, and acceptance criteria. Use phase and phaseStep to align with PLAN structure (e.g. phase 1, phaseStep \"1.2\").',
+    description: 'Creates a task within a deliverable. delivId is the numeric id from the create deliverable response (not the deliverable code string). The deliverable must be approved before creating tasks. Include prompt with goal, instructions, and acceptance criteria. Use phase and phaseStep to align with PLAN structure (e.g. phase 1, phaseStep \"1.2\").',
     params: {
       type: 'object',
       required: ['code', 'delivId'],
       properties: {
         code: { type: 'string', pattern: '^[A-Z0-9_]+$', description: 'Project code (e.g. ZAZZ).' },
-        delivId: { type: 'string', pattern: '^[0-9]+$', description: 'Numeric deliverable id from create deliverable response. Use the id field, not deliverableCode.' }
+        delivId: { type: 'string', pattern: '^[0-9]+$', description: 'Numeric deliverable id from create deliverable response. Use the id field, not the deliverable code string.' }
       }
     },
     body: {

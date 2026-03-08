@@ -99,7 +99,7 @@ export async function createTestDeliverable(projectId, overrides = {}) {
   const [deliverable] = await db.insert(DELIVERABLES).values({
     project_id: projectId,
     project_code: overrides.projectCode || project.code,
-    deliverable_code: overrides.deliverableCode || `${project.code}-T${sequence}`,
+    code: overrides.code || `${project.code}-T${sequence}`,
     name: overrides.name || `Test Deliverable ${sequence}`,
     description: overrides.description || null,
     type: overrides.type || 'FEATURE',

@@ -26,11 +26,11 @@ export async function seedDeliverables() {
     const excludedDeliverableIds = new Set(['ZAZZ-2']);
 
     const zazzDeliverables = snapshot.deliverables
-      .filter((deliverable) => !excludedDeliverableIds.has(deliverable.deliverable_code))
+      .filter((deliverable) => !excludedDeliverableIds.has(deliverable.code))
       .map((deliverable, index) => ({
         project_id: zazzProjectId,
         project_code: deliverable.project_code,
-        deliverable_code: deliverable.deliverable_code,
+        code: deliverable.code,
         name: deliverable.name,
         description: deliverable.description,
         type: deliverable.type,

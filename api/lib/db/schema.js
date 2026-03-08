@@ -87,7 +87,7 @@ export const DELIVERABLES = pgTable('DELIVERABLES', {
   id: serial('id').primaryKey(),
   project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
   project_code: varchar('project_code', { length: 10 }).notNull(),
-  deliverable_code: varchar('deliverable_code', { length: 25 }).notNull().unique(),
+  code: varchar('code', { length: 25 }).notNull().unique(),
   name: varchar('name', { length: 30 }).notNull(),
   description: text('description'),
   type: deliverableTypeEnum('type').notNull(),

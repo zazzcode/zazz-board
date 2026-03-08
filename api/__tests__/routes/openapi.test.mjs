@@ -48,6 +48,10 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.name).toBeDefined();
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.specFilepath).toBeDefined();
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.planFilepath).toBeDefined();
+    const responseSchema = path.post.responses?.['201']?.content?.['application/json']?.schema;
+    expect(responseSchema?.properties?.projectCode).toBeDefined();
+    expect(responseSchema?.properties?.deliverableCode).toBeDefined();
+    expect(responseSchema?.properties?.code).toBeUndefined();
   });
 
   it('should document core agent operations: create task', async () => {

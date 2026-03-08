@@ -62,8 +62,8 @@ export const deliverableResponseSchema = {
   properties: {
     id: { type: 'number', description: 'Numeric primary key. Use this for API paths (e.g. create task, update deliverable).' },
     projectId: { type: 'number' },
-    projectCode: { type: 'string' },
-    deliverableCode: { type: 'string', description: 'Human-readable code (e.g. ZAZZ-4). Use for display; use id for API calls.' },
+    projectCode: { type: 'string', description: 'Project code from PROJECTS.code (e.g. ZAZZ).' },
+    deliverableCode: { type: 'string', description: 'Deliverable code from DELIVERABLES.code (e.g. ZAZZ-4). Use for display; use id for API calls.' },
     name: { type: 'string' },
     description: { type: 'string', nullable: true },
     type: { type: 'string', enum: ['FEATURE', 'BUG_FIX', 'REFACTOR', 'ENHANCEMENT', 'CHORE', 'DOCUMENTATION'] },

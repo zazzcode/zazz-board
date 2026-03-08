@@ -368,7 +368,7 @@ class DatabaseService {
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
       projectCode: DELIVERABLES.project_code,
-      deliverableCode: DELIVERABLES.deliverable_code,
+      deliverableCode: DELIVERABLES.code,
       name: DELIVERABLES.name,
       description: DELIVERABLES.description,
       type: DELIVERABLES.type,
@@ -398,7 +398,7 @@ class DatabaseService {
       DELIVERABLES.id,
       DELIVERABLES.project_id,
       DELIVERABLES.project_code,
-      DELIVERABLES.deliverable_code,
+      DELIVERABLES.code,
       DELIVERABLES.name,
       DELIVERABLES.description,
       DELIVERABLES.type,
@@ -428,7 +428,7 @@ class DatabaseService {
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
       projectCode: DELIVERABLES.project_code,
-      deliverableCode: DELIVERABLES.deliverable_code,
+      deliverableCode: DELIVERABLES.code,
       name: DELIVERABLES.name,
       description: DELIVERABLES.description,
       type: DELIVERABLES.type,
@@ -467,7 +467,7 @@ class DatabaseService {
       const [project] = await tx.select().from(PROJECTS).where(eq(PROJECTS.id, projectId)).limit(1);
       if (!project) throw new Error('Project not found');
 
-      const deliverableCode = `${project.code}-${project.next_deliverable_sequence}`;
+      const generatedCode = `${project.code}-${project.next_deliverable_sequence}`;
       await tx.update(PROJECTS)
         .set({ next_deliverable_sequence: project.next_deliverable_sequence + 1, updated_by: userId, updated_at: new Date() })
         .where(eq(PROJECTS.id, projectId));
@@ -479,7 +479,7 @@ class DatabaseService {
       const [row] = await tx.insert(DELIVERABLES).values({
         project_id: projectId,
         project_code: project.code,
-        deliverable_code: deliverableCode,
+        code: generatedCode,
         name: data.name,
         description: data.description,
         type: data.type,

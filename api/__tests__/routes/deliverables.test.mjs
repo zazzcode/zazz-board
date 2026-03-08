@@ -48,7 +48,9 @@ describe('Deliverables API', () => {
     expect(response.name).toBe('New Deliverable');
     expect(response.type).toBe('FEATURE');
     expect(response.status).toBe('PLANNING');
+    expect(response.projectCode).toBe('ZAZZ');
     expect(response.deliverableCode).toMatch(/^ZAZZ-\d+$/);
+    expect(response.code).toBeUndefined();
   });
 
   it('should update and fetch a deliverable by id', async () => {
