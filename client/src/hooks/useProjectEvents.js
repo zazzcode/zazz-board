@@ -46,8 +46,9 @@ export function useProjectEvents(projectCode, { enabled = true, onEvent } = {}) 
     let controller = null;
 
     const scheduleReconnect = () => {
-      if (disposed) return;
+      if (disposed || reconnectTimer) return;
       reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
         connect();
       }, 1500);
     };
@@ -57,6 +58,7 @@ export function useProjectEvents(projectCode, { enabled = true, onEvent } = {}) 
 
       controller = new AbortController();
       let reader = null;
+      let shouldReconnect = false;
       try {
         const response = await fetch(
           `http://localhost:3030/projects/${encodeURIComponent(projectCode)}/events`,
@@ -72,7 +74,7 @@ export function useProjectEvents(projectCode, { enabled = true, onEvent } = {}) 
         );
 
         if (!response.ok || !response.body) {
-          scheduleReconnect();
+          shouldReconnect = true;
           return;
         }
 
@@ -82,7 +84,10 @@ export function useProjectEvents(projectCode, { enabled = true, onEvent } = {}) 
 
         while (!disposed) {
           const { value, done } = await reader.read();
-          if (done) break;
+          if (done) {
+            shouldReconnect = !disposed;
+            break;
+          }
 
           buffer += decoder.decode(value, { stream: true });
           let boundaryIndex = buffer.indexOf('\n\n');
@@ -101,7 +106,7 @@ export function useProjectEvents(projectCode, { enabled = true, onEvent } = {}) 
         }
       } catch (error) {
         if (!disposed && error.name !== 'AbortError') {
-          scheduleReconnect();
+          shouldReconnect = true;
         }
       } finally {
         if (reader) {
@@ -111,7 +116,7 @@ export function useProjectEvents(projectCode, { enabled = true, onEvent } = {}) 
             // no-op
           }
         }
-        if (!disposed) {
+        if (!disposed && shouldReconnect) {
           scheduleReconnect();
         }
       }

@@ -107,7 +107,7 @@ function TaskGraphContent({ selectedProject, selectedDeliverableId }) {
   const handleTaskSave = useCallback(async (panelId, updatedTask) => {
     try {
       const token = localStorage.getItem('TB_TOKEN');
-      if (!token) return;
+      if (!token) return false;
 
       const response = await fetch(
         `http://localhost:3030/projects/${selectedProject.code}/tasks/${updatedTask.id}`,
@@ -135,11 +135,14 @@ function TaskGraphContent({ selectedProject, selectedDeliverableId }) {
           prev.map(p => p.id === panelId ? { ...p, task: savedTask } : p)
         );
         refreshGraph();
+        return true;
       } else {
         console.error('Failed to save task:', response.status);
+        return false;
       }
     } catch (err) {
       console.error('Error saving task:', err);
+      return false;
     }
   }, [selectedProject, refreshGraph]);
 

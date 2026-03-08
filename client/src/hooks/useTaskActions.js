@@ -16,7 +16,7 @@ export function useTaskActions({ refreshTasks, openDetailPanel, closeDetailPanel
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
-        return;
+        return false;
       }
 
       const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/tasks/${updatedTask.id}`, {
@@ -48,6 +48,7 @@ export function useTaskActions({ refreshTasks, openDetailPanel, closeDetailPanel
         
         // Refresh tasks to update the board
         await refreshTasks();
+        return true;
       } else if (response.status === 401) {
         console.error('Unauthorized - access token invalid');
         if (window.showToast) {
@@ -55,11 +56,14 @@ export function useTaskActions({ refreshTasks, openDetailPanel, closeDetailPanel
         } else {
           alert('Access token invalid. Please reload your access token.');
         }
+        return false;
       } else {
         console.error('Failed to save task:', response.status);
+        return false;
       }
     } catch (error) {
       console.error('Error saving task:', error);
+      return false;
     }
   }, [refreshTasks, updateTaskPanel, selectedProject]);
 

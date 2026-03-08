@@ -105,7 +105,7 @@ export function TaskDetailsPanel({
   }, [task, opened]);
 
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (onSave && editedTask) {
       // Validate that blocked reason is provided when task is blocked
       if (editedTask.isBlocked && (!editedTask.blockedReason || editedTask.blockedReason.trim() === '')) {
@@ -128,13 +128,15 @@ export function TaskDetailsPanel({
         prompt: editedTask.prompt === '' ? null : editedTask.prompt
       };
       
-      onSave({
+      const saveResult = await onSave({
         ...normalizedTask,
         tags: tagsWithColors,
         tagNames: editedTask.tags // Send tag names for API update
       });
-      
-      onClose();
+
+      if (saveResult !== false) {
+        onClose();
+      }
     }
   };
 

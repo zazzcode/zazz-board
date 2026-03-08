@@ -8,7 +8,7 @@ import { DeliverableModal } from '../components/DeliverableModal.jsx';
 
 export function DeliverableKanbanPage({ selectedProject }) {
   const { t } = useTranslation();
-  const { deliverables, loading, createDeliverable, updateDeliverableStatus, deleteDeliverable, refreshDeliverables } = useDeliverables(selectedProject);
+  const { deliverables, loading, createDeliverable, updateDeliverable, updateDeliverableStatus, deleteDeliverable, refreshDeliverables } = useDeliverables(selectedProject);
 
   const [modalOpened, setModalOpened] = useState(false);
   const [editingDeliverable, setEditingDeliverable] = useState(null);
@@ -64,10 +64,10 @@ export function DeliverableKanbanPage({ selectedProject }) {
   };
 
   const handleModalSubmit = async (data) => {
-    if (!editingDeliverable) {
-      await createDeliverable(data);
+    if (editingDeliverable) {
+      return await updateDeliverable(editingDeliverable.id, data);
     }
-    handleModalClose();
+    return await createDeliverable(data);
   };
 
   const handleDeleteClick = (deliverableId) => {
@@ -109,7 +109,6 @@ export function DeliverableKanbanPage({ selectedProject }) {
           onClose={handleModalClose}
           onSubmit={handleModalSubmit}
           deliverable={editingDeliverable}
-          selectedProject={selectedProject}
         />
       )}
 

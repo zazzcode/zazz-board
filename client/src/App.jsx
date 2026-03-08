@@ -423,12 +423,9 @@ function AppContent() {
         ? targetProject.statusWorkflow[0]
         : 'TO_DO';
 
-
-      // Map tags to tagNames array for API
-      const tagNames = newTask.tags;
-
-      const deliverablesResponse = await fetch(`http://localhost:3030/projects/${targetProject.id}/deliverables`, {
+      const deliverablesResponse = await fetch(`http://localhost:3030/projects/${targetProject.code}/deliverables`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'TB_TOKEN': token,
           'Content-Type': 'application/json'
@@ -444,7 +441,9 @@ function AppContent() {
         return;
       }
 
-      const response = await fetch('http://localhost:3030/tasks', {
+      const response = await fetch(
+        `http://localhost:3030/projects/${targetProject.code}/deliverables/${deliverables[0].id}/tasks`,
+        {
         method: 'POST',
         headers: {
           'TB_TOKEN': token,
@@ -455,11 +454,7 @@ function AppContent() {
           prompt: newTask.prompt,
           priority: newTask.priority,
           storyPoints: newTask.storyPoints ? parseInt(newTask.storyPoints) : null,
-          projectId: targetProject.id,
-          deliverableId: deliverables[0].id,
-          status: initialStatus,
-          assigneeId: newTask.assigneeId ? parseInt(newTask.assigneeId) : null,
-          tagNames: tagNames
+          status: initialStatus
         })
       });
 

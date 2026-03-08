@@ -1,11 +1,9 @@
 import { Modal, Stack, TextInput, Textarea, Select, Button, Group } from '@mantine/core';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '../hooks/useTranslation.js';
-import { useDeliverables } from '../hooks/useDeliverables.js';
 
-export function DeliverableModal({ opened, onClose, onSubmit, deliverable, selectedProject }) {
+export function DeliverableModal({ opened, onClose, onSubmit, deliverable }) {
   const { t, translateDeliverableType } = useTranslation();
-  const { updateDeliverable } = useDeliverables(selectedProject);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -56,12 +54,12 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable, selec
 
     setIsSubmitting(true);
     try {
-      if (deliverable) {
-        await updateDeliverable(deliverable.id, formData);
+      const savedDeliverable = await onSubmit(formData);
+      if (savedDeliverable) {
+        onClose();
       } else {
-        await onSubmit(formData);
+        console.error('Failed to save deliverable');
       }
-      onClose();
     } catch (error) {
       console.error('Error submitting deliverable:', error);
     } finally {

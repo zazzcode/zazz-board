@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+const idsMatch = (a, b) => String(a) === String(b);
 
 /**
  * Hook for managing tasks in a project with deliverables
@@ -7,6 +9,8 @@ import { useState, useEffect, useCallback } from 'react';
 export function useTasks(selectedProject, deliverables = []) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+  const latestFetchRequestIdRef = useRef(0);
+  const mutationVersionRef = useRef(0);
 
   // Task statuses from project workflow, fallback to default statuses
   const taskStatuses = selectedProject?.statusWorkflow || ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'];
@@ -18,6 +22,8 @@ export function useTasks(selectedProject, deliverables = []) {
       return;
     }
 
+    const fetchRequestId = ++latestFetchRequestIdRef.current;
+    const mutationVersionAtStart = mutationVersionRef.current;
     setLoading(true);
     
     const fetchTasks = async () => {
@@ -36,6 +42,7 @@ export function useTasks(selectedProject, deliverables = []) {
             `http://localhost:3030/projects/${selectedProject.code}/deliverables/${deliverable.id}/tasks`,
             {
               method: 'GET',
+              cache: 'no-store',
               headers: {
                 'TB_TOKEN': token,
                 'Content-Type': 'application/json'
@@ -48,7 +55,9 @@ export function useTasks(selectedProject, deliverables = []) {
             allTasks.push(...deliverableTasks);
           } else if (response.status === 401) {
             console.error('Unauthorized - access token invalid');
-            setLoading(false);
+            if (fetchRequestId === latestFetchRequestIdRef.current) {
+              setLoading(false);
+            }
             return;
           }
         }
@@ -61,13 +70,21 @@ export function useTasks(selectedProject, deliverables = []) {
           return (a.position || 0) - (b.position || 0);
         });
         
+        const isOutdatedFetch = fetchRequestId !== latestFetchRequestIdRef.current;
+        const mutatedDuringFetch = mutationVersionRef.current !== mutationVersionAtStart;
+        if (isOutdatedFetch || mutatedDuringFetch) {
+          return;
+        }
+
         console.log('Fetched tasks:', allTasks);
         setTasks(allTasks);
       } catch (error) {
         console.error('Error fetching tasks:', error);
         setTasks([]);
       } finally {
-        setLoading(false);
+        if (fetchRequestId === latestFetchRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 
@@ -86,6 +103,7 @@ export function useTasks(selectedProject, deliverables = []) {
    */
   const addTask = useCallback(async (newTask) => {
     try {
+      mutationVersionRef.current += 1;
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
@@ -136,6 +154,7 @@ export function useTasks(selectedProject, deliverables = []) {
    */
   const updateTask = useCallback(async (taskId, updates) => {
     try {
+      mutationVersionRef.current += 1;
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
@@ -143,7 +162,7 @@ export function useTasks(selectedProject, deliverables = []) {
       }
 
       // Find the task to get current values
-      const task = tasks.find(t => t.id === taskId);
+      const task = tasks.find(t => idsMatch(t.id, taskId));
       if (!task) {
         console.error('Task not found for update');
         return;
@@ -164,7 +183,7 @@ export function useTasks(selectedProject, deliverables = []) {
       if (response.ok) {
         const updatedTask = await response.json();
         setTasks(prev => prev.map(t => 
-          t.id === taskId ? updatedTask : t
+          idsMatch(t.id, taskId) ? updatedTask : t
         ));
       } else if (response.status === 401) {
         console.error('Unauthorized - access token invalid');
@@ -182,6 +201,7 @@ export function useTasks(selectedProject, deliverables = []) {
    */
   const deleteTask = useCallback(async (taskId) => {
     try {
+      mutationVersionRef.current += 1;
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
@@ -189,7 +209,7 @@ export function useTasks(selectedProject, deliverables = []) {
       }
 
       // Find the task to get current values
-      const task = tasks.find(t => t.id === taskId);
+      const task = tasks.find(t => idsMatch(t.id, taskId));
       if (!task) {
         console.error('Task not found for deletion');
         return;
@@ -207,7 +227,7 @@ export function useTasks(selectedProject, deliverables = []) {
       );
 
       if (response.ok) {
-        setTasks(prev => prev.filter(t => t.id !== taskId));
+        setTasks(prev => prev.filter(t => !idsMatch(t.id, taskId)));
       } else if (response.status === 401) {
         console.error('Unauthorized - access token invalid');
       } else {
@@ -225,6 +245,8 @@ export function useTasks(selectedProject, deliverables = []) {
   const refreshTasks = useCallback(async () => {
     if (!selectedProject || deliverables.length === 0) return;
     
+    const fetchRequestId = ++latestFetchRequestIdRef.current;
+    const mutationVersionAtStart = mutationVersionRef.current;
     setLoading(true);
     
     try {
@@ -241,6 +263,7 @@ export function useTasks(selectedProject, deliverables = []) {
           `http://localhost:3030/projects/${selectedProject.code}/deliverables/${deliverable.id}/tasks`,
           {
             method: 'GET',
+            cache: 'no-store',
             headers: {
               'TB_TOKEN': token,
               'Content-Type': 'application/json'
@@ -253,7 +276,9 @@ export function useTasks(selectedProject, deliverables = []) {
           allTasks.push(...deliverableTasks);
         } else if (response.status === 401) {
           console.error('Unauthorized - access token invalid');
-          setLoading(false);
+          if (fetchRequestId === latestFetchRequestIdRef.current) {
+            setLoading(false);
+          }
           return;
         }
       }
@@ -266,12 +291,20 @@ export function useTasks(selectedProject, deliverables = []) {
         return (a.position || 0) - (b.position || 0);
       });
 
+      const isOutdatedFetch = fetchRequestId !== latestFetchRequestIdRef.current;
+      const mutatedDuringFetch = mutationVersionRef.current !== mutationVersionAtStart;
+      if (isOutdatedFetch || mutatedDuringFetch) {
+        return;
+      }
+
       console.log('Refreshed tasks:', allTasks);
       setTasks(allTasks);
     } catch (error) {
       console.error('Error refreshing tasks:', error);
     } finally {
-      setLoading(false);
+      if (fetchRequestId === latestFetchRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [selectedProject, deliverables, taskStatuses]);
 

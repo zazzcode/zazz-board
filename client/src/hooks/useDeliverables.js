@@ -1,8 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+const idsMatch = (a, b) => String(a) === String(b);
 
 export function useDeliverables(selectedProject) {
   const [deliverables, setDeliverables] = useState([]);
   const [loading, setLoading] = useState(false);
+  const latestRefreshRequestIdRef = useRef(0);
+  const mutationVersionRef = useRef(0);
 
   const refreshDeliverables = useCallback(async () => {
     if (!selectedProject) {
@@ -10,6 +14,8 @@ export function useDeliverables(selectedProject) {
       return;
     }
 
+    const refreshRequestId = ++latestRefreshRequestIdRef.current;
+    const mutationVersionAtStart = mutationVersionRef.current;
     setLoading(true);
     try {
       const token = localStorage.getItem('TB_TOKEN');
@@ -20,6 +26,7 @@ export function useDeliverables(selectedProject) {
 
       const response = await fetch(`http://localhost:3030/projects/${selectedProject.code}/deliverables`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'TB_TOKEN': token,
           'Content-Type': 'application/json'
@@ -28,6 +35,11 @@ export function useDeliverables(selectedProject) {
 
       if (response.ok) {
         const data = await response.json();
+        const isOutdatedRefresh = refreshRequestId !== latestRefreshRequestIdRef.current;
+        const mutatedDuringRefresh = mutationVersionRef.current !== mutationVersionAtStart;
+        if (isOutdatedRefresh || mutatedDuringRefresh) {
+          return;
+        }
         console.log('Fetched deliverables:', data);
         setDeliverables(data);
       } else if (response.status === 401) {
@@ -55,6 +67,7 @@ export function useDeliverables(selectedProject) {
 
   const createDeliverable = useCallback(async (deliverableData) => {
     try {
+      mutationVersionRef.current += 1;
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
@@ -86,6 +99,7 @@ export function useDeliverables(selectedProject) {
 
   const updateDeliverable = useCallback(async (deliverableId, updates) => {
     try {
+      mutationVersionRef.current += 1;
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
@@ -104,7 +118,7 @@ export function useDeliverables(selectedProject) {
       if (response.ok) {
         const updatedDeliverable = await response.json();
         setDeliverables(prev => prev.map(d => 
-          d.id === deliverableId ? updatedDeliverable : d
+          idsMatch(d.id, deliverableId) ? updatedDeliverable : d
         ));
         return updatedDeliverable;
       } else {
@@ -119,6 +133,7 @@ export function useDeliverables(selectedProject) {
 
   const updateDeliverableStatus = useCallback(async (deliverableId, status) => {
     try {
+      mutationVersionRef.current += 1;
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
@@ -137,7 +152,7 @@ export function useDeliverables(selectedProject) {
       if (response.ok) {
         const updatedDeliverable = await response.json();
         setDeliverables(prev => prev.map(d => 
-          d.id === deliverableId ? updatedDeliverable : d
+          idsMatch(d.id, deliverableId) ? updatedDeliverable : d
         ));
         return updatedDeliverable;
       } else {
@@ -152,6 +167,7 @@ export function useDeliverables(selectedProject) {
 
   const approveDeliverable = useCallback(async (deliverableId) => {
     try {
+      mutationVersionRef.current += 1;
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
@@ -169,7 +185,7 @@ export function useDeliverables(selectedProject) {
       if (response.ok) {
         const updatedDeliverable = await response.json();
         setDeliverables(prev => prev.map(d => 
-          d.id === deliverableId ? updatedDeliverable : d
+          idsMatch(d.id, deliverableId) ? updatedDeliverable : d
         ));
         return updatedDeliverable;
       } else {
@@ -184,6 +200,7 @@ export function useDeliverables(selectedProject) {
 
   const deleteDeliverable = useCallback(async (deliverableId) => {
     try {
+      mutationVersionRef.current += 1;
       const token = localStorage.getItem('TB_TOKEN');
       if (!token) {
         console.error('No access token found');
@@ -199,7 +216,7 @@ export function useDeliverables(selectedProject) {
       });
 
       if (response.ok) {
-        setDeliverables(prev => prev.filter(d => d.id !== deliverableId));
+        setDeliverables(prev => prev.filter(d => !idsMatch(d.id, deliverableId)));
         return true;
       } else {
         console.error('Failed to delete deliverable:', response.status);
