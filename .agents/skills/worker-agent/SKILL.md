@@ -70,7 +70,7 @@ You MUST execute in this order:
 7. Before moving `READY -> IN_PROGRESS`, run `zazzctl exec begin ...` (acquire locks + block/unblock synchronization + claim status).
 8. If lock acquire conflicts, set `isBlocked=true` with `blockedReason='FILE_LOCK'`, poll every 3 seconds, and retry acquire until success.
 9. While task is active, run periodic `zazzctl exec tick ...` heartbeats and keep notes current.
-10. Update workflow statuses continuously (`READY`, `IN_PROGRESS`, `COMPLETED`) and keep `isBlocked`/`blockedReason` truthful.
+10. Update workflow statuses continuously (`READY`, `IN_PROGRESS`, then `QA` if configured, then `COMPLETED`) and keep `isBlocked`/`blockedReason` truthful.
 11. If course correction/rework appears after completion, add new follow-up tasks + relations to the graph; do not reopen completed tasks.
 12. Recompute which tasks are now dependency-ready and repeat.
 13. Stop only when every task in the current deliverable graph is either:
@@ -134,6 +134,8 @@ Routes:
 
 Lock workflow:
 1. Determine the file list before work starts.
+   - Use `fileRelativePaths` (API payload) / `fileRelativePath` (API response).
+   - Paths must be relative to the active worktree root (not absolute paths).
 2. Attempt `acquire` for the full file list (atomic batch), preferably via `zazzctl exec begin`.
 3. If `409 FILE_LOCK_CONFLICT`:
    - keep workflow status unchanged
@@ -202,12 +204,13 @@ Until clarified, keep workflow status unchanged, set `isBlocked=true` and `block
 ## Status Transition Rules
 
 Use these state rules:
-- `TO_DO` -> `READY` when the task is selected for an executable wave
+- `TO_DO` -> `READY` when the project workflow includes `TO_DO` and the task is selected for an executable wave
 - `READY` -> `IN_PROGRESS` only after required file locks are acquired
 - On lock conflict: keep workflow status unchanged, set `isBlocked=true`, `blockedReason='FILE_LOCK'`, poll every 3 seconds
 - On owner decision wait: keep workflow status unchanged, set `isBlocked=true`, `blockedReason='OWNER_DECISION'`
 - When blocker resolves: set `isBlocked=false`, clear `blockedReason`, then continue normal status flow
-- `IN_PROGRESS` -> `COMPLETED` only after required tests pass
+- `IN_PROGRESS` -> `QA` when workflow requires QA, otherwise `IN_PROGRESS` -> `COMPLETED`
+- final transition to `COMPLETED` only after required tests pass (and QA pass when applicable)
 
 Status changes must match real execution state.
 
@@ -237,7 +240,7 @@ Execution is complete only when all are true:
 ## Environment Variables
 
 ```bash
-export ZAZZ_API_BASE_URL="http://localhost:3000"
+export ZAZZ_API_BASE_URL="http://localhost:3030"
 export ZAZZ_API_TOKEN="your-api-token"
 export AGENT_ID="worker"
 export ZAZZ_WORKSPACE="/path/to/project"
