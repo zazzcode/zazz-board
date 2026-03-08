@@ -82,6 +82,18 @@ export const PROJECTS = pgTable('PROJECTS', {
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const AGENT_TOKENS = pgTable('AGENT_TOKENS', {
+  id: serial('id').primaryKey(),
+  user_id: integer('user_id').notNull().references(() => USERS.id, { onDelete: 'cascade' }),
+  project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
+  token: varchar('token', { length: 36 }).notNull().unique(),
+  label: varchar('label', { length: 100 }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_agent_tokens_token').on(table.token),
+  index('idx_agent_tokens_user_project').on(table.user_id, table.project_id),
+]);
+
 // Deliverables table
 export const DELIVERABLES = pgTable('DELIVERABLES', {
   id: serial('id').primaryKey(),
@@ -227,6 +239,7 @@ export const IMAGE_DATA = pgTable('IMAGE_DATA', {
 
 // Relations
 export const usersRelations = relations(USERS, ({ many }) => ({
+  agentTokens: many(AGENT_TOKENS),
 }));
 
 export const projectsRelations = relations(PROJECTS, ({ one, many }) => ({
@@ -234,8 +247,20 @@ export const projectsRelations = relations(PROJECTS, ({ one, many }) => ({
     fields: [PROJECTS.leader_id],
     references: [USERS.id],
   }),
+  agentTokens: many(AGENT_TOKENS),
   deliverables: many(DELIVERABLES),
   tasks: many(TASKS),
+}));
+
+export const agentTokensRelations = relations(AGENT_TOKENS, ({ one }) => ({
+  user: one(USERS, {
+    fields: [AGENT_TOKENS.user_id],
+    references: [USERS.id],
+  }),
+  project: one(PROJECTS, {
+    fields: [AGENT_TOKENS.project_id],
+    references: [PROJECTS.id],
+  }),
 }));
 
 export const deliverablesRelations = relations(DELIVERABLES, ({ one, many }) => ({

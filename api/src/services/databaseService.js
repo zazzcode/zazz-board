@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, asc, like, or, inArray, ne } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES, FILE_LOCKS } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES, FILE_LOCKS, AGENT_TOKENS } from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
 import { keysToCamelCase } from '../utils/propertyMapper.js';
 import { randomUUID } from 'crypto';
@@ -359,6 +359,132 @@ class DatabaseService {
     return project || null;
   }
 
+  async getAgentTokensForUser(projectId, userId) {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      return null;
+    }
+
+    const tokens = await db.select({
+      id: AGENT_TOKENS.id,
+      token: AGENT_TOKENS.token,
+      label: AGENT_TOKENS.label,
+      createdAt: AGENT_TOKENS.created_at,
+    })
+      .from(AGENT_TOKENS)
+      .where(and(eq(AGENT_TOKENS.project_id, projectId), eq(AGENT_TOKENS.user_id, userId)))
+      .orderBy(asc(AGENT_TOKENS.created_at), asc(AGENT_TOKENS.id));
+
+    return {
+      userId: user.id,
+      userName: user.fullName,
+      userEmail: user.email,
+      tokens,
+    };
+  }
+
+  async getAgentTokensForProject(projectId) {
+    const [users, tokenRows] = await Promise.all([
+      this.getUsers(),
+      db.select({
+        id: AGENT_TOKENS.id,
+        userId: AGENT_TOKENS.user_id,
+        token: AGENT_TOKENS.token,
+        label: AGENT_TOKENS.label,
+        createdAt: AGENT_TOKENS.created_at,
+      })
+        .from(AGENT_TOKENS)
+        .where(eq(AGENT_TOKENS.project_id, projectId))
+        .orderBy(asc(AGENT_TOKENS.user_id), asc(AGENT_TOKENS.created_at), asc(AGENT_TOKENS.id)),
+    ]);
+
+    const tokensByUserId = new Map();
+    for (const tokenRow of tokenRows) {
+      if (!tokensByUserId.has(tokenRow.userId)) {
+        tokensByUserId.set(tokenRow.userId, []);
+      }
+      tokensByUserId.get(tokenRow.userId).push({
+        id: tokenRow.id,
+        token: tokenRow.token,
+        label: tokenRow.label,
+        createdAt: tokenRow.createdAt,
+      });
+    }
+
+    return users.map((user) => ({
+      userId: user.id,
+      userName: user.fullName,
+      userEmail: user.email,
+      tokens: tokensByUserId.get(user.id) || [],
+    }));
+  }
+
+  async getAgentTokenById(id) {
+    const [token] = await db.select({
+      id: AGENT_TOKENS.id,
+      userId: AGENT_TOKENS.user_id,
+      projectId: AGENT_TOKENS.project_id,
+      token: AGENT_TOKENS.token,
+      label: AGENT_TOKENS.label,
+      createdAt: AGENT_TOKENS.created_at,
+      userEmail: USERS.email,
+      userFullName: USERS.full_name,
+      projectCode: PROJECTS.code,
+    })
+      .from(AGENT_TOKENS)
+      .innerJoin(USERS, eq(AGENT_TOKENS.user_id, USERS.id))
+      .innerJoin(PROJECTS, eq(AGENT_TOKENS.project_id, PROJECTS.id))
+      .where(eq(AGENT_TOKENS.id, id))
+      .limit(1);
+
+    return token || null;
+  }
+
+  async createAgentToken(projectId, userId, label = null) {
+    const project = await this.getProjectById(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const [created] = await db.insert(AGENT_TOKENS)
+      .values({
+        user_id: userId,
+        project_id: projectId,
+        token: randomUUID(),
+        label: label ?? null,
+      })
+      .returning({
+        id: AGENT_TOKENS.id,
+        token: AGENT_TOKENS.token,
+        label: AGENT_TOKENS.label,
+        createdAt: AGENT_TOKENS.created_at,
+      });
+
+    return {
+      ...created,
+      userId: user.id,
+      userEmail: user.email,
+      userFullName: user.fullName,
+      projectId: project.id,
+      projectCode: project.code,
+    };
+  }
+
+  async deleteAgentToken(id) {
+    const existing = await this.getAgentTokenById(id);
+    if (!existing) {
+      return null;
+    }
+
+    await db.delete(AGENT_TOKENS).where(eq(AGENT_TOKENS.id, id));
+    return existing;
+  }
+
   async getDeliverablesForProject(projectId, filters = {}) {
     const conditions = [eq(DELIVERABLES.project_id, projectId)];
     if (filters.status) conditions.push(eq(DELIVERABLES.status, filters.status));
@@ -549,16 +675,26 @@ class DatabaseService {
       .from(PROJECTS).where(eq(PROJECTS.id, deliverable.projectId)).limit(1);
     if (!project?.workflow?.includes(status)) throw new Error(`Status ${status} not allowed for this project`);
 
-    if (status === 'IN_PROGRESS') {
-      if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before moving to IN_PROGRESS');
-      if (!deliverable.approvedAt) throw new Error('Deliverable must be approved before moving to IN_PROGRESS');
-    }
-
     const nextHistory = Array.isArray(deliverable.statusHistory) ? [...deliverable.statusHistory] : [];
     nextHistory.push({ status, changedAt: new Date().toISOString(), changedBy: userId });
 
+    const updateData = {
+      status,
+      status_history: nextHistory,
+      updated_by: userId,
+      updated_at: new Date(),
+    };
+
+    if (status === 'IN_PROGRESS') {
+      if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before moving to IN_PROGRESS');
+      if (!deliverable.approvedAt) {
+        updateData.approved_by = userId;
+        updateData.approved_at = new Date();
+      }
+    }
+
     const [updated] = await db.update(DELIVERABLES)
-      .set({ status, status_history: nextHistory, updated_by: userId, updated_at: new Date() })
+      .set(updateData)
       .where(eq(DELIVERABLES.id, id))
       .returning();
     if (!updated) return null;

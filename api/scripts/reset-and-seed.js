@@ -8,6 +8,7 @@ import { seedStatusDefinitions } from './seeders/seedStatusDefinitions.js';
 import { seedCoordinationTypes } from './seeders/seedCoordinationTypes.js';
 import { seedTranslations } from './seeders/seedTranslations.js';
 import { seedProjects } from './seeders/seedProjects.js';
+import { seedAgentTokens } from './seeders/seedAgentTokens.js';
 import { seedDeliverables } from './seeders/seedDeliverables.js';
 import { seedTags } from './seeders/seedTags.js';
 import { seedTasks } from './seeders/seedTasks.js';
@@ -27,6 +28,7 @@ async function resetAndSeed() {
     await db.execute(sql`DROP TABLE IF EXISTS "TASK_TAGS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASKS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "DELIVERABLES" CASCADE`);
+    await db.execute(sql`DROP TABLE IF EXISTS "AGENT_TOKENS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "PROJECTS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TAGS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TRANSLATIONS" CASCADE`);
@@ -62,19 +64,23 @@ async function resetAndSeed() {
     await seedProjects();
     console.log('');
 
-    console.log('📋 Step 2c: Seeding deliverables...');
+    console.log('📋 Step 2c: Seeding agent tokens...');
+    await seedAgentTokens();
+    console.log('');
+
+    console.log('📋 Step 2d: Seeding deliverables...');
     await seedDeliverables();
     console.log('');
 
-    console.log('📋 Step 2d: Seeding tasks...');
+    console.log('📋 Step 2e: Seeding tasks...');
     await seedTasks();
     console.log('');
 
-    console.log('📋 Step 2e: Seeding task-tag relationships...');
+    console.log('📋 Step 2f: Seeding task-tag relationships...');
     await seedTaskTags();
     console.log('');
 
-    console.log('📋 Step 2f: Seeding task relations...');
+    console.log('📋 Step 2g: Seeding task relations...');
     await seedTaskRelations();
     console.log('');
 
@@ -82,6 +88,7 @@ async function resetAndSeed() {
     console.log('📊 Summary:');
     console.log('   • 5 users created');
     console.log('   • 2 projects created (ZAZZ, ZED_MER)');
+    console.log('   • 6 agent tokens created');
     console.log('   • 4 deliverables created (ZAZZ only)');
     console.log('   • 32 ZAZZ tasks seeded from database snapshot');
     console.log('   • status definitions + translations seeded');

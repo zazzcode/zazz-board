@@ -68,6 +68,8 @@ You MUST execute in this order:
 4. Compute the dependency-ready set.
 5. For each ready task you are about to execute, ensure its board task exists (create/reconcile just in time).
 6. Ensure all required `DEPENDS_ON` edges for that task exist before starting.
+   - If the task has non-`none` `DEPENDS_ON` entries, create those relation rows as soon as the dependent task exists on the board.
+   - Do not defer edge creation until upstream work completes; the live graph must show planned dependency lines immediately.
 7. Before moving `READY -> IN_PROGRESS`, run `zazzctl exec begin ...` (acquire locks + block/unblock synchronization + claim status).
 8. If lock acquire conflicts, set `isBlocked=true` with `blockedReason='FILE_LOCK'`, poll every 3 seconds, and retry acquire until success.
 9. While task is active, run periodic `zazzctl exec tick ...` heartbeats and keep notes current.
@@ -90,6 +92,7 @@ Execution model:
 1. Add tasks as the plan is executed.
 2. Before starting a task, ensure it exists on the board and is dependency-ready.
 3. Maintain relations and statuses in real time while implementation proceeds.
+   - Graph edges are part of board truth. As soon as a dependent task exists, its required `DEPENDS_ON` relations must also exist.
 4. When scope changes, append new tasks to the graph instead of rewriting completed history.
 5. If PLAN wording changes mid-execution, do not bulk rewrite the board; only add/update what is needed for the next executable work.
 6. Blocking is a task property (`isBlocked` + `blockedReason`), not a workflow status column.
@@ -106,7 +109,8 @@ When executing a deliverable, you are responsible for board state integrity:
    - Create/reconcile tasks just in time for dependency-ready work.
    - Reuse existing matching tasks; do not duplicate.
 2. **Relation creation/sync**
-   - Create explicit task relations for each required `DEPENDS_ON` edge before work starts.
+   - Create explicit task relations for each required `DEPENDS_ON` edge as soon as the dependent task exists.
+   - Re-fetch the deliverable graph after relation writes and confirm the edge is visible before continuing.
 3. **Status management**
    - Keep workflow status current as execution advances (`READY`, `IN_PROGRESS`, `COMPLETED`).
    - Keep block state current via `isBlocked` + `blockedReason`.
@@ -271,10 +275,11 @@ Status changes must match real execution state.
 Execution is complete only when all are true:
 1. Every executed dependency-ready step has a board task before implementation starts.
 2. Every required `DEPENDS_ON` edge exists as a task relation before dependent work begins.
-3. Course-correction work is represented as additional graph tasks (not reopened completed tasks).
-4. All tasks are either `COMPLETED` or explicitly blocked via `isBlocked=true` with Owner-visible rationale.
-5. Required tests for completed tasks pass.
-6. Deliverable behavior matches SPEC acceptance criteria.
+3. The live deliverable graph has been re-fetched and shows every non-`none` planned dependency edge for instantiated tasks.
+4. Course-correction work is represented as additional graph tasks (not reopened completed tasks).
+5. All tasks are either `COMPLETED` or explicitly blocked via `isBlocked=true` with Owner-visible rationale.
+6. Required tests for completed tasks pass.
+7. Deliverable behavior matches SPEC acceptance criteria.
 
 ---
 

@@ -113,12 +113,48 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(releasePath.post).toBeDefined();
   });
 
+  it('should document agent-token management paths and schemas', async () => {
+    const spec = await app.swagger();
+
+    const userPath = spec.paths['/projects/{code}/users/{userId}/agent-tokens'];
+    expect(userPath).toBeDefined();
+    expect(userPath.get).toBeDefined();
+    expect(userPath.post).toBeDefined();
+    expect(userPath.patch).toBeUndefined();
+    expect(userPath.put).toBeUndefined();
+
+    const userParams = userPath.get.parameters || [];
+    expect(userParams.some((param) => param.name === 'userId')).toBe(true);
+    expect(userPath.get.responses?.['200']?.content?.['application/json']?.schema?.properties?.tokens).toBeDefined();
+
+    const createBody = userPath.post.requestBody?.content?.['application/json']?.schema;
+    expect(createBody?.properties?.label).toBeDefined();
+    expect(createBody?.required).toBeUndefined();
+    expect(userPath.post.responses?.['201']?.content?.['application/json']?.schema?.properties?.token).toBeDefined();
+
+    const projectPath = spec.paths['/projects/{code}/agent-tokens'];
+    expect(projectPath).toBeDefined();
+    expect(projectPath.get).toBeDefined();
+    expect(projectPath.post).toBeUndefined();
+    expect(projectPath.get.responses?.['200']?.content?.['application/json']?.schema?.properties?.users).toBeDefined();
+
+    const deletePath = spec.paths['/projects/{code}/users/{userId}/agent-tokens/{id}'];
+    expect(deletePath).toBeDefined();
+    expect(deletePath.delete).toBeDefined();
+    expect(deletePath.patch).toBeUndefined();
+    expect(deletePath.put).toBeUndefined();
+    expect(deletePath.delete.responses?.['200']?.content?.['application/json']?.schema?.properties?.message).toBeDefined();
+  });
+
   it('should document key paths with tags and summaries', async () => {
     const spec = await app.swagger();
     const keyPaths = [
       '/projects/{projectCode}/deliverables',
       '/projects/{projectCode}/deliverables/{id}',
       '/projects/{projectCode}/deliverables/{id}/approve',
+      '/projects/{code}/users/{userId}/agent-tokens',
+      '/projects/{code}/users/{userId}/agent-tokens/{id}',
+      '/projects/{code}/agent-tokens',
       '/projects/{code}/deliverables/{delivId}/tasks',
       '/projects/{code}/deliverables/{delivId}/tasks/{taskId}',
       '/projects/{code}/deliverables/{delivId}/graph',

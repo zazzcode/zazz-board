@@ -1,9 +1,16 @@
-import { Table, Text, Badge, Group, ActionIcon, Tooltip, Box } from '@mantine/core';
-import { IconCalendar, IconEdit } from '@tabler/icons-react';
+import { Table, Text, Group, ActionIcon, Tooltip, Box } from '@mantine/core';
+import { IconCalendar, IconEdit, IconKey } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useEffect } from 'react';
 
-export function ProjectList({ projects, loading, currentUser, onProjectSelect, onProjectEdit }) {
+export function ProjectList({
+  projects,
+  loading,
+  currentUser,
+  onProjectSelect,
+  onProjectEdit,
+  onManageAgentTokens,
+}) {
   const { t } = useTranslation();
   
   // Debug info when project list renders
@@ -94,16 +101,33 @@ export function ProjectList({ projects, loading, currentUser, onProjectSelect, o
               </Group>
             </Table.Td>
             <Table.Td>
-              <ActionIcon 
-                variant="subtle" 
-                size="md"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onProjectEdit(project);
-                }}
-              >
-                <IconEdit size={21} />
-              </ActionIcon>
+              <Group gap={4} justify="flex-end">
+                <Tooltip label="Manage agent tokens" withArrow>
+                  <ActionIcon
+                    variant="subtle"
+                    size="md"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onManageAgentTokens?.(project);
+                    }}
+                    aria-label="Manage agent tokens"
+                    disabled={!onManageAgentTokens}
+                  >
+                    <IconKey size={18} />
+                  </ActionIcon>
+                </Tooltip>
+                <ActionIcon 
+                  variant="subtle" 
+                  size="md"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onProjectEdit(project);
+                  }}
+                  aria-label="Edit project"
+                >
+                  <IconEdit size={21} />
+                </ActionIcon>
+              </Group>
             </Table.Td>
           </Table.Tr>
         ))}

@@ -1,6 +1,51 @@
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS, FILE_LOCKS, IMAGE_METADATA, IMAGE_DATA } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS, FILE_LOCKS, IMAGE_METADATA, IMAGE_DATA, AGENT_TOKENS } from '../../lib/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
+import { tokenService } from '../../src/services/tokenService.js';
+
+const SEEDED_AGENT_TOKENS = [
+  {
+    user_id: 5,
+    project_id: 1,
+    token: '660e8400-e29b-41d4-a716-446655440101',
+    label: 'For all agents access token',
+  },
+  {
+    user_id: 5,
+    project_id: 1,
+    token: '660e8400-e29b-41d4-a716-446655440102',
+    label: 'Spec builder agent ONLY access token',
+  },
+  {
+    user_id: 2,
+    project_id: 2,
+    token: '660e8400-e29b-41d4-a716-446655440103',
+    label: 'For all agents access token',
+  },
+  {
+    user_id: 2,
+    project_id: 2,
+    token: '660e8400-e29b-41d4-a716-446655440104',
+    label: 'Spec builder agent ONLY access token',
+  },
+  {
+    user_id: 3,
+    project_id: 2,
+    token: '660e8400-e29b-41d4-a716-446655440105',
+    label: 'For all agents access token',
+  },
+  {
+    user_id: 3,
+    project_id: 2,
+    token: '660e8400-e29b-41d4-a716-446655440106',
+    label: 'Spec builder agent ONLY access token',
+  },
+];
+
+async function resetAgentTokens() {
+  await db.delete(AGENT_TOKENS);
+  await db.insert(AGENT_TOKENS).values(SEEDED_AGENT_TOKENS);
+}
 
 /**
  * Validates we're running against a test database
@@ -67,6 +112,8 @@ export async function clearTaskData() {
   await db.delete(TASK_TAGS);
   await db.delete(TASKS);
   await db.delete(DELIVERABLES);
+  await resetAgentTokens();
+  await tokenService.refreshCache();
 }
 
 /**

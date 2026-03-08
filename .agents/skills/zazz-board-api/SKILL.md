@@ -142,7 +142,9 @@ Dependency lifecycle (required):
 - Treat `DEPENDS_ON` in PLAN as required `TASK_RELATIONS` rows.
 - Do not assume task create `dependencies` field is sufficient for graph lines.
 - After task creation, create each dependency edge explicitly via relation endpoint.
-- Since dependency edges are created as predecessors complete, unresolved dependencies should not be represented as blocked status.
+- Create dependency edges immediately after the dependent task exists, even if upstream work is not complete yet.
+- Live graph lines are required board truth for instantiated tasks; do not defer relation writes as a later cleanup step.
+- Unresolved dependencies should not be represented as blocked status unless a separate blocker exists.
 - Solo tasks are valid and visible without dependencies.
 
 File lock lifecycle (required for worker execution):
@@ -158,6 +160,7 @@ Harness-aware exception:
 Verification lifecycle (required):
 - After creating/updating tasks, re-fetch deliverable task list and confirm task `id`, `phaseStep`, `status`, and blocker fields when used.
 - Re-fetch deliverable graph and confirm task presence and relation edges.
+- For every instantiated task with non-`none` planned `DEPENDS_ON`, verify matching graph edges are present before declaring board sync complete.
 - If mismatch appears, report exact endpoint + payload + response.
 
 ---
@@ -180,7 +183,7 @@ Verification lifecycle (required):
   - Required inputs: `code`, `delivId`, `title`
   - Required operational fields for planning execution: `phase`, `phaseStep`, `prompt`
   - Respect deliverable approval prerequisites
-  - For each planned dependency, create explicit relation (`DEPENDS_ON`) after task creation
+  - For each planned dependency, create explicit relation (`DEPENDS_ON`) immediately after task creation
 - Update task status:
   - Resolve valid transitions from live workflow; common path is `READY` -> `IN_PROGRESS` -> (`QA` optional) -> `COMPLETED`
   - Include `agentName` when moving to `IN_PROGRESS` to claim work

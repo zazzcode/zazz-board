@@ -3,7 +3,16 @@ import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
 import { ProjectList } from '../components/ProjectList.jsx';
 import { useTranslation } from '../hooks/useTranslation.js';
 
-export function HomePage({ projects, loading, accessToken, currentUser, onProjectSelect, onProjectEdit, onProjectCreate }) {
+export function HomePage({
+  projects,
+  loading,
+  accessToken,
+  currentUser,
+  onProjectSelect,
+  onProjectEdit,
+  onProjectCreate,
+  onManageAgentTokens,
+}) {
   const { t } = useTranslation();
 
   if (!accessToken) {
@@ -37,6 +46,7 @@ export function HomePage({ projects, loading, accessToken, currentUser, onProjec
         currentUser={currentUser}
         onProjectSelect={onProjectSelect}
         onProjectEdit={onProjectEdit}
+        onManageAgentTokens={onManageAgentTokens}
       />
     </Container>
   );

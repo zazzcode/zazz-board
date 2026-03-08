@@ -3,6 +3,8 @@ import { clearTaskData, createTestDeliverable, createTestTask, resetProjectDefau
 
 const { spec } = pactum;
 const VALID_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
+const ZAZZ_AGENT_TOKEN = '660e8400-e29b-41d4-a716-446655440101';
+const ZED_MER_AGENT_TOKEN = '660e8400-e29b-41d4-a716-446655440103';
 
 describe('Project-id route regressions', () => {
   beforeEach(async () => {
@@ -57,5 +59,37 @@ describe('Project-id route regressions', () => {
 
     expect(Array.isArray(columnTasks)).toBe(true);
     expect(columnTasks.some((row) => row.id === task.id)).toBe(true);
+  });
+
+  it('should allow a matching-project agent token on :id project routes', async () => {
+    const project = await spec()
+      .get('/projects/1')
+      .withHeaders('TB_TOKEN', ZAZZ_AGENT_TOKEN)
+      .expectStatus(200)
+      .returns('res.body');
+
+    expect(project.id).toBe(1);
+    expect(project.code).toBe('ZAZZ');
+  });
+
+  it('should reject a wrong-project agent token on :id project routes', async () => {
+    await spec()
+      .get('/projects/1')
+      .withHeaders('TB_TOKEN', ZED_MER_AGENT_TOKEN)
+      .expectStatus(403);
+  });
+
+  it('should reject a wrong-project agent token on :code project routes', async () => {
+    await spec()
+      .get('/projects/ZAZZ/deliverables')
+      .withHeaders('TB_TOKEN', ZED_MER_AGENT_TOKEN)
+      .expectStatus(403);
+  });
+
+  it('should reject agent tokens on authenticated non-project routes', async () => {
+    await spec()
+      .get('/users/me')
+      .withHeaders('TB_TOKEN', ZAZZ_AGENT_TOKEN)
+      .expectStatus(403);
   });
 });

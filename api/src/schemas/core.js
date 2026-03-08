@@ -86,5 +86,29 @@ export const coreSchemas = {
         }
       }
     }
+  },
+
+  refreshTokenCache: {
+    tags: ['core'],
+    summary: 'Refresh token cache',
+    description: 'Reloads user tokens, agent tokens, and project code/id maps from the database. Human user token only.',
+    response: {
+      200: {
+        description: 'Token cache refreshed',
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          auth: {
+            type: 'object',
+            properties: {
+              tokenCacheInitialized: { type: 'boolean' },
+              userCount: { type: 'number' },
+              agentTokenCount: { type: 'number' },
+              projectCount: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
   }
 };

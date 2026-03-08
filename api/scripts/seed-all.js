@@ -3,6 +3,7 @@ import { seedStatusDefinitions } from './seeders/seedStatusDefinitions.js';
 import { seedCoordinationTypes } from './seeders/seedCoordinationTypes.js';
 import { seedTranslations } from './seeders/seedTranslations.js';
 import { seedProjects } from './seeders/seedProjects.js';
+import { seedAgentTokens } from './seeders/seedAgentTokens.js';
 import { seedDeliverables } from './seeders/seedDeliverables.js';
 import { seedTags } from './seeders/seedTags.js';
 import { seedTasks } from './seeders/seedTasks.js';
@@ -57,23 +58,28 @@ async function seedAll() {
     await seedProjects();
     console.log('');
 
-    // Step 3: Seed deliverables (depends on projects and users)
-    console.log('📋 Step 3: Seeding deliverables (depends on projects and users)...');
+    // Step 3: Seed agent tokens (depends on users and projects)
+    console.log('📋 Step 3: Seeding agent tokens (depends on users and projects)...');
+    await seedAgentTokens();
+    console.log('');
+
+    // Step 4: Seed deliverables (depends on projects and users)
+    console.log('📋 Step 4: Seeding deliverables (depends on projects and users)...');
     await seedDeliverables();
     console.log('');
 
-    // Step 4: Seed tasks (depends on projects, deliverables, and users)
-    console.log('📋 Step 4: Seeding tasks (depends on projects, deliverables, and users)...');
+    // Step 5: Seed tasks (depends on projects, deliverables, and users)
+    console.log('📋 Step 5: Seeding tasks (depends on projects, deliverables, and users)...');
     await seedTasks();
     console.log('');
 
-    // Step 5: Seed relationship tables
-    console.log('📋 Step 5: Seeding relationships (depends on tasks and tags)...');
+    // Step 6: Seed relationship tables
+    console.log('📋 Step 6: Seeding relationships (depends on tasks and tags)...');
     await seedTaskTags();
     console.log('');
 
-    // Step 6: Seed task relations (depends on tasks existing)
-    console.log('📋 Step 6: Seeding task relations (depends on tasks)...');
+    // Step 7: Seed task relations (depends on tasks existing)
+    console.log('📋 Step 7: Seeding task relations (depends on tasks)...');
     await seedTaskRelations();
     console.log('');
 
@@ -83,6 +89,7 @@ async function seedAll() {
     console.log('   • 8 status definitions created');
     console.log('   • 4 translation sets created (en, es, fr, de)');
     console.log('   • 2 projects created (ZAZZ, ZED_MER)');
+    console.log('   • 6 agent tokens created');
     console.log('   • 4 deliverables created (ZAZZ only)');
     console.log('   • 6 tags created');
     console.log('   • 32 ZAZZ tasks seeded from database snapshot');
@@ -99,4 +106,3 @@ async function seedAll() {
 }
 
 seedAll();
-

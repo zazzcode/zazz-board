@@ -100,8 +100,7 @@ describe('Deliverables Plan Approval', () => {
       .expectStatus(404);
   });
 
-  it('should allow transition to IN_PROGRESS only after approval', async () => {
-    // Create without approval
+  it('should auto-approve when transitioning to IN_PROGRESS with a plan filepath', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
       planFilepath: 'docs/test-plan.md',
@@ -109,26 +108,16 @@ describe('Deliverables Plan Approval', () => {
       approvedBy: null
     });
 
-    // Try to transition before approval (should fail)
-    await spec()
-      .patch(`/projects/ZAZZ/deliverables/${created.id}/status`)
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .withJson({ status: 'IN_PROGRESS' })
-      .expectStatus(400);
-
-    // Now approve
-    await spec()
-      .patch(`/projects/ZAZZ/deliverables/${created.id}/approve`)
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .expectStatus(200);
-
-    // Transition should now succeed
-    await spec()
+    const response = await spec()
       .patch(`/projects/ZAZZ/deliverables/${created.id}/status`)
       .withHeaders('TB_TOKEN', VALID_TOKEN)
       .withJson({ status: 'IN_PROGRESS' })
       .expectStatus(200)
-      .expectJsonLike({ status: 'IN_PROGRESS' });
+      .returns('res.body');
+
+    expect(response.approvedAt).not.toBeNull();
+    expect(response.approvedBy).toBe(5);
+    expect(response.status).toBe('IN_PROGRESS');
   });
 
   it('should approve multiple deliverables independently', async () => {

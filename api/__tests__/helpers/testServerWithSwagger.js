@@ -47,7 +47,7 @@ export async function createTestServerWithSwagger() {
 
   await app.register(routes);
 
-  await tokenService.initialize();
+  await tokenService.refreshCache();
 
   await app.ready();
 
