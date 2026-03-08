@@ -131,6 +131,12 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=password
 ```
 
+Agent skills and `zazzctl` read `ZAZZ_API_TOKEN` from root `.env`:
+
+```bash
+ZAZZ_API_TOKEN=550e8400-e29b-41d4-a716-446655440000
+```
+
 ### Docker Compose reference (from `docker-compose.yml`)
 
 | Service  | Container name       | Host port | Container port | Notes                    |

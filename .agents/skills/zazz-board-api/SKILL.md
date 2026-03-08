@@ -14,13 +14,13 @@ Agents use this API to create/manage deliverables and tasks, update statuses, ap
 ## Authentication
 All API requests (except `/openapi.json`, `/health`, `/`, `/db-test`, `/token-info`) require:
 - Header: `TB_TOKEN: <uuid>` or `Authorization: Bearer <uuid>`
-- Token: `ZAZZ_API_TOKEN` or fallback `550e8400-e29b-41d4-a716-446655440000`
+- Token resolution: `ZAZZ_API_TOKEN` when set, otherwise fallback `550e8400-e29b-41d4-a716-446655440000`
 
 ---
 
 ## Environment variables
 - `ZAZZ_API_BASE_URL` (fallback: `http://localhost:3030`)
-- `ZAZZ_API_TOKEN` (fallback: `550e8400-e29b-41d4-a716-446655440000`)
+- `ZAZZ_API_TOKEN` (required token source; fallback if unset: `550e8400-e29b-41d4-a716-446655440000`)
 - `ZAZZ_PROJECT_CODE` (fallback: `ZAZZ`)
 
 ---
@@ -140,7 +140,7 @@ Verification lifecycle (required):
 1. Fetch OpenAPI spec.
 2. Resolve routes for required capabilities using deterministic rules.
 3. Validate required path/query/body schema for each operation.
-4. Execute request with `TB_TOKEN`.
+4. Execute request with `TB_TOKEN` or `Authorization: Bearer`, using the resolved token (`ZAZZ_API_TOKEN` first, fallback test token).
 5. Validate post-conditions (task list + graph + statuses).
 6. On errors, report capability + path + status + API error payload.
 

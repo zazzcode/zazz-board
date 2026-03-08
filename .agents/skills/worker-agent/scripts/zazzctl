@@ -23,7 +23,7 @@ Resources:
 
 Global env defaults:
   ZAZZ_API_BASE_URL (default: http://localhost:3030)
-  ZAZZ_API_TOKEN    (default: demo token)
+  ZAZZ_API_TOKEN    (default fallback: test token)
   ZAZZ_PROJECT_CODE (default: ZAZZ)
   ZAZZCTL_PRETTY    (1 pretty JSON, 0 raw)
 
