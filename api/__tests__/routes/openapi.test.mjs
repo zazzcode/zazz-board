@@ -98,7 +98,7 @@ describe('OpenAPI / Swagger documentation', () => {
     const acquirePath = spec.paths['/projects/{code}/deliverables/{delivId}/locks/acquire'];
     expect(acquirePath).toBeDefined();
     expect(acquirePath.post).toBeDefined();
-    expect(acquirePath.post.requestBody?.content?.['application/json']?.schema?.properties?.filePaths).toBeDefined();
+    expect(acquirePath.post.requestBody?.content?.['application/json']?.schema?.properties?.fileRelativePaths).toBeDefined();
 
     const heartbeatPath = spec.paths['/projects/{code}/deliverables/{delivId}/locks/heartbeat'];
     expect(heartbeatPath).toBeDefined();

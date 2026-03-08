@@ -33,7 +33,7 @@ describe('File lock routes', () => {
         taskId: task.id,
         phaseStep: '1.1',
         agentName: 'worker-1',
-        filePaths: ['api/src/routes/projects.js', 'api/src/services/databaseService.js'],
+        fileRelativePaths: ['api/src/routes/projects.js', 'api/src/services/databaseService.js'],
         ttlSeconds: 30,
       })
       .expectStatus(200)
@@ -72,7 +72,7 @@ describe('File lock routes', () => {
         taskId: ownerTask.id,
         phaseStep: '1.1',
         agentName: 'worker-1',
-        filePaths: ['api/src/routes/projects.js'],
+        fileRelativePaths: ['api/src/routes/projects.js'],
         ttlSeconds: 30,
       })
       .expectStatus(200);
@@ -84,7 +84,7 @@ describe('File lock routes', () => {
         taskId: blockedTask.id,
         phaseStep: '1.2',
         agentName: 'worker-2',
-        filePaths: ['api/src/routes/projects.js', 'api/src/routes/taskGraph.js'],
+        fileRelativePaths: ['api/src/routes/projects.js', 'api/src/routes/taskGraph.js'],
         ttlSeconds: 30,
       })
       .expectStatus(409)
@@ -92,7 +92,7 @@ describe('File lock routes', () => {
 
     expect(conflict.error).toBe('FILE_LOCK_CONFLICT');
     expect(Array.isArray(conflict.conflicts)).toBe(true);
-    expect(conflict.conflicts[0].filePath).toBe('api/src/routes/projects.js');
+    expect(conflict.conflicts[0].fileRelativePath).toBe('api/src/routes/projects.js');
     expect(conflict.pollIntervalSeconds).toBe(3);
   });
 
@@ -116,7 +116,7 @@ describe('File lock routes', () => {
         taskId: ownerTask.id,
         phaseStep: '2.1',
         agentName: 'worker-1',
-        filePaths: ['client/src/App.jsx'],
+        fileRelativePaths: ['client/src/App.jsx'],
         ttlSeconds: 30,
       })
       .expectStatus(200);
@@ -140,7 +140,7 @@ describe('File lock routes', () => {
         taskId: nextTask.id,
         phaseStep: '2.2',
         agentName: 'worker-2',
-        filePaths: ['client/src/App.jsx'],
+        fileRelativePaths: ['client/src/App.jsx'],
         ttlSeconds: 30,
       })
       .expectStatus(200)
@@ -171,7 +171,7 @@ describe('File lock routes', () => {
         taskId: firstTask.id,
         phaseStep: '3.1',
         agentName: 'worker-1',
-        filePaths: ['api/src/routes/images.js'],
+        fileRelativePaths: ['api/src/routes/images.js'],
         ttlSeconds: 5,
       })
       .expectStatus(200);
@@ -185,7 +185,7 @@ describe('File lock routes', () => {
         taskId: secondTask.id,
         phaseStep: '3.2',
         agentName: 'worker-2',
-        filePaths: ['api/src/routes/images.js'],
+        fileRelativePaths: ['api/src/routes/images.js'],
         ttlSeconds: 30,
       })
       .expectStatus(200)

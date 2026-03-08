@@ -642,8 +642,8 @@ case "$resource:$action" in
           --arg agentName "$agent_name" \
           --arg phaseStep "$phase_step" \
           --arg ttl "$ttl_seconds" \
-          --argjson filePaths "$files_json" \
-          '{taskId:$taskId,agentName:$agentName,filePaths:$filePaths}
+          --argjson fileRelativePaths "$files_json" \
+          '{taskId:$taskId,agentName:$agentName,fileRelativePaths:$fileRelativePaths}
           + (if $phaseStep != "" then {phaseStep:$phaseStep} else {} end)
           + (if $ttl != "" then {ttlSeconds:($ttl|tonumber)} else {} end)')
         call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/acquire" "$body"
@@ -654,9 +654,9 @@ case "$resource:$action" in
           --argjson taskId "$task_id" \
           --arg agentName "$agent_name" \
           --arg ttl "$ttl_seconds" \
-          --argjson filePaths "$files_json" \
+          --argjson fileRelativePaths "$files_json" \
           '{taskId:$taskId,agentName:$agentName}
-          + (if ($filePaths|length) > 0 then {filePaths:$filePaths} else {} end)
+          + (if ($fileRelativePaths|length) > 0 then {fileRelativePaths:$fileRelativePaths} else {} end)
           + (if $ttl != "" then {ttlSeconds:($ttl|tonumber)} else {} end)')
         call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/heartbeat" "$body"
         exit_with_last_response
@@ -665,9 +665,9 @@ case "$resource:$action" in
         body=$(jq -n \
           --argjson taskId "$task_id" \
           --arg agentName "$agent_name" \
-          --argjson filePaths "$files_json" \
+          --argjson fileRelativePaths "$files_json" \
           '{taskId:$taskId,agentName:$agentName}
-          + (if ($filePaths|length) > 0 then {filePaths:$filePaths} else {} end)')
+          + (if ($fileRelativePaths|length) > 0 then {fileRelativePaths:$fileRelativePaths} else {} end)')
         call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/release" "$body"
         exit_with_last_response
         ;;
@@ -719,8 +719,8 @@ case "$resource:$action" in
       --arg agentName "$agent_name" \
       --arg phaseStep "$phase_step" \
       --arg ttl "$ttl_seconds" \
-      --argjson filePaths "$files_json" \
-      '{taskId:$taskId,agentName:$agentName,filePaths:$filePaths}
+      --argjson fileRelativePaths "$files_json" \
+      '{taskId:$taskId,agentName:$agentName,fileRelativePaths:$fileRelativePaths}
       + (if $phaseStep != "" then {phaseStep:$phaseStep} else {} end)
       + (if $ttl != "" then {ttlSeconds:($ttl|tonumber)} else {} end)')
 
@@ -823,9 +823,9 @@ case "$resource:$action" in
       --argjson taskId "$task_id" \
       --arg agentName "$agent_name" \
       --arg ttl "$ttl_seconds" \
-      --argjson filePaths "$files_json" \
+      --argjson fileRelativePaths "$files_json" \
       '{taskId:$taskId,agentName:$agentName}
-      + (if ($filePaths|length) > 0 then {filePaths:$filePaths} else {} end)
+      + (if ($fileRelativePaths|length) > 0 then {fileRelativePaths:$fileRelativePaths} else {} end)
       + (if $ttl != "" then {ttlSeconds:($ttl|tonumber)} else {} end)')
 
     call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/heartbeat" "$heartbeat_body"
@@ -913,9 +913,9 @@ case "$resource:$action" in
     release_body=$(jq -n \
       --argjson taskId "$task_id" \
       --arg agentName "$agent_name" \
-      --argjson filePaths "$files_json" \
+      --argjson fileRelativePaths "$files_json" \
       '{taskId:$taskId,agentName:$agentName}
-      + (if ($filePaths|length) > 0 then {filePaths:$filePaths} else {} end)')
+      + (if ($fileRelativePaths|length) > 0 then {fileRelativePaths:$fileRelativePaths} else {} end)')
 
     call_api POST "/projects/${project}/deliverables/${deliverable_id}/locks/release" "$release_body"
     release_http="$LAST_HTTP"

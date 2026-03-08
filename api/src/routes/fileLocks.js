@@ -72,7 +72,7 @@ export default async function fileLockRoutes(fastify, options) {
     try {
       const { code, delivId } = request.params;
       const { project, deliverableId } = await resolveScope(code, delivId);
-      const { taskId, phaseStep, agentName, filePaths, ttlSeconds } = request.body;
+      const { taskId, phaseStep, agentName, fileRelativePaths, ttlSeconds } = request.body;
 
       const result = await dbService.acquireFileLocks({
         projectId: project.id,
@@ -80,7 +80,7 @@ export default async function fileLockRoutes(fastify, options) {
         taskId,
         phaseStep: phaseStep || null,
         agentName,
-        filePaths,
+        fileRelativePaths,
         ttlSeconds,
         userId: request.user?.id || null,
       });
@@ -101,7 +101,7 @@ export default async function fileLockRoutes(fastify, options) {
         taskId,
         phaseStep: phaseStep || null,
         agentName,
-        filePaths,
+        fileRelativePaths,
       });
 
       reply.send(result);
@@ -117,14 +117,14 @@ export default async function fileLockRoutes(fastify, options) {
     try {
       const { code, delivId } = request.params;
       const { project, deliverableId } = await resolveScope(code, delivId);
-      const { taskId, agentName, filePaths, ttlSeconds } = request.body;
+      const { taskId, agentName, fileRelativePaths, ttlSeconds } = request.body;
 
       const result = await dbService.heartbeatFileLocks({
         projectId: project.id,
         deliverableId,
         taskId,
         agentName,
-        filePaths: filePaths || [],
+        fileRelativePaths: fileRelativePaths || [],
         ttlSeconds,
         userId: request.user?.id || null,
       });
@@ -135,7 +135,7 @@ export default async function fileLockRoutes(fastify, options) {
         deliverableId,
         taskId,
         agentName,
-        filePaths: filePaths || [],
+        fileRelativePaths: fileRelativePaths || [],
       });
 
       reply.send(result);
@@ -151,14 +151,14 @@ export default async function fileLockRoutes(fastify, options) {
     try {
       const { code, delivId } = request.params;
       const { project, deliverableId } = await resolveScope(code, delivId);
-      const { taskId, agentName, filePaths } = request.body;
+      const { taskId, agentName, fileRelativePaths } = request.body;
 
       const result = await dbService.releaseFileLocks({
         projectId: project.id,
         deliverableId,
         taskId,
         agentName,
-        filePaths: filePaths || [],
+        fileRelativePaths: fileRelativePaths || [],
       });
 
       publishEvent(project.code, {
@@ -167,7 +167,7 @@ export default async function fileLockRoutes(fastify, options) {
         deliverableId,
         taskId,
         agentName,
-        filePaths: filePaths || [],
+        fileRelativePaths: fileRelativePaths || [],
       });
 
       reply.send(result);

@@ -1440,9 +1440,9 @@ class DatabaseService {
 
   // ==================== FILE LOCK OPERATIONS ====================
 
-  normalizeLockFilePaths(filePaths = []) {
-    if (!Array.isArray(filePaths)) return [];
-    const normalized = filePaths
+  normalizeLockFileRelativePaths(fileRelativePaths = []) {
+    if (!Array.isArray(fileRelativePaths)) return [];
+    const normalized = fileRelativePaths
       .map((value) => String(value || '').trim())
       .filter(Boolean);
     return [...new Set(normalized)];
@@ -1464,7 +1464,7 @@ class DatabaseService {
       taskId: lock.task_id,
       phaseStep: lock.phase_step,
       agentName: lock.agent_name,
-      filePath: lock.filepath,
+      fileRelativePath: lock.file_relative_path,
       acquiredAt: lock.acquired_at,
       heartbeatAt: lock.heartbeat_at,
       leaseExpiresAt: lock.lease_expires_at,
@@ -1498,15 +1498,15 @@ class DatabaseService {
             sql`${FILE_LOCKS.lease_expires_at} > NOW()`
           )
         )
-        .orderBy(asc(FILE_LOCKS.filepath));
+        .orderBy(asc(FILE_LOCKS.file_relative_path));
       return rows.map((row) => this.mapFileLock(row));
     });
   }
 
-  async acquireFileLocks({ projectId, deliverableId, taskId, phaseStep = null, agentName, filePaths, ttlSeconds = 30, userId = null }) {
-    const normalizedFilePaths = this.normalizeLockFilePaths(filePaths);
-    if (normalizedFilePaths.length === 0) {
-      throw new Error('filePaths is required and must contain at least one path');
+  async acquireFileLocks({ projectId, deliverableId, taskId, phaseStep = null, agentName, fileRelativePaths, ttlSeconds = 30, userId = null }) {
+    const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
+    if (normalizedFileRelativePaths.length === 0) {
+      throw new Error('fileRelativePaths is required and must contain at least one path');
     }
     const normalizedAgentName = String(agentName || '').trim();
     if (!normalizedAgentName) {
@@ -1536,7 +1536,7 @@ class DatabaseService {
         .where(
           and(
             eq(FILE_LOCKS.deliverable_id, deliverableId),
-            inArray(FILE_LOCKS.filepath, normalizedFilePaths),
+            inArray(FILE_LOCKS.file_relative_path, normalizedFileRelativePaths),
             sql`${FILE_LOCKS.lease_expires_at} > NOW()`
           )
         );
@@ -1544,7 +1544,7 @@ class DatabaseService {
       const conflicts = existingLocks
         .filter((lock) => !(lock.task_id === taskId && lock.agent_name === normalizedAgentName))
         .map((lock) => ({
-          filePath: lock.filepath,
+          fileRelativePath: lock.file_relative_path,
           taskId: lock.task_id,
           phaseStep: lock.phase_step,
           agentName: lock.agent_name,
@@ -1563,8 +1563,8 @@ class DatabaseService {
       const now = new Date();
       const leaseExpiresAt = new Date(now.getTime() + ttl * 1000);
 
-      for (const filePath of normalizedFilePaths) {
-        const existing = existingLocks.find((lock) => lock.filepath === filePath);
+      for (const fileRelativePath of normalizedFileRelativePaths) {
+        const existing = existingLocks.find((lock) => lock.file_relative_path === fileRelativePath);
         if (existing) {
           await tx
             .update(FILE_LOCKS)
@@ -1585,7 +1585,7 @@ class DatabaseService {
               task_id: taskId,
               phase_step: phaseStep,
               agent_name: normalizedAgentName,
-              filepath: filePath,
+              file_relative_path: fileRelativePath,
               acquired_at: now,
               heartbeat_at: now,
               lease_expires_at: leaseExpiresAt,
@@ -1605,11 +1605,11 @@ class DatabaseService {
             eq(FILE_LOCKS.deliverable_id, deliverableId),
             eq(FILE_LOCKS.task_id, taskId),
             eq(FILE_LOCKS.agent_name, normalizedAgentName),
-            inArray(FILE_LOCKS.filepath, normalizedFilePaths),
+            inArray(FILE_LOCKS.file_relative_path, normalizedFileRelativePaths),
             sql`${FILE_LOCKS.lease_expires_at} > NOW()`
           )
         )
-        .orderBy(asc(FILE_LOCKS.filepath));
+        .orderBy(asc(FILE_LOCKS.file_relative_path));
 
       return {
         acquired: true,
@@ -1619,12 +1619,12 @@ class DatabaseService {
     });
   }
 
-  async heartbeatFileLocks({ projectId, deliverableId, taskId, agentName, filePaths = [], ttlSeconds = 30, userId = null }) {
+  async heartbeatFileLocks({ projectId, deliverableId, taskId, agentName, fileRelativePaths = [], ttlSeconds = 30, userId = null }) {
     const normalizedAgentName = String(agentName || '').trim();
     if (!normalizedAgentName) {
       throw new Error('agentName is required');
     }
-    const normalizedFilePaths = this.normalizeLockFilePaths(filePaths);
+    const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
     const ttl = this.normalizeLockTtlSeconds(ttlSeconds);
 
     return db.transaction(async (tx) => {
@@ -1641,8 +1641,8 @@ class DatabaseService {
         sql`${FILE_LOCKS.lease_expires_at} > NOW()`,
       ];
 
-      if (normalizedFilePaths.length > 0) {
-        conditions.push(inArray(FILE_LOCKS.filepath, normalizedFilePaths));
+      if (normalizedFileRelativePaths.length > 0) {
+        conditions.push(inArray(FILE_LOCKS.file_relative_path, normalizedFileRelativePaths));
       }
 
       const refreshedRows = await tx
@@ -1664,12 +1664,12 @@ class DatabaseService {
     });
   }
 
-  async releaseFileLocks({ projectId, deliverableId, taskId, agentName, filePaths = [] }) {
+  async releaseFileLocks({ projectId, deliverableId, taskId, agentName, fileRelativePaths = [] }) {
     const normalizedAgentName = String(agentName || '').trim();
     if (!normalizedAgentName) {
       throw new Error('agentName is required');
     }
-    const normalizedFilePaths = this.normalizeLockFilePaths(filePaths);
+    const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
 
     return db.transaction(async (tx) => {
       await this.reclaimExpiredFileLocks(tx, deliverableId);
@@ -1680,8 +1680,8 @@ class DatabaseService {
         eq(FILE_LOCKS.task_id, taskId),
         eq(FILE_LOCKS.agent_name, normalizedAgentName),
       ];
-      if (normalizedFilePaths.length > 0) {
-        conditions.push(inArray(FILE_LOCKS.filepath, normalizedFilePaths));
+      if (normalizedFileRelativePaths.length > 0) {
+        conditions.push(inArray(FILE_LOCKS.file_relative_path, normalizedFileRelativePaths));
       }
 
       const releasedRows = await tx

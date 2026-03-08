@@ -11,7 +11,7 @@ const lockItemSchema = {
     taskId: { type: 'integer', description: 'Task id that owns the lock.' },
     phaseStep: { type: 'string', nullable: true, description: 'Plan step label (e.g. "2.3").' },
     agentName: { type: 'string', description: 'Worker/sub-agent name that owns the lock.' },
-    filePath: { type: 'string', description: 'Repo-relative file path.' },
+    fileRelativePath: { type: 'string', description: 'Path relative to the worktree root.' },
     acquiredAt: { type: 'string', format: 'date-time' },
     heartbeatAt: { type: 'string', format: 'date-time' },
     leaseExpiresAt: { type: 'string', format: 'date-time' },
@@ -24,7 +24,7 @@ const lockItemSchema = {
 const lockConflictSchema = {
   type: 'object',
   properties: {
-    filePath: { type: 'string' },
+    fileRelativePath: { type: 'string' },
     taskId: { type: 'integer' },
     phaseStep: { type: 'string', nullable: true },
     agentName: { type: 'string' },
@@ -43,16 +43,16 @@ const deliverableScopeParams = {
 
 const acquireLikeBodyBase = {
   type: 'object',
-  required: ['taskId', 'agentName', 'filePaths'],
+  required: ['taskId', 'agentName', 'fileRelativePaths'],
   properties: {
     taskId: { type: 'integer', minimum: 1, description: 'Numeric task id that will own locks.' },
     phaseStep: { type: 'string', minLength: 1, maxLength: 20, description: 'Plan step ID (e.g. "3.2").' },
     agentName: { type: 'string', minLength: 1, maxLength: 100, description: 'Worker/sub-agent identifier.' },
-    filePaths: {
+    fileRelativePaths: {
       type: 'array',
       minItems: 1,
       items: { type: 'string', minLength: 1, maxLength: 1000 },
-      description: 'Repo-relative file paths to lock.'
+      description: 'Paths relative to the worktree root to lock.'
     },
     ttlSeconds: {
       type: 'integer',
@@ -70,10 +70,10 @@ const heartbeatBody = {
   properties: {
     taskId: { type: 'integer', minimum: 1, description: 'Numeric task id that owns locks.' },
     agentName: { type: 'string', minLength: 1, maxLength: 100, description: 'Worker/sub-agent identifier.' },
-    filePaths: {
+    fileRelativePaths: {
       type: 'array',
       items: { type: 'string', minLength: 1, maxLength: 1000 },
-      description: 'Optional subset of file paths. If omitted, refreshes all lock rows for taskId+agentName in this deliverable.'
+      description: 'Optional subset of worktree-relative paths. If omitted, refreshes all lock rows for taskId+agentName in this deliverable.'
     },
     ttlSeconds: {
       type: 'integer',
@@ -134,7 +134,7 @@ export const fileLockSchemas = {
   heartbeatLocks: {
     tags: ['file-locks'],
     summary: 'Refresh lock lease heartbeat',
-    description: 'Extends lease expiry for lock rows owned by taskId+agentName. If filePaths omitted, refreshes all locks for that owner in the deliverable.',
+    description: 'Extends lease expiry for lock rows owned by taskId+agentName. If fileRelativePaths omitted, refreshes all locks for that owner in the deliverable.',
     params: deliverableScopeParams,
     body: heartbeatBody,
     response: {
@@ -152,7 +152,7 @@ export const fileLockSchemas = {
   releaseLocks: {
     tags: ['file-locks'],
     summary: 'Release file locks',
-    description: 'Releases lock rows for taskId+agentName. If filePaths omitted, releases all locks owned by that owner in the deliverable.',
+    description: 'Releases lock rows for taskId+agentName. If fileRelativePaths omitted, releases all locks owned by that owner in the deliverable.',
     params: deliverableScopeParams,
     body: {
       type: 'object',
@@ -160,10 +160,10 @@ export const fileLockSchemas = {
       properties: {
         taskId: { type: 'integer', minimum: 1, description: 'Numeric task id that owns locks.' },
         agentName: { type: 'string', minLength: 1, maxLength: 100, description: 'Worker/sub-agent identifier.' },
-        filePaths: {
+        fileRelativePaths: {
           type: 'array',
           items: { type: 'string', minLength: 1, maxLength: 1000 },
-          description: 'Optional subset of file paths to release.'
+          description: 'Optional subset of worktree-relative paths to release.'
         }
       },
       additionalProperties: false
