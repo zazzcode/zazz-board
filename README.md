@@ -1,6 +1,8 @@
 # Zazz Board
 
-**Zazz Board** is a Kanban-style orchestration app for coordinating **AI agents** and **owners** — the people who define what to build, approve PLANs, and review results. Work is organized by **project**; each project contains **deliverables** (features, bug fixes, refactors) that group **tasks**. Owners manage SPECs and deliverable flow; agents handle task execution and QA. Only deliverables are PR’d — never individual tasks.
+**Zazz Board** is a Kanban-style orchestration app for coordinating **AI agents** and **owners** — the people who define what to build, approve PLANs, and review results. Work is organized by **project**; each project contains **deliverables** (features, bug fixes, refactors) that group **tasks**. Owners manage SPECs and deliverable flow; agents execute implementation work and board updates. Only deliverables are PR’d — never individual tasks.
+
+**Current initiative focus:** `spec-builder`, `planner`, and `worker` agent flows. Coordinator/QA agent flows are not the current release focus.
 
 **Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
 
@@ -38,7 +40,7 @@
 
 1. **Deliverable creation**: Owner works with the **spec builder agent** to create the deliverable specification (SPEC). During that dialogue, the agent drafts the SPEC document and creates the deliverable card on the Kanban board via the API — both with sufficient clarity and correct metadata (SPEC path, worktree, branch).
 2. **Planning**: The **Planner agent** decomposes the SPEC into the PLAN — phased sequence of tasks with per-task acceptance criteria, test requirements, and file assignments. Owner approves PLAN (sets `approved_by` / `approved_at`), sets PLAN path. Owner or system moves deliverable to **In Progress** (guard: PLAN approved + PLAN path set).
-3. **Execution**: **Coordinator** creates tasks from the PLAN via the API; **Workers** implement tasks; **QA** validates against acceptance criteria. When all tasks are complete, QA creates PR and sets `pull_request_url` on the deliverable, then moves deliverable to **In Review**.
+3. **Execution**: The **Worker agent** realizes plan tasks just-in-time on the board, creates required relations, and implements with TDD while keeping statuses and block flags current via API. Owner-managed orchestration can run this flow directly without coordinator/QA agent personas in the current release.
 4. **Review & release**: Owner reviews PR, merges to staging (**Staged**) then to main (**Done** or **Prod** for projects with a release-pipeline workflow). Status history is stored for lead-time and reporting.
 
 ### Tech notes
@@ -349,15 +351,15 @@ For **Swagger UI**, see [How to access the docs with your access token](#how-to-
 
 ## Reference
 
-|| Action | Command (project root unless noted) |
-||--------|-------------------------------------|
-|| Run API + client | `npm run dev` |
-|| Run API only | `npm run dev:api` |
-|| Run client only | `npm run dev:client` |
-|| Reset dev DB (from `api/`) | `npm run db:reset` |
-|| Seed only (from `api/`) | `npm run db:seed` |
-|| Reset + reseed Docker DB (containers running) | `npm run docker:reset:seed` |
-|| Run tests (from `api/`) | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
+| Action | Command (project root unless noted) |
+|--------|-------------------------------------|
+| Run API + client | `npm run dev` |
+| Run API only | `npm run dev:api` |
+| Run client only | `npm run dev:client` |
+| Reset dev DB (from `api/`) | `npm run db:reset` |
+| Seed only (from `api/`) | `npm run db:seed` |
+| Reset + reseed Docker DB (containers running) | `npm run docker:reset:seed` |
+| Run tests (from `api/`) | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
 
 Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/__tests__/README.md](./api/__tests__/README.md).
 
@@ -376,5 +378,5 @@ This repository is developed using the Zazz framework (dogfooding). Zazz Board i
 - **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
 - **`.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md) Repository Structure.
-- **`.agents/skills/`** — Agent skills (spec-builder, planner, coordinator, worker, qa, zazz-board-api). Developed here; synced to zazz-skills repo when stable.
+- **`.agents/skills/`** — Agent skills. Current release focus: `spec-builder`, `planner`, `worker`, and `zazz-board-api` (coordinator/qa skills are not current release focus). Developed here; synced to zazz-skills repo when stable.
 - **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
