@@ -151,6 +151,10 @@ File lock lifecycle (required for worker execution):
 - While work is active, refresh lease with `POST /projects/{code}/deliverables/{delivId}/locks/heartbeat`.
 - On completion/handoff, release with `POST /projects/{code}/deliverables/{delivId}/locks/release`.
 
+Harness-aware exception:
+- If a worker harness guarantees strict disjoint file ownership, isolated subagent workspaces, and parent-controlled merge/serialization for overlaps, lock calls may be skipped for those internal subagents.
+- If any external worker/process can concurrently edit the same deliverable/files, lock calls remain mandatory.
+
 Verification lifecycle (required):
 - After creating/updating tasks, re-fetch deliverable task list and confirm task `id`, `phaseStep`, `status`, and blocker fields when used.
 - Re-fetch deliverable graph and confirm task presence and relation edges.

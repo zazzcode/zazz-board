@@ -22,8 +22,10 @@
 ### In scope
 - Add `AGENT_TOKENS` persistence, seed data, and reset integration.
 - Expand token/auth stack to support both token types with in-memory cache and project `code↔id` maps.
+- Add human-user-token-only cache refresh endpoint (`POST /token-cache/refresh`) to resync token/project maps during test/admin flows.
 - Enforce project-scoped agent-token authorization for project routes (`:id` and `:code`).
 - Enforce authorization model: user tokens can access all projects (current model), agent tokens only their bound project.
+- Enforce authenticated non-project routes as user-token-only; agent tokens `403` unless route is explicitly public.
 - Keep agent-usable routes project-code scoped (`:code` / `:projectCode`) for consistent authorization checks.
 - Add agent-token CRUD/list API routes and OpenAPI schemas.
 - Enforce **user-token-only** access for agent-token management endpoints (agent tokens must be `403`).
@@ -41,7 +43,6 @@
 ### Explicit non-goals from SPEC
 - Do not migrate existing external agents automatically.
 - Do not add project-level restrictions beyond existing leader/non-leader behavior.
-- Do not change non-project-route behavior for agent tokens.
 
 ## 3. Verified Current State (Repository Reality)
 - `api/lib/db/schema.js` has `USERS.access_token` but no `AGENT_TOKENS` table.
@@ -49,8 +50,10 @@
 - `api/src/middleware/authMiddleware.js` authenticates token but does not attach `tokenType`/agent scope or enforce project match.
 - `api/scripts/reset-and-seed.js` has no `AGENT_TOKENS` drop/seed integration.
 - No agent-token routes/schemas exist in `api/src/routes/*` or `api/src/schemas/*`.
+- No token-cache refresh endpoint exists.
 - Live OpenAPI has no `/projects/{code}/agent-tokens` or `/projects/{code}/users/{userId}/agent-tokens` paths.
 - Existing route surface includes both project param styles (`/projects/{id}` and `/projects/{code}`), so middleware must resolve both.
+- Existing authenticated non-project routes (e.g. `/users/*`) do not enforce user-token-only access.
 - Existing tests use user token `550e8400-e29b-41d4-a716-446655440000` in agent persona suites:
   - `api/__tests__/routes/agent-workflow.test.mjs`
   - `api/__tests__/routes/deliverables-approval.test.mjs`
@@ -62,8 +65,10 @@
 |---|---|---|
 | DB schema | No `AGENT_TOKENS` | `AGENT_TOKENS(id, user_id, project_id, token, label, created_at)` + indexes |
 | Token cache | User-token only map | Unified map for user + agent tokens with token type/scope plus in-memory project `code↔id` maps |
+| Cache refresh API | None | `POST /token-cache/refresh` (user token only; agent token `403`) to reload cache/maps from DB |
 | Auth request context | `request.user` only | `request.user`, `request.tokenType`, `request.agentTokenProjectId`, `request.agentTokenProjectCode`, `request.agentTokenUserId` |
 | Project-route auth | Any valid token accepted | Agent token must match normalized project id (from `:id` or cached `:code -> id` lookup) else `403` |
+| Authenticated non-project routes | Any valid token accepted | User-token-only (`403` for agent token), except explicitly public endpoints |
 | Agent route shape | Mixed assumptions | Agent-usable routes must carry project code context (`:code`/`:projectCode`) for auth consistency |
 | Token-management endpoint auth | No special split | `/projects/:code/agent-tokens` and `/projects/:code/users/:userId/agent-tokens*` require user token; agent token always `403` |
 | Agent-token APIs | None | `GET /projects/:code/users/:userId/agent-tokens`, `GET /projects/:code/agent-tokens`, `POST /projects/:code/users/:userId/agent-tokens`, `DELETE /projects/:code/users/:userId/agent-tokens/:id` (no PATCH/PUT update endpoint) |
@@ -100,15 +105,17 @@ Merge points:
 |---|---|---|
 | AC-1 Schema | `1.1` | Schema push/reset output + seeded data query + route behavior relying on table |
 | AC-2 Token Service & Cache | `1.2` | New tokenService tests and route integration tests validating add/remove cache behavior |
+| AC-2b Cache Refresh Endpoint | `2.3`, `3.1` | `agent-tokens.test.mjs` coverage for `POST /token-cache/refresh` (200/401/403) |
 | AC-3 Auth Middleware | `1.3` | Pactum wrong-project `403` tests across `:code` and `:id` routes |
 | AC-4 GET user tokens | `2.2`, `3.1` | `agent-tokens.test.mjs` happy/403/404/401 |
 | AC-4b GET project tree | `2.2`, `3.1` | Leader/non-leader coverage in `agent-tokens.test.mjs` |
 | AC-5 POST token | `2.2`, `1.2`, `3.1` | Create returns token + immediate auth usability check |
 | AC-6 DELETE token | `2.2`, `1.2`, `3.1` | Delete + immediate `401` on revoked token |
+| AC-6b API Immutability | `2.2`, `3.1`, `3.3` | PATCH/PUT absent in routes and OpenAPI, explicit `404` assertions |
 | AC-7 UI icon | `4.1` | Manual owner verification checklist |
 | AC-8 UI modal behaviors | `4.2` | Manual owner verification checklist (leader/non-leader flows) |
 | AC-9 UI delete confirmation flow | `4.2` | Manual owner verification checklist (exact phrase gating) |
-| AC-10 Tests | `3.1`, `3.2`, `3.3` | Full route/openapi/persona/wrong-project test suite |
+| AC-10 Tests | `3.1`, `3.2`, `3.3` | Full route/openapi/persona/wrong-project + non-project-guard + cache-refresh suite |
 
 ## 7. Phased Execution Plan
 ### Phase 1 - Data/Auth foundation
@@ -145,6 +152,7 @@ Merge points:
   - Cache entries include `{ type, userId, projectId?, projectCode?, email?, fullName? }`.
   - Project maps loaded at startup: `projectIdByCode` and `projectCodeById`.
   - `addAgentTokenToCache()` and `removeAgentTokenFromCache()` implemented.
+  - `refreshCache()` remains callable for explicit cache reload route.
   - Startup initialization includes users + agent tokens + project `code↔id` maps.
 - DEPENDS_ON: `1.1`
 - COORDINATES_WITH: `2.2`, `3.1`
@@ -168,6 +176,7 @@ Merge points:
   - Middleware uses cached `request.tokenType` (`user`/`agent`) as primary gate for user-only endpoints.
   - Middleware resolves project context from `:code`, `:projectCode`, or `:id` on project routes using cached project maps.
   - Agent token mismatch returns `403`; user token behavior unchanged.
+  - Agent token on authenticated non-project routes returns `403` (public routes excluded).
   - Agent token on token-management endpoints returns `403` even when project matches.
   - Request context fields populated for downstream handlers (`agentTokenProjectCode` included).
   - Agent-usable route audit confirms project code context is present where agents are expected to operate.
@@ -177,6 +186,7 @@ Merge points:
 - TDD: tests to write first:
   - Wrong-project tests for both route param styles.
   - User-only endpoint test proving agent token is rejected by tokenType-first check (`403`) before ownership/path checks.
+  - Non-project route test proving agent token is rejected on authenticated non-project routes (`/users/me`), while public routes stay accessible.
   - Tests asserting agent-token access is only exercised on project-scoped routes carrying `:code`/`:projectCode`.
 - TDD: tests to run for completion:
   - `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- __tests__/routes/agent-tokens.test.mjs __tests__/routes/project-id-routes-regression.test.mjs`
@@ -230,6 +240,27 @@ Merge points:
   - `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- __tests__/routes/agent-tokens.test.mjs`
 - Acceptance criteria mapped: `AC-4`, `AC-4b`, `AC-5`, `AC-6`, partial `AC-10`
 - Completion signal: All new endpoints pass Pactum coverage and return spec-compliant payloads.
+
+#### 2.3 Add user-token-only token-cache refresh endpoint
+- Objective: Provide explicit cache resync capability for tests/admin flows after DB reset/direct DB changes.
+- Files affected:
+  - `api/src/routes/index.js` (or dedicated core/auth route plugin)
+  - `api/src/schemas/core.js` (or new auth schema file)
+  - `api/src/schemas/index.js`
+  - `api/src/schemas/validation.js`
+- Deliverables/output:
+  - `POST /token-cache/refresh`
+  - User token required (`200`), missing/invalid token (`401`), agent token (`403`)
+  - Endpoint calls `tokenService.refreshCache()` and returns success payload
+- DEPENDS_ON: `1.2`, `1.3`
+- COORDINATES_WITH: `3.1`, `3.3`
+- Parallelizable with: `4.1`
+- TDD: tests to write first:
+  - Route tests for refresh success (`200`) with user token and failure (`401`/`403`)
+- TDD: tests to run for completion:
+  - `cd api && set -a && source .env && set +a && NODE_ENV=test npm run test -- __tests__/routes/agent-tokens.test.mjs`
+- Acceptance criteria mapped: `AC-2b`, partial `AC-10`
+- Completion signal: Refresh endpoint reliably reloads cache and enforces tokenType gating.
 
 ### Phase 3 - Test updates and regression protection
 

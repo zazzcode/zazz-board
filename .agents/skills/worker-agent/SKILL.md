@@ -149,23 +149,63 @@ Lock workflow:
 6. On completion or handoff, run `zazzctl exec complete` (status + release).
 7. If worker process crashes/restarts, re-resolve task state from API and reacquire before resuming edits.
 
+### Harness-aware lock exception (Codex/subagent environments)
+If the active execution harness provides all of the following guarantees, API lock calls may be skipped for those internal subagents:
+1. strict disjoint file ownership assignment per subagent
+2. isolated subagent workspaces/branches with parent-controlled integration
+3. serialization of overlapping file ownership (no concurrent overlap)
+
+When using this exception:
+1. Parent worker MUST enforce disjoint ownership policy from the parallel execution section.
+2. Parent worker MUST serialize tasks when ownership overlaps.
+3. Parent worker MUST still keep board task status/notes truthful.
+4. If any external worker/process may touch the same deliverable/files, DO NOT use this exception; use API locks.
+
+Default policy remains: use API file locks unless the harness guarantees above are explicitly present.
+
 ---
 
 ## Parallel Execution Policy
 
 If subagents/teams are supported, parallelization is required.
 
+### Subagent contract (required when available)
+When using subagents/teams, the parent worker must assign explicit ownership and integration rules:
+1. Assign exactly one executable task per subagent.
+2. Assign an explicit owned file set per subagent (from PLAN file assignments).
+3. Require each subagent to edit only its owned files.
+4. Require each subagent to report:
+   - files changed
+   - tests run + outcome
+   - blockers and unresolved questions
+5. Parent worker is responsible for:
+   - integrating subagent outputs
+   - resolving cross-task conflicts
+   - running final verification
+   - updating board statuses/notes
+
 ### Parallelization algorithm
 1. Compute the ready set (dependencies satisfied).
-2. From ready tasks, select tasks with no overlapping file ownership.
-3. Spawn subagents for as many safe tasks as possible.
-4. Assign one task per subagent.
-5. Track and merge outputs; update board statuses for each task.
-6. Recompute ready set and repeat.
+2. Build each task's ownership set from PLAN file assignments (or the smallest defensible file set if PLAN omits explicit files).
+3. Select only tasks whose ownership sets are pairwise disjoint.
+4. If two ready tasks overlap on any file, serialize them (do not run in parallel).
+5. Spawn subagents for as many safe tasks as possible (default max parallel workers: 3 unless Owner specifies otherwise).
+6. Assign one task per subagent with explicit owned files, lock list, and test expectations.
+7. Track outputs; integrate changes sequentially in parent worker context; then update board statuses for each task.
+8. Recompute ready set and repeat.
 
 If subagents are not supported, execute the same dependency order in single-agent mode.
 
 Do not run tasks in parallel when they overlap on locked/conflicting files.
+
+### Merge and integration protocol (required)
+`Merge results` means parent-worker integration of completed subagent work, not blind acceptance:
+1. Wait for subagent completion reports.
+2. Review each subagent's changed files against assigned ownership.
+3. Integrate non-conflicting outputs first.
+4. Resolve conflicts in parent context when outputs touch shared contracts/interfaces.
+5. Run required tests for each completed task, then run a cross-task regression sweep.
+6. Only after verification, advance task statuses and append notes with integration outcome.
 
 ---
 

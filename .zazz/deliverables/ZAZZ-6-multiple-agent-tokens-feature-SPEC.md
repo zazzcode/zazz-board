@@ -42,6 +42,7 @@ Zazz Board currently uses a single token per user (`USERS.access_token`). Both h
 - `USERS.access_token` repurposed as **user token** (human only, full project access)
 - `tokenService` and `authMiddleware` extended to support both token types and user+project-scope validation for agent tokens
 - **In-memory cache**: Expand existing user-token cache to include agent tokens and project code/id lookup maps; single Map lookup for token validation (no DB hit). Cache populated on startup. **On create**: add new token to cache as part of the create route (no full refresh). **On delete**: remove token from cache as part of the delete route (no full refresh). Assume single API instance for now; multi-instance shared cache is future work.
+- User-token-only cache maintenance endpoint: `POST /token-cache/refresh` reloads token/project maps from DB (for test isolation and admin maintenance). Agent token is forbidden (`403`).
 - API routes: list agent tokens (project + user scoped), create agent token, delete agent token (hard delete)
 - Agent token records are immutable after create (no PATCH/PUT update endpoint in API)
 - Route protection: agent token must match both user context and project in URL
@@ -62,9 +63,9 @@ Zazz Board currently uses a single token per user (`USERS.access_token`). Both h
 
 ### Future Fixes (Identified During Spec Interview)
 
-Cleanup items identified during the specification interview but **outside the scope** of this deliverable are documented in [future-fixes.md](../future-fixes.md). Includes: project route param inconsistency (`:id` vs `:code`), legacy naming (task_blaster vs zazz_board), non-project route behavior for agent tokens, project-level access restrictions, multi-instance cache.
+Cleanup items identified during the specification interview but **outside the scope** of this deliverable are documented in [future-fixes.md](../future-fixes.md). Includes: project route param inconsistency (`:id` vs `:code`), legacy naming (task_blaster vs zazz_board), project-level access restrictions, multi-instance cache.
 
-**Non-project routes (agent tokens)**: Non-project routes just work—no restriction. Agent tokens receive the same response as user tokens. Authorization is limited to project-scoped routes. When routes gain project scoping in the future, add agent-token authorization there.
+**Non-project routes (agent tokens)**: Agent tokens are **not allowed** on authenticated non-project routes. Public routes (`/health`, `/db-test`, `/openapi.json`, `/docs`) remain unauthenticated. Any authenticated route intended for agent use must carry project context (`/projects/:code/...` or `/projects/:id/...`).
 
 ---
 
@@ -141,8 +142,6 @@ New seeder: `api/scripts/seeders/seedAgentTokens.js`. Add to `reset-and-seed.js`
 
 **Test stability**: Seeded tokens must stay **consistent** across runs—same UUIDs, same projects—so all API tests can rely on them. Agent token tests use these fixed values. Tokens are seeded only in projects used by agent tests (ZAZZ, ZED_MER).
 
-**USERS seed alignment note**: In `seedUsers`, rename `Mike Johnson` to `Steve Johnson`. Add `Jonathon` as an additional seeded user (new row only) so AGENT_TOKENS seed references remain stable (`user_id` 2/3/5 unchanged).
-
 **Seeder implementation**:
 ```javascript
 // api/scripts/seeders/seedAgentTokens.js
@@ -191,6 +190,7 @@ The existing `tokenService` caches user tokens on startup. **Expand the cache** 
 4. Read cached token type (`'user' | 'agent'`) and set request token context
 5. For user-token-only endpoints: if cached type is `agent`, return `403` immediately (no further auth checks)
 6. If token type is `user`: full access (current model). If `agent`: project-scoped checks apply.
+7. For authenticated non-project endpoints: user token only (`agent` -> `403`) unless endpoint is explicitly public.
 
 ### 5.3 Request Context
 
@@ -223,6 +223,7 @@ Do not expand scope to standardize routes; add inconsistency to future-fixes.
 **Authorization summary**:
 - User token (`USERS.access_token`): full project access (current model).
 - Agent token (`AGENT_TOKENS.token`): restricted to one project only; any other project returns `403`.
+- Authenticated non-project routes: user token only (`403` for agent token).
 
 **Routes using `:id`** (projects.js): `GET /projects/:id`, `PUT /projects/:id`, `DELETE /projects/:id`, `GET /projects/:id/tasks`, `GET /projects/:id/kanban/tasks/column/:status`
 
@@ -232,9 +233,12 @@ Do not expand scope to standardize routes; add inconsistency to future-fixes.
 
 ## 6. API Specification
 
-All routes require authentication.
+Public routes (no auth): `/health`, `/db-test`, `/openapi.json`, `/docs`.
+
+All other routes require authentication.
 
 - For general project-scoped routes, user token or matching-project agent token is valid.
+- For authenticated non-project routes, **user token only** is valid (agent token `403`).
 - For **agent-token management routes in section 6.1**, **user token only** is valid. Agent tokens are forbidden (`403`) on these routes.
 
 ### 6.1 Agent Token CRUD
@@ -362,6 +366,25 @@ This endpoint is **human user token only** (agent tokens forbidden).
 **Response 403**: Agent token used (forbidden on token-management routes), or not authorized to delete this token (e.g. non-leader trying to delete another user's token)
 **Response 404**: Token or project not found
 
+### 6.2 Token Cache Refresh
+
+#### POST /token-cache/refresh
+
+Refreshes in-memory token cache and project code/id maps from the database. This endpoint exists to keep long-running test sessions and admin/debug flows in sync after direct DB resets/changes.
+
+This endpoint is **human user token only** (agent tokens forbidden).
+
+**Response 200**:
+```json
+{
+  "message": "Token cache refreshed",
+  "cacheInitialized": true
+}
+```
+
+**401**: Missing/invalid token  
+**403**: Agent token used
+
 ---
 
 ## 7. UI Specification
@@ -429,6 +452,13 @@ Add translation keys for:
 
 **Verified by**: unit test or integration test
 
+### AC-2b: API — POST /token-cache/refresh
+- [ ] Endpoint refreshes token and project maps from DB
+- [ ] User token required; agent token gets 403
+- [ ] Returns success response for test/admin cache resync flows
+
+**Verified by**: PactumJS test
+
 ### AC-3: Auth Middleware
 - [ ] For project-scoped routes: agent token must have matching project_id (and belongs to user via user_id)
 - [ ] Agent token used for wrong project → 403 Forbidden
@@ -436,6 +466,7 @@ Add translation keys for:
 - [ ] Agent-usable routes consistently include project code context (`:code` / `:projectCode`) for authorization
 - [ ] User token: full access (per current project access model)
 - [ ] Agent tokens are rejected with 403 on agent-token management endpoints (`/projects/:code/agent-tokens` and `/projects/:code/users/:userId/agent-tokens*`)
+- [ ] Agent tokens are rejected with 403 on authenticated non-project routes (except public routes)
 - [ ] User-only endpoint guard runs before project/user ownership checks (tokenType-first gating)
 
 **Verified by**: PactumJS test (agent token wrong project → 403)
@@ -513,6 +544,8 @@ Add translation keys for:
 - [ ] Auth tests: agent token calling token-management routes (`GET/POST/DELETE agent-tokens`) → 403
 - [ ] Immutability tests: PATCH/PUT token update paths are not available (404) and not in OpenAPI
 - [ ] Cache invalidation: after DELETE, revoked token returns 401 on next request
+- [ ] Cache refresh endpoint (`POST /token-cache/refresh`): user token 200, agent token 403, missing token 401
+- [ ] Non-project auth guard: agent token on authenticated non-project route (e.g. `/users/me`) returns 403
 - [ ] **Agent persona tests**: Update `agent-workflow.test.mjs` to use agent token (`660e8400-e29b-41d4-a716-446655440101`) instead of user token—proves agents can perform full workflow (create deliverable, tasks, set status, append notes) with agent token. Add test: agent token for ZAZZ used on `/projects/ZED_MER/...` → 403
 - [ ] **Planner-sequence tests**: Update `deliverables-approval.test.mjs` and/or `deliverables-status.test.mjs` to use agent token where they simulate planner behavior (approve plan, transition PLANNING → IN_PROGRESS, create non-dependent tasks). These sequential tests validate agent tokens for planner persona.
 - [ ] **Wrong-project tests**: Agent token for ZED_MER (`660e8400-e29b-41d4-a716-446655440103`) used on `/projects/ZAZZ/deliverables` or `/projects/ZAZZ/deliverables/1/approve` → 403. Agent token for ZAZZ used on `/projects/ZED_MER/...` → 403.
@@ -557,6 +590,7 @@ Add translation keys for:
 ### Never Do
 - Mask tokens in token list responses for authorized human users
 - Allow agent tokens to call token-management routes
+- Allow agent tokens on authenticated non-project routes
 - Add PATCH/PUT token update routes
 - Skip user+project scope check for agent tokens on project routes
 
@@ -565,6 +599,7 @@ Add translation keys for:
 ## 11. Technical Context
 
 - **tokenService**: `api/src/services/tokenService.js` — expand cache to include agent tokens plus `projectIdByCode`/`projectCodeById`; add `addAgentTokenToCache()` and `removeAgentTokenFromCache()`; call on create/delete
+- **Token cache refresh route**: `POST /token-cache/refresh` (user-token-only) to resync in-memory cache/maps from DB for test/admin workflows
 - **authMiddleware**: `api/src/middleware/authMiddleware.js` — attach tokenType, agentTokenProjectId, agentTokenProjectCode; add project-scope check for project routes (support both `:id` and `:code` params via cache)
 - **Project routes**: Normalize `:id` or `:code` via in-memory project maps; agent token's project_id must match
 - **Agent token routes**: `GET/POST /projects/:code/users/:userId/agent-tokens`, `GET /projects/:code/agent-tokens` (leader tree), `DELETE .../users/:userId/agent-tokens/:id`; `userId` = `me` or numeric ID
