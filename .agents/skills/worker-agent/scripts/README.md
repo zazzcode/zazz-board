@@ -1,14 +1,15 @@
 # zazzctl Setup (Worker Skill)
 
-This directory contains the canonical worker adapter:
+This directory contains a worker profile wrapper:
 - `zazzctl`
 
-Use this script as the standard board API adapter for worker agents across projects and worktrees.
+Canonical implementation lives in:
+- `.agents/skills/zazz-board-api/scripts/zazzctl.mjs`
+
+Use this wrapper for worker agents across projects and worktrees.
 
 ## Requirements
-- POSIX shell (`/bin/sh`)
-- `curl`
-- `jq`
+- Node.js 22+
 - network access to Zazz Board API
 
 ## Environment
@@ -28,18 +29,18 @@ export ZAZZCTL_PRETTY=1
 Use the checked-in script directly:
 
 ```bash
-./.agents/skills/worker-agent/scripts/zazzctl help now
+./.agents/skills/worker-agent/scripts/zazzctl help
 ```
 
 ### Convenience wrapper in repo root
 Optional wrapper file at `scripts/zazzctl` can delegate to this script.
 
 ### Other project/worktree
-Copy only this script into your target repo, then make it executable:
+Copy the canonical Node CLI and (optionally) this wrapper into your target repo:
 
 ```bash
-cp /path/to/source/.agents/skills/worker-agent/scripts/zazzctl ./scripts/zazzctl
-chmod +x ./scripts/zazzctl
+cp /path/to/source/.agents/skills/zazz-board-api/scripts/zazzctl.mjs ./scripts/zazzctl.mjs
+chmod +x ./scripts/zazzctl.mjs
 ```
 
 ## Worker Protocol Commands

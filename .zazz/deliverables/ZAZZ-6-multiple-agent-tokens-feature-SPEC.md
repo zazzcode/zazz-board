@@ -41,13 +41,14 @@ Zazz Board currently uses a single token per user (`USERS.access_token`). Both h
 - Agent tokens scoped to **user + project**—belongs to one user, authorized for one project only
 - `USERS.access_token` repurposed as **user token** (human only, full project access)
 - `tokenService` and `authMiddleware` extended to support both token types and user+project-scope validation for agent tokens
-- **In-memory cache**: Expand existing user-token cache to include agent tokens; single Map lookup per request (no DB hit). Cache populated on startup. **On create**: add new token to cache as part of the create route (no full refresh). **On delete**: remove token from cache as part of the delete route (no full refresh). Assume single API instance for now; multi-instance shared cache is future work.
+- **In-memory cache**: Expand existing user-token cache to include agent tokens and project code/id lookup maps; single Map lookup for token validation (no DB hit). Cache populated on startup. **On create**: add new token to cache as part of the create route (no full refresh). **On delete**: remove token from cache as part of the delete route (no full refresh). Assume single API instance for now; multi-instance shared cache is future work.
 - API routes: list agent tokens (project + user scoped), create agent token, delete agent token (hard delete)
+- Agent token records are immutable after create (no PATCH/PUT update endpoint in API)
 - Route protection: agent token must match both user context and project in URL
 - UI: new icon on project row (agent or gear) → modal to manage agent tokens
 - **Project leader** (PROJECTS.leader_id): sees all users + all their tokens for this project
 - **Non-leader**: sees only their own tokens for this project
-- Create token: optional label (e.g. "planner agent", "worker agent"); token UUID generated on create
+- Create token: optional label (e.g. "For all agents access token", "Spec builder agent ONLY access token"); token UUID generated on create
 - Delete token: two-step confirmation—(1) "Are you sure?" dialog, (2) user must type exact string `delete this token` (lowercase); OK disabled until match; then hard delete
 - Token display: full token visible; copy icon copies to clipboard
 
@@ -55,6 +56,7 @@ Zazz Board currently uses a single token per user (`USERS.access_token`). Both h
 
 - Fine-grained permissions (all tokens have full access to their scope)
 - Token expiration or rotation
+- Editing existing token records (including label changes) after creation
 - USER_PROJECTS or other project access model changes (use current model; see Project Access below)
 - Migration of existing agent usage to new tokens (existing `USERS.access_token` becomes user-only; agents must be reconfigured to use new agent tokens)
 
@@ -85,7 +87,7 @@ CREATE TABLE AGENT_TOKENS (
   user_id    INTEGER NOT NULL REFERENCES USERS(id) ON DELETE CASCADE,
   project_id INTEGER NOT NULL REFERENCES PROJECTS(id) ON DELETE CASCADE,
   token      VARCHAR(36) NOT NULL UNIQUE,   -- UUID, indexed for fast lookup
-  label      VARCHAR(100),                   -- Optional: "planner agent", "worker agent"
+  label      VARCHAR(100),                   -- Optional: "For all agents access token", "Spec builder agent ONLY access token"
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
@@ -128,15 +130,18 @@ New seeder: `api/scripts/seeders/seedAgentTokens.js`. Add to `reset-and-seed.js`
 
 | user_id | project_id | token | label |
 |---------|------------|-------|-------|
-| 5 (Michael) | 1 (ZAZZ) | `660e8400-e29b-41d4-a716-446655440001` | planner agent |
-| 5 (Michael) | 1 (ZAZZ) | `660e8400-e29b-41d4-a716-446655440002` | worker agent |
-| 5 (Michael) | 2 (MOBDEV) | `660e8400-e29b-41d4-a716-446655440003` | qa agent |
-| 2 (Jane) | 2 (MOBDEV) | `660e8400-e29b-41d4-a716-446655440004` | planner agent |
-| 3 (Mike) | 3 (APIMOD) | `660e8400-e29b-41d4-a716-446655440005` | coordinator agent |
+| 5 (Michael) | 1 (ZAZZ) | `660e8400-e29b-41d4-a716-446655440101` | For all agents access token |
+| 5 (Michael) | 1 (ZAZZ) | `660e8400-e29b-41d4-a716-446655440102` | Spec builder agent ONLY access token |
+| 2 (Jane) | 2 (ZED_MER) | `660e8400-e29b-41d4-a716-446655440103` | For all agents access token |
+| 2 (Jane) | 2 (ZED_MER) | `660e8400-e29b-41d4-a716-446655440104` | Spec builder agent ONLY access token |
+| 3 (Steve) | 2 (ZED_MER) | `660e8400-e29b-41d4-a716-446655440105` | For all agents access token |
+| 3 (Steve) | 2 (ZED_MER) | `660e8400-e29b-41d4-a716-446655440106` | Spec builder agent ONLY access token |
 
-**Rationale**: Michael (user 5) has the known user token `550e8400-e29b-41d4-a716-446655440000`; agent tokens use a similar prefix for easy identification. Fixed UUIDs allow PactumJS tests to use a known agent token (e.g. `660e8400-e29b-41d4-a716-446655440001`) for ZAZZ project requests.
+**Rationale**: Michael (user 5) has the known user token `550e8400-e29b-41d4-a716-446655440000`; agent tokens use a similar prefix for easy identification. Fixed UUIDs allow PactumJS tests to use a known agent token (e.g. `660e8400-e29b-41d4-a716-446655440101`) for ZAZZ project requests.
 
-**Test stability**: Seeded tokens must stay **consistent** across runs—same UUIDs, same projects—so all API tests can rely on them. Agent token tests use these fixed values. Tokens are seeded only in projects used by agent tests (ZAZZ, MOBDEV, APIMOD).
+**Test stability**: Seeded tokens must stay **consistent** across runs—same UUIDs, same projects—so all API tests can rely on them. Agent token tests use these fixed values. Tokens are seeded only in projects used by agent tests (ZAZZ, ZED_MER).
+
+**USERS seed alignment note**: In `seedUsers`, rename `Mike Johnson` to `Steve Johnson`. Add `Jonathon` as an additional seeded user (new row only) so AGENT_TOKENS seed references remain stable (`user_id` 2/3/5 unchanged).
 
 **Seeder implementation**:
 ```javascript
@@ -147,11 +152,12 @@ import { AGENT_TOKENS } from '../../lib/db/schema.js';
 export async function seedAgentTokens() {
   console.log('  📝 Seeding agent tokens...');
   await db.insert(AGENT_TOKENS).values([
-    { user_id: 5, project_id: 1, token: '660e8400-e29b-41d4-a716-446655440001', label: 'planner agent' },
-    { user_id: 5, project_id: 1, token: '660e8400-e29b-41d4-a716-446655440002', label: 'worker agent' },
-    { user_id: 5, project_id: 2, token: '660e8400-e29b-41d4-a716-446655440003', label: 'qa agent' },
-    { user_id: 2, project_id: 2, token: '660e8400-e29b-41d4-a716-446655440004', label: 'planner agent' },
-    { user_id: 3, project_id: 3, token: '660e8400-e29b-41d4-a716-446655440005', label: 'coordinator agent' },
+    { user_id: 5, project_id: 1, token: '660e8400-e29b-41d4-a716-446655440101', label: 'For all agents access token' },
+    { user_id: 5, project_id: 1, token: '660e8400-e29b-41d4-a716-446655440102', label: 'Spec builder agent ONLY access token' },
+    { user_id: 2, project_id: 2, token: '660e8400-e29b-41d4-a716-446655440103', label: 'For all agents access token' },
+    { user_id: 2, project_id: 2, token: '660e8400-e29b-41d4-a716-446655440104', label: 'Spec builder agent ONLY access token' },
+    { user_id: 3, project_id: 2, token: '660e8400-e29b-41d4-a716-446655440105', label: 'For all agents access token' },
+    { user_id: 3, project_id: 2, token: '660e8400-e29b-41d4-a716-446655440106', label: 'Spec builder agent ONLY access token' },
   ]);
   console.log('  ✅ Agent tokens seeded successfully');
 }
@@ -163,12 +169,15 @@ export async function seedAgentTokens() {
 
 ### 5.1 In-Memory Token Cache
 
-The existing `tokenService` caches user tokens on startup. **Expand the cache** to include agent tokens so every request does a single in-memory Map lookup—no DB hit per request.
+The existing `tokenService` caches user tokens on startup. **Expand the cache** to include agent tokens and project code/id maps so requests can validate token + project scope from memory.
 
-**Cache structure**: `token → { type: 'user'|'agent', userId, projectId?, email?, fullName? }`
+**Cache structure**:
+- `token → { type: 'user'|'agent', userId, projectId?, projectCode?, email?, fullName? }`
+- `projectIdByCode: Map<projectCode, projectId>`
+- `projectCodeById: Map<projectId, projectCode>`
 
-- **Startup**: Load USERS (access_token → user) and AGENT_TOKENS (token → user+project) into one Map
-- **Per request**: `tokenService.validateToken(token)` does one Map lookup
+- **Startup**: Load USERS (access_token → user), AGENT_TOKENS (token → user+project), and PROJECTS (`code ↔ id`) into memory maps
+- **Per request**: `tokenService.validateToken(token)` does one token Map lookup; project param normalization uses cached `code ↔ id` maps
 - **On agent token create**: Add new token to cache as part of the create route (e.g. `tokenService.addAgentTokenToCache(...)`) — no full refresh
 - **On agent token delete**: Remove token from cache as part of the delete route (e.g. `tokenService.removeAgentTokenFromCache(token)`) — no full refresh
 
@@ -178,8 +187,10 @@ The existing `tokenService` caches user tokens on startup. **Expand the cache** 
 
 1. Extract token from `TB_TOKEN` or `Authorization: Bearer` header
 2. Look up token in cache (single Map lookup)
-3. If hit: user token → full access; agent token → project-scoped
-4. If miss → 401 Unauthorized
+3. If miss → 401 Unauthorized
+4. Read cached token type (`'user' | 'agent'`) and set request token context
+5. For user-token-only endpoints: if cached type is `agent`, return `403` immediately (no further auth checks)
+6. If token type is `user`: full access (current model). If `agent`: project-scoped checks apply.
 
 ### 5.3 Request Context
 
@@ -187,6 +198,7 @@ After validation, attach to `request`:
 - `request.user`: { id, email, fullName } (from USERS via user_id)
 - `request.tokenType`: `'user'` | `'agent'`
 - `request.agentTokenProjectId`: (only if agent) — project_id the token is authorized for
+- `request.agentTokenProjectCode`: (only if agent) — project_code the token is authorized for
 - `request.agentTokenUserId`: (only if agent) — user_id the token belongs to
 
 ### 5.4 Project-Scoped Route Protection
@@ -197,11 +209,20 @@ For routes under `/projects/:param/...` (where param may be `:id` or `:code`):
 
 If agent token is used for a different project → 403 Forbidden.
 
-**Route param support**: Some routes use `:id` (numeric), others use `:code` (e.g. ZAZZ). Auth middleware must support **both**: resolve `:id` via `getProjectById`, `:code` via `getProjectByCode`; both yield `project_id`. Agent token's `project_id` must match. Do not expand scope to standardize routes; add inconsistency to future-fixes.
+**Route param support**: Some routes use `:id` (numeric), others use `:code` (e.g. ZAZZ). Auth middleware must support **both** and normalize via in-memory project maps:
+- `:id` → compare directly to `request.agentTokenProjectId` (and optionally derive code via `projectCodeById`)
+- `:code` → resolve `projectIdByCode.get(code)` then compare to `request.agentTokenProjectId`
+Do not expand scope to standardize routes; add inconsistency to future-fixes.
+
+**Agent route convention**: Agent-usable routes must include project code context (`:code` or `:projectCode`) so auth checks are consistent. If a route has no project context, treat it as user-token-only unless explicitly defined otherwise.
 
 ### 5.5 Project Access (Current Model)
 
 **Explicit for this deliverable**: All authenticated users currently have access to all projects. There are no project-level restrictions (no USER_PROJECTS or membership model). The only distinction is **project leader** (`PROJECTS.leader_id === user.id`): one leader per project; leaders have additional capabilities (e.g. manage agent tokens for all users in the project, update status workflows). Non-leaders see only their own agent tokens. Add to future-fixes: project-level access restrictions, multi-leader support.
+
+**Authorization summary**:
+- User token (`USERS.access_token`): full project access (current model).
+- Agent token (`AGENT_TOKENS.token`): restricted to one project only; any other project returns `403`.
 
 **Routes using `:id`** (projects.js): `GET /projects/:id`, `PUT /projects/:id`, `DELETE /projects/:id`, `GET /projects/:id/tasks`, `GET /projects/:id/kanban/tasks/column/:status`
 
@@ -211,13 +232,19 @@ If agent token is used for a different project → 403 Forbidden.
 
 ## 6. API Specification
 
-All routes require authentication. User token or agent token (with matching project) is valid.
+All routes require authentication.
+
+- For general project-scoped routes, user token or matching-project agent token is valid.
+- For **agent-token management routes in section 6.1**, **user token only** is valid. Agent tokens are forbidden (`403`) on these routes.
 
 ### 6.1 Agent Token CRUD
+
+Agent-token management is intentionally **list/create/delete only**. There is **no PATCH/PUT update endpoint** for agent tokens.
 
 #### GET /projects/:code/users/:userId/agent-tokens
 
 List agent tokens for a **user** within a **project**. Both project and user are in the route path.
+This endpoint is **human user token only** (agent tokens forbidden).
 
 - **userId**: Use `me` for the current user, or a numeric user ID. Non-leader: can only use `me` (403 if numeric userId ≠ self). Leader: can use `me` or any user ID.
 - **Project leader**: Can request any user's tokens. To get the full tree (all users + tokens), use `GET /projects/:code/agent-tokens` instead.
@@ -233,19 +260,20 @@ List agent tokens for a **user** within a **project**. Both project and user are
     {
       "id": 1,
       "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "label": "planner agent",
+      "label": "For all agents access token",
       "createdAt": "2026-03-03T10:00:00Z"
     }
   ]
 }
 ```
 
-**403**: Agent token used for different project; or non-leader requesting another user's tokens.
+**403**: Agent token used (forbidden on token-management routes); or non-leader requesting another user's tokens.
 **404**: Project or user not found.
 
 #### GET /projects/:code/agent-tokens
 
 List all agent tokens for the project. **Project leader only.** Returns a tree: each user with their tokens (labels included). Used for the expandable table/tree UI.
+This endpoint is **human user token only** (agent tokens forbidden).
 
 **Response 200**:
 ```json
@@ -259,13 +287,13 @@ List all agent tokens for the project. **Project leader only.** Returns a tree: 
         {
           "id": 1,
           "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-          "label": "planner agent",
+          "label": "For all agents access token",
           "createdAt": "2026-03-03T10:00:00Z"
         },
         {
           "id": 2,
           "token": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
-          "label": "worker agent",
+          "label": "Spec builder agent ONLY access token",
           "createdAt": "2026-03-03T11:00:00Z"
         }
       ]
@@ -278,7 +306,7 @@ List all agent tokens for the project. **Project leader only.** Returns a tree: 
         {
           "id": 3,
           "token": "c3d4e5f6-a7b8-9012-cdef-345678901234",
-          "label": "qa agent",
+          "label": "For all agents access token",
           "createdAt": "2026-03-03T12:00:00Z"
         }
       ]
@@ -287,17 +315,18 @@ List all agent tokens for the project. **Project leader only.** Returns a tree: 
 }
 ```
 
-**403**: Non-leader (only project leader can call this); or agent token for different project.
+**403**: Non-leader (only project leader can call this); or agent token used (forbidden on token-management routes).
 **404**: Project not found.
 
 #### POST /projects/:code/users/:userId/agent-tokens
 
 Create a new agent token for a user and this project. **userId** must be `me` (current user) or, for leaders, the target user's ID. Non-leader can only create for `me`.
+This endpoint is **human user token only** (agent tokens forbidden).
 
 **Request body:**
 ```json
 {
-  "label": "planner agent"
+  "label": "For all agents access token"
 }
 ```
 
@@ -308,19 +337,20 @@ Create a new agent token for a user and this project. **userId** must be `me` (c
 {
   "id": 1,
   "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "label": "planner agent",
+  "label": "For all agents access token",
   "createdAt": "2026-03-03T10:00:00Z"
 }
 ```
 
-**Note**: Full token is returned **only on create**. Client should show copy-to-clipboard and optionally store for agent config. **Cache**: After creating, call `tokenService.addAgentTokenToCache(token, data)` so the new token is valid on the next request.
+**Note**: Full token is returned on create **and in token list responses** for authorized human users (no masking). Client should show copy-to-clipboard. **Cache**: After creating, call `tokenService.addAgentTokenToCache(token, data)` so the new token is valid on the next request.
 
-**403**: Agent token used for different project; or user does not have access to project.
+**403**: Agent token used (forbidden on token-management routes); or user does not have access to project.
 **404**: Project not found.
 
 #### DELETE /projects/:code/users/:userId/agent-tokens/:id
 
 Hard-delete an agent token (remove row). Token becomes invalid immediately. **userId** in path: `me` for self, or numeric ID for leader deleting another user's token.
+This endpoint is **human user token only** (agent tokens forbidden).
 
 - **Project leader**: Can delete any token for this project (any user's)
 - **Non-leader**: Can delete only their own tokens
@@ -329,7 +359,7 @@ Hard-delete an agent token (remove row). Token becomes invalid immediately. **us
 
 **Cache**: After deleting, call `tokenService.removeAgentTokenFromCache(token)` so the revoked token is rejected immediately on the next request.
 
-**Response 403**: Not authorized to delete this token (e.g. non-leader trying to delete another user's token)
+**Response 403**: Agent token used (forbidden on token-management routes), or not authorized to delete this token (e.g. non-leader trying to delete another user's token)
 **Response 404**: Token or project not found
 
 ---
@@ -352,7 +382,7 @@ Hard-delete an agent token (remove row). Token becomes invalid immediately. **us
 - **Title**: "Agent Tokens for [Project Name]" (or project code)
 - **Project leader view**: Expandable tree or table. One row per user; each user row expands to show rows for each of their tokens (label, token, copy icon, delete button). Data from `GET /projects/:code/agent-tokens`. Structure: User row → token rows (indented or nested).
 - **Non-leader view**: Same expandable structure but only current user. Data from `GET /projects/:code/users/me/agent-tokens`; display as single user with token rows.
-- **Create**: Button "Create token". Optional label field (placeholder: "e.g. planner agent"). On submit, POST to `.../users/me/agent-tokens`; show new token with copy icon and "Copied!" feedback on first copy.
+- **Create**: Button "Create token". Optional label field (placeholder: "e.g. For all agents access token"). On submit, POST to `.../users/me/agent-tokens`; show new token with copy icon and "Copied!" feedback on first copy.
 
 ### 7.3 Delete Token Flow (Two Steps, Same Modal)
 
@@ -384,14 +414,16 @@ Add translation keys for:
 - [ ] `token` is VARCHAR(36) UNIQUE, indexed for fast lookup
 - [ ] `label` is optional VARCHAR(100)
 - [ ] `USERS.access_token` unchanged (repurposed as user token)
-- [ ] `seedAgentTokens.js` seeds 5 agent tokens; reset-and-seed includes it; AGENT_TOKENS dropped in reset order
+- [ ] `seedAgentTokens.js` seeds 6 agent tokens; reset-and-seed includes it; AGENT_TOKENS dropped in reset order
 
 **Verified by**: schema migration; seed script run; db:reset succeeds
 
 ### AC-2: Token Service & Cache
 - [ ] Cache expanded to include both user tokens and agent tokens; single Map lookup per request
-- [ ] `validateToken(token)` returns `{ type, userId, projectId?, ... }` from cache; no DB hit
-- [ ] Returns `tokenType: 'user' | 'agent'`, `agentTokenProjectId`, and `agentTokenUserId` when agent
+- [ ] Project code/id maps loaded in memory (`projectIdByCode`, `projectCodeById`) for `:code` route normalization
+- [ ] `validateToken(token)` returns `{ type, userId, projectId?, projectCode?, ... }` from cache; no DB hit
+- [ ] Returns `tokenType: 'user' | 'agent'`, `agentTokenProjectId`, `agentTokenProjectCode`, and `agentTokenUserId` when agent
+- [ ] User-only endpoint checks use cached `tokenType` and reject agent tokens with immediate `403`
 - [ ] `addAgentTokenToCache(token, data)` adds new token on create; `removeAgentTokenFromCache(token)` removes on delete
 - [ ] Cache loaded on startup; no full refresh on create/delete
 
@@ -400,8 +432,11 @@ Add translation keys for:
 ### AC-3: Auth Middleware
 - [ ] For project-scoped routes: agent token must have matching project_id (and belongs to user via user_id)
 - [ ] Agent token used for wrong project → 403 Forbidden
-- [ ] Support both `:id` and `:code` route params—resolve to project_id; agent token's project_id must match
+- [ ] Support both `:id` and `:code` route params using in-memory project code/id maps; agent token's project_id must match
+- [ ] Agent-usable routes consistently include project code context (`:code` / `:projectCode`) for authorization
 - [ ] User token: full access (per current project access model)
+- [ ] Agent tokens are rejected with 403 on agent-token management endpoints (`/projects/:code/agent-tokens` and `/projects/:code/users/:userId/agent-tokens*`)
+- [ ] User-only endpoint guard runs before project/user ownership checks (tokenType-first gating)
 
 **Verified by**: PactumJS test (agent token wrong project → 403)
 
@@ -409,14 +444,16 @@ Add translation keys for:
 - [ ] Returns tokens for specified user in project; `me` resolves to current user
 - [ ] Non-leader: 403 if userId ≠ me
 - [ ] Leader: can request any user's tokens
-- [ ] 403 if agent token for different project; 404 if project or user not found
+- [ ] User token required; agent token gets 403
+- [ ] 404 if project or user not found
 
 **Verified by**: PactumJS test
 
 ### AC-4b: API — GET /projects/:code/agent-tokens (leader only)
 - [ ] Project leader receives all users + their tokens (tree format)
 - [ ] Non-leader: 403
-- [ ] 403 if agent token for different project; 404 if project not found
+- [ ] User token required; agent token gets 403
+- [ ] 404 if project not found
 
 **Verified by**: PactumJS test
 
@@ -424,7 +461,8 @@ Add translation keys for:
 - [ ] Creates token for current user + project; UUID generated
 - [ ] Calls `tokenService.addAgentTokenToCache()` after create so new token is valid immediately
 - [ ] Optional label in body
-- [ ] Returns full token on create (only time it's returned)
+- [ ] Returns full token on create
+- [ ] User token required; agent token gets 403
 - [ ] 403/404 as above
 
 **Verified by**: PactumJS test
@@ -434,9 +472,17 @@ Add translation keys for:
 - [ ] Calls `tokenService.removeAgentTokenFromCache(token)` after delete so revoked token is rejected immediately
 - [ ] Project leader can delete any token for project
 - [ ] Non-leader can delete only own tokens
+- [ ] User token required; agent token gets 403
 - [ ] 403 if not authorized; 404 if not found
 
 **Verified by**: PactumJS test
+
+### AC-6b: API Immutability — No Update Endpoint
+- [ ] No PATCH/PUT endpoint exists for agent tokens
+- [ ] Attempting token update routes returns 404 (route not found)
+- [ ] OpenAPI does not document PATCH/PUT for agent-token paths
+
+**Verified by**: PactumJS + OpenAPI tests
 
 ### AC-7: UI — Project Row Icon
 - [ ] New icon (agent or gear) at end of each project row
@@ -464,23 +510,25 @@ Add translation keys for:
 - [ ] GET .../users/me/agent-tokens and GET .../users/:id/agent-tokens (leader)
 - [ ] GET .../agent-tokens: leader gets tree; non-leader gets 403
 - [ ] Auth tests: agent token wrong project → 403
+- [ ] Auth tests: agent token calling token-management routes (`GET/POST/DELETE agent-tokens`) → 403
+- [ ] Immutability tests: PATCH/PUT token update paths are not available (404) and not in OpenAPI
 - [ ] Cache invalidation: after DELETE, revoked token returns 401 on next request
-- [ ] **Agent persona tests**: Update `agent-workflow.test.mjs` to use agent token (`660e8400-e29b-41d4-a716-446655440001`) instead of user token—proves agents can perform full workflow (create deliverable, tasks, set status, append notes) with agent token. Add test: agent token for ZAZZ used on `/projects/MOBDEV/...` → 403
+- [ ] **Agent persona tests**: Update `agent-workflow.test.mjs` to use agent token (`660e8400-e29b-41d4-a716-446655440101`) instead of user token—proves agents can perform full workflow (create deliverable, tasks, set status, append notes) with agent token. Add test: agent token for ZAZZ used on `/projects/ZED_MER/...` → 403
 - [ ] **Planner-sequence tests**: Update `deliverables-approval.test.mjs` and/or `deliverables-status.test.mjs` to use agent token where they simulate planner behavior (approve plan, transition PLANNING → IN_PROGRESS, create non-dependent tasks). These sequential tests validate agent tokens for planner persona.
-- [ ] **Wrong-project tests**: Agent token for MOBDEV (`660e8400-e29b-41d4-a716-446655440003`) used on `/projects/ZAZZ/deliverables` or `/projects/ZAZZ/deliverables/1/approve` → 403. Agent token for ZAZZ used on `/projects/MOBDEV/...` → 403.
+- [ ] **Wrong-project tests**: Agent token for ZED_MER (`660e8400-e29b-41d4-a716-446655440103`) used on `/projects/ZAZZ/deliverables` or `/projects/ZAZZ/deliverables/1/approve` → 403. Agent token for ZAZZ used on `/projects/ZED_MER/...` → 403.
 
 **Verified by**: PactumJS tests
 
 ### Test Strategy: Agent Persona
 
 **Relevant existing tests**:
-- `agent-workflow.test.mjs` — leader creates deliverable + tasks; worker/QA agents set status, append notes. All against ZAZZ. **Update to use agent token** `660e8400-e29b-41d4-a716-446655440001` (Michael, ZAZZ).
+- `agent-workflow.test.mjs` — leader creates deliverable + tasks; worker/QA agents set status, append notes. All against ZAZZ. **Update to use agent token** `660e8400-e29b-41d4-a716-446655440101` (Michael, ZAZZ).
 - `deliverables-approval.test.mjs` — approve plan, transition PLANNING → IN_PROGRESS. Sequential planner flow. **Update to use agent token** where simulating planner.
 - `deliverables-status.test.mjs` — "should transition from PLANNING to IN_PROGRESS after approval", "should track status history". **Update to use agent token** for planner sequence.
 
 **Wrong-project tests**: Add tests (in agent-tokens.test.mjs or deliverables tests) that use agent tokens tied to a different project:
-- Token for MOBDEV (`660e8400-e29b-41d4-a716-446655440003`) on `/projects/ZAZZ/...` → 403
-- Token for ZAZZ on `/projects/MOBDEV/...` → 403
+- Token for ZED_MER (`660e8400-e29b-41d4-a716-446655440103`) on `/projects/ZAZZ/...` → 403
+- Token for ZAZZ on `/projects/ZED_MER/...` → 403
 
 **No need to update** every route test—agent-workflow, deliverables-approval, and deliverables-status cover agent persona. Other route tests can continue using user token.
 
@@ -507,17 +555,21 @@ Add translation keys for:
 - Adding token expiration or rotation
 
 ### Never Do
-- Return full token on GET list (only on POST create)
+- Mask tokens in token list responses for authorized human users
+- Allow agent tokens to call token-management routes
+- Add PATCH/PUT token update routes
 - Skip user+project scope check for agent tokens on project routes
 
 ---
 
 ## 11. Technical Context
 
-- **tokenService**: `api/src/services/tokenService.js` — expand cache to include agent tokens; add `addAgentTokenToCache()` and `removeAgentTokenFromCache()`; call on create/delete
-- **authMiddleware**: `api/src/middleware/authMiddleware.js` — attach tokenType, agentTokenProjectId; add project-scope check for project routes (support both `:id` and `:code` params)
-- **Project routes**: Resolve `:id` or `:code` to project_id; agent token's project_id must match
+- **tokenService**: `api/src/services/tokenService.js` — expand cache to include agent tokens plus `projectIdByCode`/`projectCodeById`; add `addAgentTokenToCache()` and `removeAgentTokenFromCache()`; call on create/delete
+- **authMiddleware**: `api/src/middleware/authMiddleware.js` — attach tokenType, agentTokenProjectId, agentTokenProjectCode; add project-scope check for project routes (support both `:id` and `:code` params via cache)
+- **Project routes**: Normalize `:id` or `:code` via in-memory project maps; agent token's project_id must match
 - **Agent token routes**: `GET/POST /projects/:code/users/:userId/agent-tokens`, `GET /projects/:code/agent-tokens` (leader tree), `DELETE .../users/:userId/agent-tokens/:id`; `userId` = `me` or numeric ID
+  - User token only for these routes; agent token must return 403
+  - No update route (`PATCH`/`PUT`) for agent tokens by design
 - **Client**: `ProjectList.jsx` — add icon; new `AgentTokensModal.jsx` component (expandable tree/table)
 
 ---

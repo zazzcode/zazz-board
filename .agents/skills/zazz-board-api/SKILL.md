@@ -22,6 +22,25 @@ All API requests (except `/openapi.json`, `/health`, `/`, `/db-test`, `/token-in
 - `ZAZZ_API_BASE_URL` (fallback: `http://localhost:3030`)
 - `ZAZZ_API_TOKEN` (required token source; fallback if unset: `550e8400-e29b-41d4-a716-446655440000`)
 - `ZAZZ_PROJECT_CODE` (fallback: `ZAZZ`)
+- `ZAZZCTL_PROFILE` (optional default profile: `generic`, `worker`, `planner`, `spec_builder`)
+
+---
+
+## Canonical CLI Adapter (Required)
+Use the canonical Node CLI for board communication:
+- Script: `.agents/skills/zazz-board-api/scripts/zazzctl.mjs`
+- Runtime prereq: Node.js 22+ (project baseline)
+
+CLI-first policy:
+- Use `zazzctl` as the default communication path.
+- Do not handcraft ad-hoc `curl` for normal execution.
+- `curl` is allowed only for OpenAPI fetch/debugging when the CLI is missing a capability.
+
+Role profile usage:
+- Worker: `zazzctl --profile worker ...`
+- Planner: `zazzctl --profile planner ...`
+- Spec Builder: `zazzctl --profile spec_builder ...`
+- Generic (fallback): `zazzctl ...` or `zazzctl --profile generic ...`
 
 ---
 
@@ -50,6 +69,7 @@ Core capabilities:
 - Acquire/heartbeat/release/list deliverable file locks
 - Get deliverable status workflow
 - Image operations (list/upload/delete/fetch/metadata) using project-scoped routes
+- Spec-builder board sync: create deliverable, set deliverable status, set `specFilepath`
 
 ---
 
@@ -115,6 +135,8 @@ Deliverable lifecycle (required):
 - Resolve project deliverable workflow from API/OpenAPI-capable endpoints.
 - Update deliverable status explicitly with status endpoints; do not assume implicit transitions.
 - Approve deliverable explicitly with approve endpoint when workflow requires it.
+- Planner start gate: when planning starts, set deliverable status to `PLANNING`.
+- Spec-builder gate: after deliverable creation, set default status to `BACKLOG` and persist `specFilepath`.
 
 Dependency lifecycle (required):
 - Treat `DEPENDS_ON` in PLAN as required `TASK_RELATIONS` rows.

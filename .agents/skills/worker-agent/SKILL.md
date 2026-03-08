@@ -31,14 +31,15 @@ Live OpenAPI is the route contract source of truth.
 ## Required Worker CLI Adapter
 
 Canonical command adapter path:
-- `.agents/skills/worker-agent/scripts/zazzctl`
-- setup guide: `.agents/skills/worker-agent/scripts/README.md`
+- `.agents/skills/zazz-board-api/scripts/zazzctl.mjs`
+- setup guide: `.agents/skills/zazz-board-api/scripts/README.md`
 
-Convenience wrapper:
-- `scripts/zazzctl` (delegates to the canonical skill script)
+Worker wrapper:
+- `.agents/skills/worker-agent/scripts/zazzctl` (calls canonical CLI with `--profile worker`)
+- optional repo wrapper: `scripts/zazzctl`
 
 Rule:
-- Use `zazzctl` for worker board API writes/reads (tasks, relations, status, blockers, notes, graph checks, locks).
+- Use `zazzctl --profile worker` for worker board API writes/reads (tasks, relations, status, blockers, notes, graph checks, locks).
 - Do not handcraft ad-hoc curl calls for normal worker execution when `zazzctl` is available.
 
 ---
