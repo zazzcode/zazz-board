@@ -1,7 +1,6 @@
 import { Table, Text, Group, ActionIcon, Tooltip, Box } from '@mantine/core';
 import { IconCalendar, IconEdit, IconKey } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
-import { useEffect } from 'react';
 
 export function ProjectList({
   projects,
@@ -12,17 +11,7 @@ export function ProjectList({
   onManageAgentTokens,
 }) {
   const { t } = useTranslation();
-  
-  // Debug info when project list renders
-  useEffect(() => {
-    if (!loading && projects) {
-      console.log('=== PROJECTS DEBUG ===');
-      console.log('Projects:', projects.length);
-      console.log('LOCALE:', navigator.language);
-      console.log('=====================');
-    }
-  }, [projects, loading]);
-  
+
   if (loading) {
     return <Text>{t('common.loading')}</Text>;
   }
@@ -32,9 +21,7 @@ export function ProjectList({
   }
 
   const formatDate = (dateString) => {
-    const locale = navigator.language;
-    console.log('LOCALE:', locale);
-    return new Date(dateString).toLocaleDateString(locale, {
+    return new Date(dateString).toLocaleDateString(navigator.language, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
@@ -42,14 +29,15 @@ export function ProjectList({
   };
 
   return (
-    <Table>
+    <div style={{ overflowX: 'auto' }}>
+    <Table style={{ minWidth: 560 }}>
       <Table.Thead>
         <Table.Tr>
           <Table.Th style={{ width: '40px' }}></Table.Th>
           <Table.Th>{t('tasks.title')}</Table.Th>
           <Table.Th>{t('projects.leader')}</Table.Th>
           <Table.Th>{t('projects.createdAt')}</Table.Th>
-          <Table.Th></Table.Th>
+          <Table.Th style={{ width: 90 }}></Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
@@ -100,25 +88,24 @@ export function ProjectList({
                 <Text size="sm">{formatDate(project.createdAt)}</Text>
               </Group>
             </Table.Td>
-            <Table.Td>
+            <Table.Td style={{ minWidth: 90 }}>
               <Group gap={4} justify="flex-end">
-                <Tooltip label="Manage agent tokens" withArrow>
-                  <ActionIcon
-                    variant="subtle"
-                    size="md"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onManageAgentTokens?.(project);
-                    }}
-                    aria-label="Manage agent tokens"
-                    disabled={!onManageAgentTokens}
-                  >
-                    <IconKey size={18} />
-                  </ActionIcon>
-                </Tooltip>
-                <ActionIcon 
-                  variant="subtle" 
+                <ActionIcon
+                  variant="subtle"
                   size="md"
+                  title={t('projects.agentTokens.title')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onManageAgentTokens?.(project);
+                  }}
+                  aria-label={t('projects.agentTokens.title')}
+                >
+                  <IconKey size={21} />
+                </ActionIcon>
+                <ActionIcon
+                  variant="subtle"
+                  size="md"
+                  title="Edit project"
                   onClick={(e) => {
                     e.stopPropagation();
                     onProjectEdit(project);
@@ -133,5 +120,6 @@ export function ProjectList({
         ))}
       </Table.Tbody>
     </Table>
+    </div>
   );
 } 

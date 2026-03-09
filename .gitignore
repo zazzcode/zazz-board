@@ -24,6 +24,7 @@ api/.env.local
 .idea
 .DS_Store
 .codex/
+project-page-screenshot.png
 *.suo
 *.ntvs*
 *.njsproj

@@ -70,7 +70,7 @@
     },
     "agentTokens": {
       "title": "Agent-Tokens",
-      "titleWithProject": "{{project}} Agent-Tokens",
+      "titleWithProject": "{{projectCode}} Projekt-Agent-Zugangstokens",
       "subtitleLeader": "Erstellen und widerrufen Sie projektspezifische Agent-Tokens fur die Mitglieder dieses Projekts.",
       "subtitleSelf": "Erstellen und widerrufen Sie Ihre projektspezifischen Agent-Tokens fur dieses Projekt.",
       "loading": "Agent-Tokens werden geladen...",

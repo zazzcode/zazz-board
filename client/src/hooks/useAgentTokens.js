@@ -36,11 +36,6 @@ export function useAgentTokens(selectedProject, currentUser, opened) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const isLeader = useMemo(() => {
-    if (!selectedProject || !currentUser) return false;
-    return String(selectedProject.leaderId) === String(currentUser.id);
-  }, [selectedProject, currentUser]);
-
   const refreshAgentTokens = useCallback(async () => {
     if (!selectedProject || !opened) {
       setUserGroups([]);
@@ -51,11 +46,10 @@ export function useAgentTokens(selectedProject, currentUser, opened) {
     setLoading(true);
     setError(null);
     try {
-      const url = isLeader
-        ? `http://localhost:3030/projects/${selectedProject.code}/agent-tokens`
-        : `http://localhost:3030/projects/${selectedProject.code}/users/me/agent-tokens`;
+      // Always fetch only current user's tokens (no leader "all users" view)
+      const url = `http://localhost:3030/projects/${selectedProject.code}/users/me/agent-tokens`;
       const data = await fetchJson(url, { method: 'GET' });
-      const groups = Array.isArray(data?.users) ? data.users : data ? [data] : [];
+      const groups = data ? [data] : [];
       setUserGroups(groups);
     } catch (error) {
       console.error('Error fetching agent tokens:', error);
@@ -64,7 +58,7 @@ export function useAgentTokens(selectedProject, currentUser, opened) {
     } finally {
       setLoading(false);
     }
-  }, [isLeader, opened, selectedProject]);
+  }, [opened, selectedProject]);
 
   useEffect(() => {
     refreshAgentTokens();
@@ -105,7 +99,6 @@ export function useAgentTokens(selectedProject, currentUser, opened) {
     userGroups,
     loading,
     error,
-    isLeader,
     refreshAgentTokens,
     createAgentToken,
     deleteAgentToken,

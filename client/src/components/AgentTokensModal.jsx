@@ -85,7 +85,7 @@ function TokenRow({
             loading={createLoading}
             onClick={() => onCreate(group.userId)}
           >
-            {t('projects.agentTokens.createButton')}
+            {t('projects.agentTokens.createAction')}
           </Button>
         </Group>
 
@@ -114,9 +114,9 @@ function TokenRow({
                               variant="light"
                               size="xs"
                               color={copied ? 'green' : 'blue'}
-                          leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                          onClick={copy}
-                        >
+                              leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                              onClick={copy}
+                            >
                               {copied ? copiedLabel : t('projects.agentTokens.copyAction')}
                             </Button>
                           )}
@@ -185,7 +185,7 @@ function TokenRow({
 
 export function AgentTokensModal({ opened, onClose, selectedProject, currentUser }) {
   const { t } = useTranslation();
-  const { userGroups, loading, error, isLeader, createAgentToken, deleteAgentToken } = useAgentTokens(
+  const { userGroups, loading, error, createAgentToken, deleteAgentToken } = useAgentTokens(
     selectedProject,
     currentUser,
     opened,
@@ -211,9 +211,10 @@ export function AgentTokensModal({ opened, onClose, selectedProject, currentUser
 
   const visibleGroups = useMemo(() => {
     if (!Array.isArray(userGroups)) return [];
-    if (isLeader) return userGroups;
-    return userGroups.slice(0, 1);
-  }, [isLeader, userGroups]);
+    // Always show only current user's tokens
+    if (!currentUser?.id) return [];
+    return userGroups.filter((g) => String(g.userId) === String(currentUser.id));
+  }, [userGroups, currentUser]);
 
   const handleCreateLabelChange = (userId, value) => {
     setCreateLabels((current) => ({
@@ -229,7 +230,7 @@ export function AgentTokensModal({ opened, onClose, selectedProject, currentUser
 
     try {
       const created = await createAgentToken({
-        userId: isLeader ? userId : undefined,
+        userId: undefined,
         label: createLabels[userId]?.trim() || undefined,
       });
       setCreatedToken(created);
@@ -250,7 +251,7 @@ export function AgentTokensModal({ opened, onClose, selectedProject, currentUser
 
     try {
       await deleteAgentToken({
-        userId: isLeader ? userId : undefined,
+        userId: undefined,
         tokenId,
       });
       setDeleteState(null);
@@ -262,16 +263,14 @@ export function AgentTokensModal({ opened, onClose, selectedProject, currentUser
   };
 
   const title = selectedProject
-    ? t('projects.agentTokens.titleWithProject', { project: selectedProject.title })
+    ? t('projects.agentTokens.titleWithProject', { projectCode: selectedProject.code })
     : t('projects.agentTokens.title');
 
   return (
     <Modal opened={opened} onClose={onClose} title={title} size="xl">
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          {isLeader
-            ? t('projects.agentTokens.subtitleLeader')
-            : t('projects.agentTokens.subtitleSelf')}
+          {t('projects.agentTokens.subtitleSelf')}
         </Text>
 
         {createdToken && (
@@ -318,7 +317,7 @@ export function AgentTokensModal({ opened, onClose, selectedProject, currentUser
           <Text>{t('projects.agentTokens.loading')}</Text>
         ) : visibleGroups.length === 0 ? (
           <Text c="dimmed">
-            {isLeader ? t('projects.agentTokens.emptyLeader') : t('projects.agentTokens.emptySelf')}
+            {t('projects.agentTokens.emptySelf')}
           </Text>
         ) : (
           <Stack gap="md">

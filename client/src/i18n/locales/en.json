@@ -71,7 +71,7 @@
     },
     "agentTokens": {
       "title": "Agent Tokens",
-      "titleWithProject": "{{project}} Agent Tokens",
+      "titleWithProject": "{{projectCode}} Project Agent Access Tokens",
       "subtitleLeader": "Create and revoke project-scoped agent tokens for team members in this project.",
       "subtitleSelf": "Create and revoke your project-scoped agent tokens for this project.",
       "loading": "Loading agent tokens...",

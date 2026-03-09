@@ -1,11 +1,12 @@
-import { db } from '../../lib/db/index.js';
+import { db, client } from '../../lib/db/index.js';
 import { AGENT_TOKENS } from '../../lib/db/schema.js';
+import { fileURLToPath } from 'node:url';
 
 export async function seedAgentTokens() {
   console.log('  📝 Seeding agent tokens...');
 
   try {
-    await db.insert(AGENT_TOKENS).values([
+    const values = [
       {
         user_id: 5,
         project_id: 1,
@@ -42,11 +43,27 @@ export async function seedAgentTokens() {
         token: '660e8400-e29b-41d4-a716-446655440106',
         label: 'Spec builder agent ONLY access token',
       },
-    ]);
+    ];
+
+    await db.insert(AGENT_TOKENS).values(values).onConflictDoNothing();
 
     console.log('  ✅ Agent tokens seeded successfully');
   } catch (error) {
     console.error('  ❌ Error seeding agent tokens:', error.message);
     throw error;
   }
+}
+
+async function runFromCli() {
+  try {
+    await seedAgentTokens();
+  } catch (error) {
+    process.exitCode = 1;
+  } finally {
+    await client.end();
+  }
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  runFromCli();
 }

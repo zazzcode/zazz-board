@@ -70,7 +70,7 @@
     },
     "agentTokens": {
       "title": "Tokens d'Agent",
-      "titleWithProject": "Jetons d'Agent de {{project}}",
+      "titleWithProject": "{{projectCode}} Jetons d'Accès Agent du Projet",
       "subtitleLeader": "Creez et revoquez des tokens d'agent limites au projet pour les membres de ce projet.",
       "subtitleSelf": "Creez et revoquez vos tokens d'agent limites a ce projet.",
       "loading": "Chargement des tokens d'agent...",
