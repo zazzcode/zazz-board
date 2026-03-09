@@ -73,6 +73,7 @@ This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. 
 | coordinator-agent  | Orchestrates execution after plan approval             |
 | worker-agent       | Implements tasks                                       |
 | qa-agent           | Verifies AC, creates rework tasks                      |
+| database-baseline-refresh | Preserves live dev DB data while upgrading schema and refreshing the canonical seed baseline |
 
 
 **Rules** (`.cursor/rules/`): Always-applied for Cursor (e.g. worktree workflow).

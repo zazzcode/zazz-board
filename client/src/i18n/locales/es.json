@@ -67,13 +67,49 @@
       "dragHelp": "Arrastra para reordenar. Estos estados aparecerán como columnas en tu tablero Kanban.",
       "viewHelp": "Estos estados aparecerán como columnas en tu tablero Kanban.",
       "addHelp": "Haz clic en \"Agregar\" para incluir un estado en tu flujo de trabajo."
+    },
+    "agentTokens": {
+      "title": "Tokens de Agente",
+      "titleWithProject": "{{projectCode}} Tokens de Acceso de Agente del Proyecto",
+      "subtitleLeader": "Crea y revoca tokens de agente con alcance al proyecto para los miembros de este proyecto.",
+      "subtitleSelf": "Crea y revoca tus tokens de agente con alcance a este proyecto.",
+      "loading": "Cargando tokens de agente...",
+      "error": "No se pueden cargar los tokens de agente en este momento.",
+      "emptyLeader": "Todavia no se han creado tokens de agente para este proyecto.",
+      "emptySelf": "Todavia no tienes tokens de agente para este proyecto.",
+      "noTokensForUser": "Todavia no hay tokens de agente.",
+      "userSectionTitle": "{{name}}",
+      "userSectionFallback": "Usuario {{userId}}",
+      "userTokenCount_one": "{{count}} token",
+      "userTokenCount_other": "{{count}} tokens",
+      "tokenLabel": "Etiqueta",
+      "tokenLabelPlaceholder": "Etiqueta opcional",
+      "tokenValue": "Token",
+      "createdAt": "Creado",
+      "createForUser": "Crear token para {{name}}",
+      "createForMe": "Crear token",
+      "createAction": "Generar token",
+      "createError": "No se pudo crear el token de agente.",
+      "copyAction": "Copiar token",
+      "copied": "Copiado",
+      "copyHelper": "Copia y guarda este token ahora. Es posible que no vuelvas a verlo despues de cerrar este modal.",
+      "latestTokenTitle": "Token mas reciente",
+      "deleteAction": "Revocar token",
+      "deleteTitle": "Confirmar revocacion del token",
+      "deleteBody": "Esto revoca el token de forma permanente. Escribe la frase de confirmacion para continuar.",
+      "deletePhraseLabel": "Escribe \"delete this token\" para confirmar",
+      "deletePhrasePlaceholder": "delete this token",
+      "deletePhraseValue": "delete this token",
+      "deleteConfirm": "Revocar token",
+      "deleteCancel": "Conservar token",
+      "deleteError": "No se pudo revocar el token de agente.",
+      "unlabeledToken": "Token sin etiqueta"
     }
   },
   "tasks": {
-    "title": "Tareas",
+    "title": "Título",
     "newTask": "Nueva Tarea",
     "taskId": "ID de Tarea",
-    "title": "Título",
     "prompt": "Prompt",
     "status": "Estado",
     "priority": "Prioridad",
@@ -84,8 +120,6 @@
     "gitWorktreePlaceholder": "feature/tarea-123",
     "gitPullRequestUrl": "URL de Pull Request",
     "gitPullRequestUrlPlaceholder": "https://github.com/usuario/repo/pull/123",
-
-    "prompt": "Prompt",
     "isBlocked": "Bloqueado",
     "blockedReason": "Razón del Bloqueo",
     "startedAt": "Iniciado",
@@ -156,4 +190,4 @@
     "tagUpdated": "Etiqueta actualizada exitosamente",
     "tagDeleted": "Etiqueta eliminada exitosamente"
   }
-} 
+}

@@ -7,7 +7,7 @@ import { DeliverableModal } from '../components/DeliverableModal.jsx';
 
 export function DeliverableListPage({ selectedProject }) {
   const { t, translateDeliverableType, translateDeliverableStatus } = useTranslation();
-  const { deliverables, loading, createDeliverable, deleteDeliverable } = useDeliverables(selectedProject);
+  const { deliverables, loading, createDeliverable, updateDeliverable, deleteDeliverable } = useDeliverables(selectedProject);
   
   const [sortBy, setSortBy] = useState('deliverableCode');
   const [sortDirection, setSortDirection] = useState('asc');
@@ -79,10 +79,10 @@ export function DeliverableListPage({ selectedProject }) {
   };
 
   const handleModalSubmit = async (data) => {
-    if (!editingDeliverable) {
-      await createDeliverable(data);
+    if (editingDeliverable) {
+      return await updateDeliverable(editingDeliverable.id, data);
     }
-    handleModalClose();
+    return await createDeliverable(data);
   };
 
   const handleDeleteClick = async (deliverableId) => {
@@ -140,7 +140,6 @@ export function DeliverableListPage({ selectedProject }) {
           onClose={handleModalClose}
           onSubmit={handleModalSubmit}
           deliverable={editingDeliverable}
-          selectedProject={selectedProject}
         />
       )}
     </Container>

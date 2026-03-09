@@ -47,6 +47,53 @@ See `deliverables.js`, `taskGraph.js`, `projects.js` for examples.
 
 Map service/database errors to appropriate HTTP codes in the handler: business rule violations (cycle, self-ref, not found) → 400; duplicate/conflict → 409; authorization failure → 403. See `taskGraph.js` createTaskRelation for error-mapping pattern.
 
+## Client mutation pattern (no stale UI after save)
+
+When a user edits data in the UI, backend persistence and UI state update must happen in one consistent flow.
+
+- **Single source of truth per screen**: the page-level hook/state that renders the list/board owns mutations (`create`, `update`, `delete`).
+- **No duplicate mutation hooks in child forms/modals**: child components receive `onSubmit` callbacks from the parent; they do not create a second hook instance for the same entity.
+- **Save contract**: submit handlers return success/failure (`saved entity` or `false`), so forms only close on success.
+- **Immediate state update from API response**: on success, update local state from the returned entity so the user sees changes without reload.
+- **Realtime is secondary**: SSE/realtime updates are for cross-tab/cross-user sync and revalidation, not the primary mechanism for reflecting your own save.
+- **Failure behavior**: keep the editor open on failed save; surface an error and do not silently close.
+
+This pattern applies to all editable entities (projects, deliverables, tasks, tags, workflow settings).
+
+### Required mutation lifecycle (UI)
+
+For every editable form/panel/modal:
+
+1. Parent screen owns entity state and mutation hook.
+2. Child editor receives `onSubmit` and returns pending/success/failure state.
+3. Submit executes one mutation request and awaits response.
+4. On success, merge returned entity into parent state by `id` (string-safe id match).
+5. Close editor only after success.
+6. Optional background revalidation runs after success, but must not overwrite newer local mutation state.
+
+### Race-safety and revalidation rules
+
+- Guard against stale GET responses overwriting newer local state:
+  - Track request sequence/version and ignore outdated responses.
+  - Track mutation version and ignore refresh results started before a newer mutation.
+- For mutation-sensitive list reloads, use `cache: 'no-store'` unless a stronger cache contract (ETag/versioning) is implemented.
+- Realtime-triggered refresh must be debounced/throttled and must avoid reconnect storms.
+
+### Anti-patterns (do not ship)
+
+- Child modal calls `useXxx()` mutation hook separately from parent list/page hook for same entity.
+- Editor closes before mutation promise resolves.
+- Save handler does not return explicit success/failure to caller.
+- Revalidation response always blindly replaces state, regardless of request ordering.
+- Logic depends on hard reload for user to see their own saved change.
+
+### Minimum test expectations for editable flows
+
+- Edit field -> Save -> Reopen editor without reload shows updated value.
+- Edit field -> Save -> List/card row reflects update immediately.
+- Failed save keeps editor open and preserves entered values.
+- Concurrent refresh + save does not regress state to pre-save value.
+
 ## UPPER_SNAKE_CASE for status codes and enum-like values
 
 Status codes, priorities, and other enum-like values use **UPPER_SNAKE_CASE** (e.g. `TO_DO`, `IN_PROGRESS`, `QA`, `COMPLETED`, `LOW`, `MEDIUM`, `FEATURE`, `BUG_FIX`). These values are stored in the DB, used in the API, and double as i18n translation keys.

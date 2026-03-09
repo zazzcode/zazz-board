@@ -3,16 +3,7 @@ import { sql } from 'drizzle-orm';
 import { existsSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { seedUsers } from './seeders/seedUsers.js';
-import { seedStatusDefinitions } from './seeders/seedStatusDefinitions.js';
-import { seedCoordinationTypes } from './seeders/seedCoordinationTypes.js';
-import { seedTranslations } from './seeders/seedTranslations.js';
-import { seedProjects } from './seeders/seedProjects.js';
-import { seedDeliverables } from './seeders/seedDeliverables.js';
-import { seedTags } from './seeders/seedTags.js';
-import { seedTasks } from './seeders/seedTasks.js';
-import { seedTaskTags } from './seeders/seedTaskTags.js';
-import { seedTaskRelations } from './seeders/seedTaskRelations.js';
+import { seedDatabaseSnapshot } from './seeders/seedDatabaseSnapshot.js';
 
 async function resetAndSeed() {
   try {
@@ -23,9 +14,11 @@ async function resetAndSeed() {
     await db.execute(sql`DROP TABLE IF EXISTS "IMAGE_DATA" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "IMAGE_METADATA" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASK_RELATIONS" CASCADE`);
+    await db.execute(sql`DROP TABLE IF EXISTS "FILE_LOCKS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASK_TAGS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASKS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "DELIVERABLES" CASCADE`);
+    await db.execute(sql`DROP TABLE IF EXISTS "AGENT_TOKENS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "PROJECTS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TAGS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TRANSLATIONS" CASCADE`);
@@ -48,42 +41,14 @@ async function resetAndSeed() {
 
     console.log('🌱 Seeding fresh data...');
     console.log('');
-
-    console.log('📋 Step 2a: Seeding base entities...');
-    await seedUsers();
-    await seedTags();
-    await seedStatusDefinitions();
-    await seedCoordinationTypes(); // Populates COORDINATION_TYPES table
-    await seedTranslations();
-    console.log('');
-
-    console.log('📋 Step 2b: Seeding projects...');
-    await seedProjects();
-    console.log('');
-
-    console.log('📋 Step 2c: Seeding deliverables...');
-    await seedDeliverables();
-    console.log('');
-
-    console.log('📋 Step 2d: Seeding tasks...');
-    await seedTasks();
-    console.log('');
-
-    console.log('📋 Step 2e: Seeding task-tag relationships...');
-    await seedTaskTags();
-    console.log('');
-
-    console.log('📋 Step 2f: Seeding task relations...');
-    await seedTaskRelations();
+    const counts = await seedDatabaseSnapshot();
     console.log('');
 
     console.log('✅ Database reset and seeding completed successfully!');
     console.log('📊 Summary:');
-    console.log('   • 5 users created');
-    console.log('   • 2 projects created (ZAZZ, ZED_MER)');
-    console.log('   • 4 deliverables created (ZAZZ only)');
-    console.log('   • 32 ZAZZ tasks seeded from database snapshot');
-    console.log('   • status definitions + translations seeded');
+    Object.entries(counts).forEach(([key, count]) => {
+      console.log(`   • ${key}: ${count}`);
+    });
     process.exit(0);
   } catch (error) {
     console.error('❌ Error resetting and seeding data:', error.message);

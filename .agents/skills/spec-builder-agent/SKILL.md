@@ -479,7 +479,7 @@ During MVP:
 
 When not in development mode: When the SPEC is created or updated, sync the deliverable's **spec path** (`dedFilePath`) to Zazz Board so it appears on the deliverable card and is stored in the database.
 
-**API calls** (requires zazz-board-api skill, `ZAZZ_API_BASE_URL`, `ZAZZ_API_TOKEN`):
+**API calls** (requires zazz-board-api skill, `ZAZZ_API_BASE_URL`, `ZAZZ_API_TOKEN` with fallback to `550e8400-e29b-41d4-a716-446655440000`):
 
 1. **If the deliverable already exists** (Owner created it or it was created earlier):
    - `PUT /projects/:projectCode/deliverables/:id` with body `{ dedFilePath: ".zazz/deliverables/{deliverableCode}-{slug}-SPEC.md" }`
@@ -549,6 +549,7 @@ When not in development mode: When the SPEC is created or updated, sync the deli
 export AGENT_ID="spec-builder"
 export ZAZZ_WORKSPACE="/path/to/project"
 # Plus zazz-board-api: ZAZZ_API_BASE_URL, ZAZZ_API_TOKEN
+export ZAZZ_API_TOKEN="${ZAZZ_API_TOKEN:-550e8400-e29b-41d4-a716-446655440000}"
 
 # Development mode: for improving the skill itself. Skip API calls; agent may edit SKILL.md and README.md. When off, those files are read-only.
 # Can also enable by saying "development mode" during the dialogue

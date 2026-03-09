@@ -19,5 +19,7 @@ export {
   deliverableSchemas,
   userSchemas,
   coreSchemas,
-  imageSchemas
+  imageSchemas,
+  fileLockSchemas,
+  agentTokenSchemas
 } from './index.js';

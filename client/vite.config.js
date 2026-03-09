@@ -8,5 +8,10 @@ export default defineConfig({
     port: 3001,
     strictPort: true, // Fail if port is not available
     host: true
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.js'
   }
 })

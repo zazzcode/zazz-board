@@ -29,6 +29,10 @@
 - **Table names**: UPPER_CASE (e.g. `PROJECTS`, `TASKS`)
 - **Columns**: snake_case in DB, camelCase in JS
 - **Automatic conversion**: `databaseService` converts returned rows via `keysToCamelCase` (`api/src/utils/propertyMapper.js`); the API and client always receive camelCase
+- **Ambiguous field naming**: `keysToCamelCase` only converts shape (snake_case -> camelCase). It does not disambiguate duplicate semantic fields from joins. When multiple tables expose the same column name (for example `PROJECTS.code` and `DELIVERABLES.code`), queries/routes must alias explicitly in SQL/Drizzle select maps.
+  - Use table-scoped camelCase aliases for ambiguity: `projectCode` for `PROJECTS.code`, `deliverableCode` for `DELIVERABLES.code`.
+  - Apply the same rule to duplicate `id` columns from joins: use `projectId`, `deliverableId`, `taskId`, etc. Keep plain `id` only for the primary resource id in that contract.
+  - Apply the same rule for route params/bodies/responses when both values are present in one API contract.
 - **Task positions**: sparse numbering (e.g. 10, 20) for reordering
 - **System enums**: PostgreSQL `pgEnum` for fixed values (e.g. `task_relation_type`, `deliverable_type`); user-definable values use `varchar`
 - **UPPER_SNAKE_CASE codes**: Status codes, priorities, and enum-like values use UPPER_SNAKE_CASE. Used in: `STATUS_DEFINITIONS.code`, `TASKS.status`, `PROJECTS.status_workflow` / `deliverable_status_workflow`, `DELIVERABLES.status` / `deliverable_type`, `COORDINATION_TYPES.code`. These codes also serve as i18n keys (see [coding-styles.md](./coding-styles.md)).
@@ -36,7 +40,7 @@
 ## Key tables
 
 - `PROJECTS` — `id` (serial PK), `code`, `deliverable_status_workflow`, `status_workflow`, `next_deliverable_sequence`
-- `DELIVERABLES` — `id` (serial PK), `deliverable_id` (varchar, e.g. ZAZZ-1), `ded_file_path`, `plan_file_path`, `prd_file_path`, `status_history`
+- `DELIVERABLES` — `id` (serial PK), `code` (varchar, e.g. ZAZZ-1), `spec_filepath`, `plan_filepath`, `status_history`
 - `TASKS` — `id` (serial PK), `deliverable_id` FK; no separate `task_id` varchar
 - `TASK_RELATIONS` — `DEPENDS_ON`, `COORDINATES_WITH`
 - `USERS`, `TAGS`, `STATUS_DEFINITIONS`, `COORDINATION_TYPES`, `TRANSLATIONS`, `IMAGE_METADATA`, `IMAGE_DATA`

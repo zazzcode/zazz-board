@@ -48,6 +48,10 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.name).toBeDefined();
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.specFilepath).toBeDefined();
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.planFilepath).toBeDefined();
+    const responseSchema = path.post.responses?.['201']?.content?.['application/json']?.schema;
+    expect(responseSchema?.properties?.projectCode).toBeDefined();
+    expect(responseSchema?.properties?.deliverableCode).toBeDefined();
+    expect(responseSchema?.properties?.code).toBeUndefined();
   });
 
   it('should document core agent operations: create task', async () => {
@@ -88,12 +92,69 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path.patch.requestBody?.content?.['application/json']?.schema?.properties?.status).toBeDefined();
   });
 
+  it('should document core agent operations: file locks', async () => {
+    const spec = await app.swagger();
+
+    const listPath = spec.paths['/projects/{code}/deliverables/{delivId}/locks'];
+    expect(listPath).toBeDefined();
+    expect(listPath.get).toBeDefined();
+
+    const acquirePath = spec.paths['/projects/{code}/deliverables/{delivId}/locks/acquire'];
+    expect(acquirePath).toBeDefined();
+    expect(acquirePath.post).toBeDefined();
+    expect(acquirePath.post.requestBody?.content?.['application/json']?.schema?.properties?.fileRelativePaths).toBeDefined();
+
+    const heartbeatPath = spec.paths['/projects/{code}/deliverables/{delivId}/locks/heartbeat'];
+    expect(heartbeatPath).toBeDefined();
+    expect(heartbeatPath.post).toBeDefined();
+
+    const releasePath = spec.paths['/projects/{code}/deliverables/{delivId}/locks/release'];
+    expect(releasePath).toBeDefined();
+    expect(releasePath.post).toBeDefined();
+  });
+
+  it('should document agent-token management paths and schemas', async () => {
+    const spec = await app.swagger();
+
+    const userPath = spec.paths['/projects/{code}/users/{userId}/agent-tokens'];
+    expect(userPath).toBeDefined();
+    expect(userPath.get).toBeDefined();
+    expect(userPath.post).toBeDefined();
+    expect(userPath.patch).toBeUndefined();
+    expect(userPath.put).toBeUndefined();
+
+    const userParams = userPath.get.parameters || [];
+    expect(userParams.some((param) => param.name === 'userId')).toBe(true);
+    expect(userPath.get.responses?.['200']?.content?.['application/json']?.schema?.properties?.tokens).toBeDefined();
+
+    const createBody = userPath.post.requestBody?.content?.['application/json']?.schema;
+    expect(createBody?.properties?.label).toBeDefined();
+    expect(createBody?.required).toBeUndefined();
+    expect(userPath.post.responses?.['201']?.content?.['application/json']?.schema?.properties?.token).toBeDefined();
+
+    const projectPath = spec.paths['/projects/{code}/agent-tokens'];
+    expect(projectPath).toBeDefined();
+    expect(projectPath.get).toBeDefined();
+    expect(projectPath.post).toBeUndefined();
+    expect(projectPath.get.responses?.['200']?.content?.['application/json']?.schema?.properties?.users).toBeDefined();
+
+    const deletePath = spec.paths['/projects/{code}/users/{userId}/agent-tokens/{id}'];
+    expect(deletePath).toBeDefined();
+    expect(deletePath.delete).toBeDefined();
+    expect(deletePath.patch).toBeUndefined();
+    expect(deletePath.put).toBeUndefined();
+    expect(deletePath.delete.responses?.['200']?.content?.['application/json']?.schema?.properties?.message).toBeDefined();
+  });
+
   it('should document key paths with tags and summaries', async () => {
     const spec = await app.swagger();
     const keyPaths = [
       '/projects/{projectCode}/deliverables',
       '/projects/{projectCode}/deliverables/{id}',
       '/projects/{projectCode}/deliverables/{id}/approve',
+      '/projects/{code}/users/{userId}/agent-tokens',
+      '/projects/{code}/users/{userId}/agent-tokens/{id}',
+      '/projects/{code}/agent-tokens',
       '/projects/{code}/deliverables/{delivId}/tasks',
       '/projects/{code}/deliverables/{delivId}/tasks/{taskId}',
       '/projects/{code}/deliverables/{delivId}/graph',
@@ -107,6 +168,10 @@ describe('OpenAPI / Swagger documentation', () => {
       '/projects/{code}/images/{id}/metadata',
       '/projects/{code}/tasks/{taskId}/relations',
       '/projects/{code}/tasks/{taskId}/readiness',
+      '/projects/{code}/deliverables/{delivId}/locks',
+      '/projects/{code}/deliverables/{delivId}/locks/acquire',
+      '/projects/{code}/deliverables/{delivId}/locks/heartbeat',
+      '/projects/{code}/deliverables/{delivId}/locks/release',
       '/health'
     ];
     for (const p of keyPaths) {

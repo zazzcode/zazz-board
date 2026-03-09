@@ -30,7 +30,8 @@
   "devDependencies": {
     "concurrently": "^9.1.0",
     "drizzle-orm": "^0.45.1",
-    "pactum-supertest": "^1.0.0"
+    "pactum-supertest": "^1.0.0",
+    "playwright": "^1.58.2"
   },
   "repository": {
     "type": "git",

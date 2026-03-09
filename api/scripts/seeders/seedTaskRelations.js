@@ -20,7 +20,7 @@ export async function seedTaskRelations() {
     const snapshot = await loadZazzProjectSnapshot();
 
     const deliverables = await db
-      .select({ id: DELIVERABLES.id, key: DELIVERABLES.deliverable_code })
+      .select({ id: DELIVERABLES.id, key: DELIVERABLES.code })
       .from(DELIVERABLES);
     const deliverableKeyByDbId = new Map(deliverables.map((deliverable) => [deliverable.id, deliverable.key]));
 
@@ -51,12 +51,12 @@ export async function seedTaskRelations() {
       byDeliverableAndTitle.set(`${deliverableKey}::${task.title}`, task.id);
     }
 
-    const resolveTaskId = (deliverableCode, phaseStep, title) => {
+    const resolveTaskId = (deliverableKey, phaseStep, title) => {
       if (phaseStep) {
-        const byPhaseTask = byDeliverableAndPhaseTask.get(`${deliverableCode}::${phaseStep}`);
+        const byPhaseTask = byDeliverableAndPhaseTask.get(`${deliverableKey}::${phaseStep}`);
         if (byPhaseTask) return byPhaseTask;
       }
-      return byDeliverableAndTitle.get(`${deliverableCode}::${title}`) || null;
+      return byDeliverableAndTitle.get(`${deliverableKey}::${title}`) || null;
     };
 
     const now = new Date();
@@ -65,12 +65,12 @@ export async function seedTaskRelations() {
 
     for (const relation of snapshot.task_relations) {
       const taskId = resolveTaskId(
-        relation.from_deliverable_code,
+        relation.from_code,
         relation.from_phase_step,
         relation.from_title
       );
       const relatedTaskId = resolveTaskId(
-        relation.to_deliverable_code,
+        relation.to_code,
         relation.to_phase_step,
         relation.to_title
       );

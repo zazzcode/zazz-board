@@ -1,21 +1,17 @@
-import { Table, Text, Badge, Group, ActionIcon, Tooltip, Box } from '@mantine/core';
-import { IconCalendar, IconEdit } from '@tabler/icons-react';
+import { Table, Text, Group, ActionIcon, Tooltip, Box } from '@mantine/core';
+import { IconCalendar, IconEdit, IconKey } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
-import { useEffect } from 'react';
 
-export function ProjectList({ projects, loading, currentUser, onProjectSelect, onProjectEdit }) {
+export function ProjectList({
+  projects,
+  loading,
+  currentUser,
+  onProjectSelect,
+  onProjectEdit,
+  onManageAgentTokens,
+}) {
   const { t } = useTranslation();
-  
-  // Debug info when project list renders
-  useEffect(() => {
-    if (!loading && projects) {
-      console.log('=== PROJECTS DEBUG ===');
-      console.log('Projects:', projects.length);
-      console.log('LOCALE:', navigator.language);
-      console.log('=====================');
-    }
-  }, [projects, loading]);
-  
+
   if (loading) {
     return <Text>{t('common.loading')}</Text>;
   }
@@ -25,9 +21,7 @@ export function ProjectList({ projects, loading, currentUser, onProjectSelect, o
   }
 
   const formatDate = (dateString) => {
-    const locale = navigator.language;
-    console.log('LOCALE:', locale);
-    return new Date(dateString).toLocaleDateString(locale, {
+    return new Date(dateString).toLocaleDateString(navigator.language, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
@@ -35,14 +29,15 @@ export function ProjectList({ projects, loading, currentUser, onProjectSelect, o
   };
 
   return (
-    <Table>
+    <div style={{ overflowX: 'auto' }}>
+    <Table style={{ minWidth: 560 }}>
       <Table.Thead>
         <Table.Tr>
           <Table.Th style={{ width: '40px' }}></Table.Th>
           <Table.Th>{t('tasks.title')}</Table.Th>
           <Table.Th>{t('projects.leader')}</Table.Th>
           <Table.Th>{t('projects.createdAt')}</Table.Th>
-          <Table.Th></Table.Th>
+          <Table.Th style={{ width: 90 }}></Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
@@ -93,21 +88,38 @@ export function ProjectList({ projects, loading, currentUser, onProjectSelect, o
                 <Text size="sm">{formatDate(project.createdAt)}</Text>
               </Group>
             </Table.Td>
-            <Table.Td>
-              <ActionIcon 
-                variant="subtle" 
-                size="md"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onProjectEdit(project);
-                }}
-              >
-                <IconEdit size={21} />
-              </ActionIcon>
+            <Table.Td style={{ minWidth: 90 }}>
+              <Group gap={4} justify="flex-end">
+                <ActionIcon
+                  variant="subtle"
+                  size="md"
+                  title={t('projects.agentTokens.title')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onManageAgentTokens?.(project);
+                  }}
+                  aria-label={t('projects.agentTokens.title')}
+                >
+                  <IconKey size={21} />
+                </ActionIcon>
+                <ActionIcon
+                  variant="subtle"
+                  size="md"
+                  title="Edit project"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onProjectEdit(project);
+                  }}
+                  aria-label="Edit project"
+                >
+                  <IconEdit size={21} />
+                </ActionIcon>
+              </Group>
             </Table.Td>
           </Table.Tr>
         ))}
       </Table.Tbody>
     </Table>
+    </div>
   );
 } 

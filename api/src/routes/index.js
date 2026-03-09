@@ -13,6 +13,9 @@ import translationsRoutes from './translations.js';
 import statusDefinitionsRoutes from './statusDefinitions.js';
 import taskGraphRoutes from './taskGraph.js';
 import deliverableRoutes from './deliverables.js';
+import fileLockRoutes from './fileLocks.js';
+import agentTokenRoutes from './agentTokens.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const dbService = new DatabaseService();
 const realtimeService = new RealtimeService();
@@ -36,7 +39,7 @@ export default async function routes(fastify, options) {
     reply.send({ 
       message: 'Zazz Board API', 
       version: '1.0.0',
-      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/projects/:code/images/:id', '/translations', '/status-definitions', '/coordination-types']
+      endpoints: ['/health', '/users', '/projects', '/deliverables', '/tasks', '/tags', '/projects/:code/images/:id', '/projects/:code/deliverables/:delivId/locks', '/translations', '/status-definitions', '/coordination-types']
     });
   });
 
@@ -62,6 +65,23 @@ export default async function routes(fastify, options) {
     });
   });
 
+  fastify.post('/token-cache/refresh', {
+    schema: coreSchemas.refreshTokenCache,
+    preHandler: authMiddleware,
+  }, async (request, reply) => {
+    await tokenService.refreshCache();
+    const tokenStats = tokenService.getCacheStats();
+    reply.send({
+      success: true,
+      auth: {
+        tokenCacheInitialized: tokenStats.isInitialized,
+        userCount: tokenStats.userCount,
+        agentTokenCount: tokenStats.agentTokenCount,
+        projectCount: tokenStats.projectCount,
+      },
+    });
+  });
+
   // Register route plugins with shared database service
   const pluginOptions = { dbService, realtimeService };
   
@@ -74,4 +94,6 @@ export default async function routes(fastify, options) {
   await fastify.register(statusDefinitionsRoutes, pluginOptions);
   await fastify.register(taskGraphRoutes, pluginOptions);
   await fastify.register(deliverableRoutes, pluginOptions);
+  await fastify.register(fileLockRoutes, pluginOptions);
+  await fastify.register(agentTokenRoutes, pluginOptions);
 }

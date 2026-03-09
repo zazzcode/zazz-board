@@ -26,19 +26,12 @@ describe('Deliverables Status Transitions', () => {
     expect(response.statusHistory.length).toBeGreaterThan(0);
   });
 
-  it('should transition from PLANNING to IN_PROGRESS after approval', async () => {
+  it('should transition from PLANNING to IN_PROGRESS and auto-approve when a plan exists', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
       planFilepath: 'docs/test-plan.md'
     });
 
-    // First approve the plan
-    await spec()
-      .patch(`/projects/ZAZZ/deliverables/${created.id}/approve`)
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .expectStatus(200);
-
-    // Then transition to IN_PROGRESS
     const response = await spec()
       .patch(`/projects/ZAZZ/deliverables/${created.id}/status`)
       .withHeaders('TB_TOKEN', VALID_TOKEN)
@@ -47,10 +40,12 @@ describe('Deliverables Status Transitions', () => {
       .returns('res.body');
 
     expect(response.status).toBe('IN_PROGRESS');
+    expect(response.approvedAt).not.toBeNull();
+    expect(response.approvedBy).toBe(5);
     expect(response.statusHistory.length).toBeGreaterThan(1);
   });
 
-  it('should block transition to IN_PROGRESS without plan approval', async () => {
+  it('should block transition to IN_PROGRESS without a plan filepath', async () => {
     const created = await createTestDeliverable(1, {
       status: 'PLANNING',
       planFilepath: null
@@ -129,12 +124,6 @@ describe('Deliverables Status Transitions', () => {
       planFilepath: 'docs/test-plan.md'
     });
 
-    // Approve
-    await spec()
-      .patch(`/projects/ZAZZ/deliverables/${created.id}/approve`)
-      .withHeaders('TB_TOKEN', VALID_TOKEN)
-      .expectStatus(200);
-
     // Transition to IN_PROGRESS
     await spec()
       .patch(`/projects/ZAZZ/deliverables/${created.id}/status`)
@@ -152,6 +141,7 @@ describe('Deliverables Status Transitions', () => {
     expect(result.statusHistory.length).toBeGreaterThanOrEqual(2);
     expect(result.statusHistory.some(h => h.status === 'PLANNING')).toBe(true);
     expect(result.statusHistory.some(h => h.status === 'IN_PROGRESS')).toBe(true);
+    expect(result.approvedAt).not.toBeNull();
   });
 
   it('should require authentication for status transitions', async () => {

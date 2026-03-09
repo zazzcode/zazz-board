@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, asc, like, or, inArray, ne } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES } from '../../lib/db/schema.js';
+import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES, FILE_LOCKS, AGENT_TOKENS } from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
 import { keysToCamelCase } from '../utils/propertyMapper.js';
 import { randomUUID } from 'crypto';
@@ -359,6 +359,132 @@ class DatabaseService {
     return project || null;
   }
 
+  async getAgentTokensForUser(projectId, userId) {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      return null;
+    }
+
+    const tokens = await db.select({
+      id: AGENT_TOKENS.id,
+      token: AGENT_TOKENS.token,
+      label: AGENT_TOKENS.label,
+      createdAt: AGENT_TOKENS.created_at,
+    })
+      .from(AGENT_TOKENS)
+      .where(and(eq(AGENT_TOKENS.project_id, projectId), eq(AGENT_TOKENS.user_id, userId)))
+      .orderBy(asc(AGENT_TOKENS.created_at), asc(AGENT_TOKENS.id));
+
+    return {
+      userId: user.id,
+      userName: user.fullName,
+      userEmail: user.email,
+      tokens,
+    };
+  }
+
+  async getAgentTokensForProject(projectId) {
+    const [users, tokenRows] = await Promise.all([
+      this.getUsers(),
+      db.select({
+        id: AGENT_TOKENS.id,
+        userId: AGENT_TOKENS.user_id,
+        token: AGENT_TOKENS.token,
+        label: AGENT_TOKENS.label,
+        createdAt: AGENT_TOKENS.created_at,
+      })
+        .from(AGENT_TOKENS)
+        .where(eq(AGENT_TOKENS.project_id, projectId))
+        .orderBy(asc(AGENT_TOKENS.user_id), asc(AGENT_TOKENS.created_at), asc(AGENT_TOKENS.id)),
+    ]);
+
+    const tokensByUserId = new Map();
+    for (const tokenRow of tokenRows) {
+      if (!tokensByUserId.has(tokenRow.userId)) {
+        tokensByUserId.set(tokenRow.userId, []);
+      }
+      tokensByUserId.get(tokenRow.userId).push({
+        id: tokenRow.id,
+        token: tokenRow.token,
+        label: tokenRow.label,
+        createdAt: tokenRow.createdAt,
+      });
+    }
+
+    return users.map((user) => ({
+      userId: user.id,
+      userName: user.fullName,
+      userEmail: user.email,
+      tokens: tokensByUserId.get(user.id) || [],
+    }));
+  }
+
+  async getAgentTokenById(id) {
+    const [token] = await db.select({
+      id: AGENT_TOKENS.id,
+      userId: AGENT_TOKENS.user_id,
+      projectId: AGENT_TOKENS.project_id,
+      token: AGENT_TOKENS.token,
+      label: AGENT_TOKENS.label,
+      createdAt: AGENT_TOKENS.created_at,
+      userEmail: USERS.email,
+      userFullName: USERS.full_name,
+      projectCode: PROJECTS.code,
+    })
+      .from(AGENT_TOKENS)
+      .innerJoin(USERS, eq(AGENT_TOKENS.user_id, USERS.id))
+      .innerJoin(PROJECTS, eq(AGENT_TOKENS.project_id, PROJECTS.id))
+      .where(eq(AGENT_TOKENS.id, id))
+      .limit(1);
+
+    return token || null;
+  }
+
+  async createAgentToken(projectId, userId, label = null) {
+    const project = await this.getProjectById(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const [created] = await db.insert(AGENT_TOKENS)
+      .values({
+        user_id: userId,
+        project_id: projectId,
+        token: randomUUID(),
+        label: label ?? null,
+      })
+      .returning({
+        id: AGENT_TOKENS.id,
+        token: AGENT_TOKENS.token,
+        label: AGENT_TOKENS.label,
+        createdAt: AGENT_TOKENS.created_at,
+      });
+
+    return {
+      ...created,
+      userId: user.id,
+      userEmail: user.email,
+      userFullName: user.fullName,
+      projectId: project.id,
+      projectCode: project.code,
+    };
+  }
+
+  async deleteAgentToken(id) {
+    const existing = await this.getAgentTokenById(id);
+    if (!existing) {
+      return null;
+    }
+
+    await db.delete(AGENT_TOKENS).where(eq(AGENT_TOKENS.id, id));
+    return existing;
+  }
+
   async getDeliverablesForProject(projectId, filters = {}) {
     const conditions = [eq(DELIVERABLES.project_id, projectId)];
     if (filters.status) conditions.push(eq(DELIVERABLES.status, filters.status));
@@ -368,7 +494,7 @@ class DatabaseService {
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
       projectCode: DELIVERABLES.project_code,
-      deliverableCode: DELIVERABLES.deliverable_code,
+      deliverableCode: DELIVERABLES.code,
       name: DELIVERABLES.name,
       description: DELIVERABLES.description,
       type: DELIVERABLES.type,
@@ -398,7 +524,7 @@ class DatabaseService {
       DELIVERABLES.id,
       DELIVERABLES.project_id,
       DELIVERABLES.project_code,
-      DELIVERABLES.deliverable_code,
+      DELIVERABLES.code,
       DELIVERABLES.name,
       DELIVERABLES.description,
       DELIVERABLES.type,
@@ -428,7 +554,7 @@ class DatabaseService {
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
       projectCode: DELIVERABLES.project_code,
-      deliverableCode: DELIVERABLES.deliverable_code,
+      deliverableCode: DELIVERABLES.code,
       name: DELIVERABLES.name,
       description: DELIVERABLES.description,
       type: DELIVERABLES.type,
@@ -467,7 +593,7 @@ class DatabaseService {
       const [project] = await tx.select().from(PROJECTS).where(eq(PROJECTS.id, projectId)).limit(1);
       if (!project) throw new Error('Project not found');
 
-      const deliverableCode = `${project.code}-${project.next_deliverable_sequence}`;
+      const generatedCode = `${project.code}-${project.next_deliverable_sequence}`;
       await tx.update(PROJECTS)
         .set({ next_deliverable_sequence: project.next_deliverable_sequence + 1, updated_by: userId, updated_at: new Date() })
         .where(eq(PROJECTS.id, projectId));
@@ -479,7 +605,7 @@ class DatabaseService {
       const [row] = await tx.insert(DELIVERABLES).values({
         project_id: projectId,
         project_code: project.code,
-        deliverable_code: deliverableCode,
+        code: generatedCode,
         name: data.name,
         description: data.description,
         type: data.type,
@@ -549,16 +675,26 @@ class DatabaseService {
       .from(PROJECTS).where(eq(PROJECTS.id, deliverable.projectId)).limit(1);
     if (!project?.workflow?.includes(status)) throw new Error(`Status ${status} not allowed for this project`);
 
-    if (status === 'IN_PROGRESS') {
-      if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before moving to IN_PROGRESS');
-      if (!deliverable.approvedAt) throw new Error('Deliverable must be approved before moving to IN_PROGRESS');
-    }
-
     const nextHistory = Array.isArray(deliverable.statusHistory) ? [...deliverable.statusHistory] : [];
     nextHistory.push({ status, changedAt: new Date().toISOString(), changedBy: userId });
 
+    const updateData = {
+      status,
+      status_history: nextHistory,
+      updated_by: userId,
+      updated_at: new Date(),
+    };
+
+    if (status === 'IN_PROGRESS') {
+      if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before moving to IN_PROGRESS');
+      if (!deliverable.approvedAt) {
+        updateData.approved_by = userId;
+        updateData.approved_at = new Date();
+      }
+    }
+
     const [updated] = await db.update(DELIVERABLES)
-      .set({ status, status_history: nextHistory, updated_by: userId, updated_at: new Date() })
+      .set(updateData)
       .where(eq(DELIVERABLES.id, id))
       .returning();
     if (!updated) return null;
@@ -1436,6 +1572,264 @@ class DatabaseService {
       originalName: deletedImage.original_name,
       contentType: deletedImage.content_type
     } : null;
+  }
+
+  // ==================== FILE LOCK OPERATIONS ====================
+
+  normalizeLockFileRelativePaths(fileRelativePaths = []) {
+    if (!Array.isArray(fileRelativePaths)) return [];
+    const normalized = fileRelativePaths
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+    return [...new Set(normalized)];
+  }
+
+  normalizeLockTtlSeconds(ttlSeconds) {
+    const parsed = Number.parseInt(ttlSeconds, 10);
+    if (!Number.isFinite(parsed)) return 30;
+    if (parsed < 5) return 5;
+    if (parsed > 300) return 300;
+    return parsed;
+  }
+
+  mapFileLock(lock) {
+    return {
+      id: lock.id,
+      projectId: lock.project_id,
+      deliverableId: lock.deliverable_id,
+      taskId: lock.task_id,
+      phaseStep: lock.phase_step,
+      agentName: lock.agent_name,
+      fileRelativePath: lock.file_relative_path,
+      acquiredAt: lock.acquired_at,
+      heartbeatAt: lock.heartbeat_at,
+      leaseExpiresAt: lock.lease_expires_at,
+      createdBy: lock.created_by,
+      updatedBy: lock.updated_by,
+      updatedAt: lock.updated_at,
+    };
+  }
+
+  async reclaimExpiredFileLocks(tx, deliverableId) {
+    return tx
+      .delete(FILE_LOCKS)
+      .where(
+        and(
+          eq(FILE_LOCKS.deliverable_id, deliverableId),
+          sql`${FILE_LOCKS.lease_expires_at} <= NOW()`
+        )
+      );
+  }
+
+  async listActiveFileLocks({ projectId, deliverableId }) {
+    return db.transaction(async (tx) => {
+      await this.reclaimExpiredFileLocks(tx, deliverableId);
+      const rows = await tx
+        .select()
+        .from(FILE_LOCKS)
+        .where(
+          and(
+            eq(FILE_LOCKS.project_id, projectId),
+            eq(FILE_LOCKS.deliverable_id, deliverableId),
+            sql`${FILE_LOCKS.lease_expires_at} > NOW()`
+          )
+        )
+        .orderBy(asc(FILE_LOCKS.file_relative_path));
+      return rows.map((row) => this.mapFileLock(row));
+    });
+  }
+
+  async acquireFileLocks({ projectId, deliverableId, taskId, phaseStep = null, agentName, fileRelativePaths, ttlSeconds = 30, userId = null }) {
+    const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
+    if (normalizedFileRelativePaths.length === 0) {
+      throw new Error('fileRelativePaths is required and must contain at least one path');
+    }
+    const normalizedAgentName = String(agentName || '').trim();
+    if (!normalizedAgentName) {
+      throw new Error('agentName is required');
+    }
+    const ttl = this.normalizeLockTtlSeconds(ttlSeconds);
+
+    return db.transaction(async (tx) => {
+      await this.reclaimExpiredFileLocks(tx, deliverableId);
+
+      const [task] = await tx.select({
+        id: TASKS.id,
+        projectId: TASKS.project_id,
+        deliverableId: TASKS.deliverable_id,
+      })
+      .from(TASKS)
+      .where(eq(TASKS.id, taskId))
+      .limit(1);
+
+      if (!task || task.projectId !== projectId || task.deliverableId !== deliverableId) {
+        throw new Error('Task not found in this project/deliverable');
+      }
+
+      const existingLocks = await tx
+        .select()
+        .from(FILE_LOCKS)
+        .where(
+          and(
+            eq(FILE_LOCKS.deliverable_id, deliverableId),
+            inArray(FILE_LOCKS.file_relative_path, normalizedFileRelativePaths),
+            sql`${FILE_LOCKS.lease_expires_at} > NOW()`
+          )
+        );
+
+      const conflicts = existingLocks
+        .filter((lock) => !(lock.task_id === taskId && lock.agent_name === normalizedAgentName))
+        .map((lock) => ({
+          fileRelativePath: lock.file_relative_path,
+          taskId: lock.task_id,
+          phaseStep: lock.phase_step,
+          agentName: lock.agent_name,
+          leaseExpiresAt: lock.lease_expires_at,
+        }));
+
+      if (conflicts.length > 0) {
+        return {
+          acquired: false,
+          error: 'FILE_LOCK_CONFLICT',
+          conflicts,
+          pollIntervalSeconds: 3,
+        };
+      }
+
+      const now = new Date();
+      const leaseExpiresAt = new Date(now.getTime() + ttl * 1000);
+
+      for (const fileRelativePath of normalizedFileRelativePaths) {
+        const existing = existingLocks.find((lock) => lock.file_relative_path === fileRelativePath);
+        if (existing) {
+          await tx
+            .update(FILE_LOCKS)
+            .set({
+              phase_step: phaseStep ?? existing.phase_step,
+              heartbeat_at: now,
+              lease_expires_at: leaseExpiresAt,
+              updated_by: userId,
+              updated_at: now,
+            })
+            .where(eq(FILE_LOCKS.id, existing.id));
+        } else {
+          await tx
+            .insert(FILE_LOCKS)
+            .values({
+              project_id: projectId,
+              deliverable_id: deliverableId,
+              task_id: taskId,
+              phase_step: phaseStep,
+              agent_name: normalizedAgentName,
+              file_relative_path: fileRelativePath,
+              acquired_at: now,
+              heartbeat_at: now,
+              lease_expires_at: leaseExpiresAt,
+              created_by: userId,
+              updated_by: userId,
+              updated_at: now,
+            });
+        }
+      }
+
+      const acquiredRows = await tx
+        .select()
+        .from(FILE_LOCKS)
+        .where(
+          and(
+            eq(FILE_LOCKS.project_id, projectId),
+            eq(FILE_LOCKS.deliverable_id, deliverableId),
+            eq(FILE_LOCKS.task_id, taskId),
+            eq(FILE_LOCKS.agent_name, normalizedAgentName),
+            inArray(FILE_LOCKS.file_relative_path, normalizedFileRelativePaths),
+            sql`${FILE_LOCKS.lease_expires_at} > NOW()`
+          )
+        )
+        .orderBy(asc(FILE_LOCKS.file_relative_path));
+
+      return {
+        acquired: true,
+        locks: acquiredRows.map((row) => this.mapFileLock(row)),
+        ttlSeconds: ttl,
+      };
+    });
+  }
+
+  async heartbeatFileLocks({ projectId, deliverableId, taskId, agentName, fileRelativePaths = [], ttlSeconds = 30, userId = null }) {
+    const normalizedAgentName = String(agentName || '').trim();
+    if (!normalizedAgentName) {
+      throw new Error('agentName is required');
+    }
+    const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
+    const ttl = this.normalizeLockTtlSeconds(ttlSeconds);
+
+    return db.transaction(async (tx) => {
+      await this.reclaimExpiredFileLocks(tx, deliverableId);
+
+      const now = new Date();
+      const leaseExpiresAt = new Date(now.getTime() + ttl * 1000);
+
+      const conditions = [
+        eq(FILE_LOCKS.project_id, projectId),
+        eq(FILE_LOCKS.deliverable_id, deliverableId),
+        eq(FILE_LOCKS.task_id, taskId),
+        eq(FILE_LOCKS.agent_name, normalizedAgentName),
+        sql`${FILE_LOCKS.lease_expires_at} > NOW()`,
+      ];
+
+      if (normalizedFileRelativePaths.length > 0) {
+        conditions.push(inArray(FILE_LOCKS.file_relative_path, normalizedFileRelativePaths));
+      }
+
+      const refreshedRows = await tx
+        .update(FILE_LOCKS)
+        .set({
+          heartbeat_at: now,
+          lease_expires_at: leaseExpiresAt,
+          updated_by: userId,
+          updated_at: now,
+        })
+        .where(and(...conditions))
+        .returning();
+
+      return {
+        refreshedCount: refreshedRows.length,
+        ttlSeconds: ttl,
+        locks: refreshedRows.map((row) => this.mapFileLock(row)),
+      };
+    });
+  }
+
+  async releaseFileLocks({ projectId, deliverableId, taskId, agentName, fileRelativePaths = [] }) {
+    const normalizedAgentName = String(agentName || '').trim();
+    if (!normalizedAgentName) {
+      throw new Error('agentName is required');
+    }
+    const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
+
+    return db.transaction(async (tx) => {
+      await this.reclaimExpiredFileLocks(tx, deliverableId);
+
+      const conditions = [
+        eq(FILE_LOCKS.project_id, projectId),
+        eq(FILE_LOCKS.deliverable_id, deliverableId),
+        eq(FILE_LOCKS.task_id, taskId),
+        eq(FILE_LOCKS.agent_name, normalizedAgentName),
+      ];
+      if (normalizedFileRelativePaths.length > 0) {
+        conditions.push(inArray(FILE_LOCKS.file_relative_path, normalizedFileRelativePaths));
+      }
+
+      const releasedRows = await tx
+        .delete(FILE_LOCKS)
+        .where(and(...conditions))
+        .returning();
+
+      return {
+        releasedCount: releasedRows.length,
+        locks: releasedRows.map((row) => this.mapFileLock(row)),
+      };
+    });
   }
 
   // ==================== UTILITY METHODS ====================

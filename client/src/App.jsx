@@ -31,6 +31,7 @@ import {
 } from '@tabler/icons-react';
 import { TokenModal } from './components/TokenModal.jsx';
 import { ProjectModal } from './components/ProjectModal.jsx';
+import { AgentTokensModal } from './components/AgentTokensModal.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { KanbanPage } from './pages/KanbanPage.jsx';
 import { TaskGraphPage } from './pages/TaskGraphPage.jsx';
@@ -61,6 +62,8 @@ function AppContent() {
   const [opened, { open, close }] = useDisclosure(false);
   const [projectModalOpened, setProjectModalOpened] = useState(false);
   const [editingProject, setEditingProject] = useState(null);  // null for create, project object for edit
+  const [agentTokensModalOpened, setAgentTokensModalOpened] = useState(false);
+  const [agentTokensProject, setAgentTokensProject] = useState(null);
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [createTaskModalOpened, setCreateTaskModalOpened] = useState(false);
@@ -322,6 +325,16 @@ function AppContent() {
     setProjectModalOpened(true);
   };
 
+  const handleManageAgentTokens = (project) => {
+    setAgentTokensProject(project);
+    setAgentTokensModalOpened(true);
+  };
+
+  const handleCloseAgentTokensModal = () => {
+    setAgentTokensModalOpened(false);
+    setAgentTokensProject(null);
+  };
+
   const handleProjectSave = async (formData) => {
     const token = localStorage.getItem('TB_TOKEN');
     if (!token) {
@@ -423,12 +436,9 @@ function AppContent() {
         ? targetProject.statusWorkflow[0]
         : 'TO_DO';
 
-
-      // Map tags to tagNames array for API
-      const tagNames = newTask.tags;
-
-      const deliverablesResponse = await fetch(`http://localhost:3030/projects/${targetProject.id}/deliverables`, {
+      const deliverablesResponse = await fetch(`http://localhost:3030/projects/${targetProject.code}/deliverables`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'TB_TOKEN': token,
           'Content-Type': 'application/json'
@@ -444,7 +454,9 @@ function AppContent() {
         return;
       }
 
-      const response = await fetch('http://localhost:3030/tasks', {
+      const response = await fetch(
+        `http://localhost:3030/projects/${targetProject.code}/deliverables/${deliverables[0].id}/tasks`,
+        {
         method: 'POST',
         headers: {
           'TB_TOKEN': token,
@@ -455,11 +467,7 @@ function AppContent() {
           prompt: newTask.prompt,
           priority: newTask.priority,
           storyPoints: newTask.storyPoints ? parseInt(newTask.storyPoints) : null,
-          projectId: targetProject.id,
-          deliverableId: deliverables[0].id,
-          status: initialStatus,
-          assigneeId: newTask.assigneeId ? parseInt(newTask.assigneeId) : null,
-          tagNames: tagNames
+          status: initialStatus
         })
       });
 
@@ -708,6 +716,7 @@ function AppContent() {
                 onProjectSelect={handleProjectSelect}
                 onProjectEdit={handleProjectEdit}
                 onProjectCreate={handleProjectCreate}
+                onManageAgentTokens={handleManageAgentTokens}
               />
             } />
             <Route path="/projects/:projectCode/kanban" element={
@@ -760,6 +769,16 @@ function AppContent() {
           onSave={handleProjectSave}
           project={editingProject}
           users={users}
+          currentUser={currentUser}
+        />
+      )}
+
+      {/* Agent Tokens Modal */}
+      {agentTokensModalOpened && (
+        <AgentTokensModal
+          opened={agentTokensModalOpened}
+          onClose={handleCloseAgentTokensModal}
+          selectedProject={agentTokensProject}
           currentUser={currentUser}
         />
       )}

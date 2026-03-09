@@ -114,12 +114,16 @@ export default async function deliverableRoutes(fastify, options) {
       const statusDef = await dbService.getStatusDefinitionByCode(request.body.status);
       if (!statusDef) return reply.code(400).send({ error: `Invalid status: ${request.body.status}` });
       const updated = await dbService.updateDeliverableStatus(deliverableId, request.body.status, request.user.id);
+      const autoApproved = !existing.approvedAt && !!updated.approvedAt;
       publishEvent(project.code, {
         type: 'deliverable',
         eventType: 'deliverable.status_changed',
         deliverableId: updated.id,
         status: updated.status,
         previousStatus: existing.status,
+        approved: autoApproved,
+        approvedBy: updated.approvedBy,
+        approvedAt: updated.approvedAt,
       });
       reply.send(updated);
     } catch (error) {
@@ -144,6 +148,8 @@ export default async function deliverableRoutes(fastify, options) {
         deliverableId: updated.id,
         status: updated.status,
         approved: true,
+        approvedBy: updated.approvedBy,
+        approvedAt: updated.approvedAt,
       });
       reply.send(updated);
     } catch (error) {

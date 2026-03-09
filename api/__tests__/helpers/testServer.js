@@ -36,8 +36,8 @@ export async function createTestServer() {
 
   await app.register(routes);
 
-  // Initialize token service
-  await tokenService.initialize();
+  // Ensure cache reflects the current test DB contents before requests run.
+  await tokenService.refreshCache();
 
   testApp = app;
   return app;
@@ -59,4 +59,12 @@ export async function closeTestServer() {
  */
 export function getTestToken() {
   return '550e8400-e29b-41d4-a716-446655440000';
+}
+
+export function getTestAgentToken(projectCode = 'ZAZZ') {
+  if (projectCode === 'ZED_MER') {
+    return '660e8400-e29b-41d4-a716-446655440103';
+  }
+
+  return '660e8400-e29b-41d4-a716-446655440101';
 }

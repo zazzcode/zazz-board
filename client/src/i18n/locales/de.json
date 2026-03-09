@@ -67,13 +67,49 @@
       "dragHelp": "Ziehen zum Neuordnen. Diese Status erscheinen als Spalten in Ihrem Kanban-Board.",
       "viewHelp": "Diese Status erscheinen als Spalten in Ihrem Kanban-Board.",
       "addHelp": "Klicken Sie auf \"Hinzufügen\", um einen Status in Ihren Workflow aufzunehmen."
+    },
+    "agentTokens": {
+      "title": "Agent-Tokens",
+      "titleWithProject": "{{projectCode}} Projekt-Agent-Zugangstokens",
+      "subtitleLeader": "Erstellen und widerrufen Sie projektspezifische Agent-Tokens fur die Mitglieder dieses Projekts.",
+      "subtitleSelf": "Erstellen und widerrufen Sie Ihre projektspezifischen Agent-Tokens fur dieses Projekt.",
+      "loading": "Agent-Tokens werden geladen...",
+      "error": "Agent-Tokens konnten derzeit nicht geladen werden.",
+      "emptyLeader": "Fur dieses Projekt wurden noch keine Agent-Tokens erstellt.",
+      "emptySelf": "Sie haben fur dieses Projekt noch keine Agent-Tokens.",
+      "noTokensForUser": "Noch keine Agent-Tokens vorhanden.",
+      "userSectionTitle": "{{name}}",
+      "userSectionFallback": "Benutzer {{userId}}",
+      "userTokenCount_one": "{{count}} Token",
+      "userTokenCount_other": "{{count}} Tokens",
+      "tokenLabel": "Bezeichnung",
+      "tokenLabelPlaceholder": "Optionale Bezeichnung",
+      "tokenValue": "Token",
+      "createdAt": "Erstellt",
+      "createForUser": "Token fur {{name}} erstellen",
+      "createForMe": "Token erstellen",
+      "createAction": "Token generieren",
+      "createError": "Agent-Token konnte nicht erstellt werden.",
+      "copyAction": "Token kopieren",
+      "copied": "Kopiert",
+      "copyHelper": "Kopieren und speichern Sie dieses Token jetzt. Nach dem Schliessen dieses Modals wird es moglicherweise nicht erneut angezeigt.",
+      "latestTokenTitle": "Neuestes Token",
+      "deleteAction": "Token widerrufen",
+      "deleteTitle": "Widerruf des Tokens bestatigen",
+      "deleteBody": "Dadurch wird das Token dauerhaft widerrufen. Geben Sie zur Bestatigung die Bestatigungsphrase ein.",
+      "deletePhraseLabel": "Geben Sie zur Bestatigung \"delete this token\" ein",
+      "deletePhrasePlaceholder": "delete this token",
+      "deletePhraseValue": "delete this token",
+      "deleteConfirm": "Token widerrufen",
+      "deleteCancel": "Token behalten",
+      "deleteError": "Agent-Token konnte nicht widerrufen werden.",
+      "unlabeledToken": "Token ohne Bezeichnung"
     }
   },
   "tasks": {
-    "title": "Aufgaben",
+    "title": "Titel",
     "newTask": "Neue Aufgabe",
     "taskId": "Aufgaben-ID",
-    "title": "Titel",
     "prompt": "Prompt",
     "status": "Status",
     "priority": "Priorität",
@@ -84,8 +120,6 @@
     "gitWorktreePlaceholder": "feature/aufgabe-123",
     "gitPullRequestUrl": "Pull-Request-URL",
     "gitPullRequestUrlPlaceholder": "https://github.com/benutzer/repo/pull/123",
-
-    "prompt": "Prompt",
     "isBlocked": "Blockiert",
     "blockedReason": "Blockierungsgrund",
     "startedAt": "Gestartet",
@@ -156,4 +190,4 @@
     "tagUpdated": "Tag erfolgreich aktualisiert",
     "tagDeleted": "Tag erfolgreich gelöscht"
   }
-} 
+}

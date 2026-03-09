@@ -16,6 +16,8 @@
     "db:push": "drizzle-kit push --force",
     "db:seed": "node scripts/seed-all.js",
     "db:reset": "node scripts/reset-and-seed.js",
+    "db:export-snapshot": "node scripts/export-database-snapshot.js",
+    "db:seed-agent-tokens": "node scripts/seeders/seedAgentTokens.js",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest",
     "test:coverage": "NODE_ENV=test vitest run --coverage"

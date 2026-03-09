@@ -50,7 +50,7 @@ export const deliverableSchemas = {
   createDeliverable: {
     tags: ['deliverables'],
     summary: 'Create deliverable',
-    description: 'Creates a new deliverable card in the project. Use this when starting work on a new feature, bug fix, or other work item. The response includes id (numeric—use for create task and other API paths) and deliverableCode (string, e.g. ZAZZ-4—use for display). You can include specFilepath and planFilepath on create if known, or add them later via update deliverable.',
+    description: 'Creates a new deliverable card in the project. Use this when starting work on a new feature, bug fix, or other work item. The response includes id (numeric—use for create task and other API paths), projectCode (project code), and deliverableCode (string, e.g. ZAZZ-4—use for display). You can include specFilepath and planFilepath on create if known, or add them later via update deliverable.',
     params: {
       type: 'object',
       required: ['projectCode'],

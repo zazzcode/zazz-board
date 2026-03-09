@@ -67,13 +67,49 @@
       "dragHelp": "Glissez pour réorganiser. Ces statuts apparaîtront sous forme de colonnes dans votre tableau Kanban.",
       "viewHelp": "Ces statuts apparaîtront sous forme de colonnes dans votre tableau Kanban.",
       "addHelp": "Cliquez sur \"Ajouter\" pour inclure un statut dans votre flux de travail."
+    },
+    "agentTokens": {
+      "title": "Tokens d'Agent",
+      "titleWithProject": "{{projectCode}} Jetons d'Accès Agent du Projet",
+      "subtitleLeader": "Creez et revoquez des tokens d'agent limites au projet pour les membres de ce projet.",
+      "subtitleSelf": "Creez et revoquez vos tokens d'agent limites a ce projet.",
+      "loading": "Chargement des tokens d'agent...",
+      "error": "Impossible de charger les tokens d'agent pour le moment.",
+      "emptyLeader": "Aucun token d'agent n'a encore ete cree pour ce projet.",
+      "emptySelf": "Vous n'avez encore aucun token d'agent pour ce projet.",
+      "noTokensForUser": "Aucun jeton d'agent pour le moment.",
+      "userSectionTitle": "{{name}}",
+      "userSectionFallback": "Utilisateur {{userId}}",
+      "userTokenCount_one": "{{count}} jeton",
+      "userTokenCount_other": "{{count}} jetons",
+      "tokenLabel": "Libelle",
+      "tokenLabelPlaceholder": "Libelle facultatif",
+      "tokenValue": "Token",
+      "createdAt": "Cree",
+      "createForUser": "Creer un token pour {{name}}",
+      "createForMe": "Creer un token",
+      "createAction": "Generer le token",
+      "createError": "Impossible de creer le jeton d'agent.",
+      "copyAction": "Copier le token",
+      "copied": "Copie",
+      "copyHelper": "Copiez et enregistrez ce token maintenant. Il se peut qu'il ne soit plus visible apres la fermeture de cette fenetre.",
+      "latestTokenTitle": "Token le plus recent",
+      "deleteAction": "Revoquer le token",
+      "deleteTitle": "Confirmer la revocation du token",
+      "deleteBody": "Cette action revoque definitivement le token. Saisissez la phrase de confirmation pour continuer.",
+      "deletePhraseLabel": "Tapez \"delete this token\" pour confirmer",
+      "deletePhrasePlaceholder": "delete this token",
+      "deletePhraseValue": "delete this token",
+      "deleteConfirm": "Revoquer le token",
+      "deleteCancel": "Conserver le token",
+      "deleteError": "Impossible de revoquer le jeton d'agent.",
+      "unlabeledToken": "Jeton sans libelle"
     }
   },
   "tasks": {
-    "title": "Tâches",
+    "title": "Titre",
     "newTask": "Nouvelle Tâche",
     "taskId": "ID de Tâche",
-    "title": "Titre",
     "prompt": "Prompt",
     "status": "Statut",
     "priority": "Priorité",
@@ -84,8 +120,6 @@
     "gitWorktreePlaceholder": "feature/tache-123",
     "gitPullRequestUrl": "URL du Pull Request",
     "gitPullRequestUrlPlaceholder": "https://github.com/utilisateur/repo/pull/123",
-
-    "prompt": "Prompt",
     "isBlocked": "Bloqué",
     "blockedReason": "Raison du Blocage",
     "startedAt": "Démarré",
@@ -156,4 +190,4 @@
     "tagUpdated": "Étiquette mise à jour avec succès",
     "tagDeleted": "Étiquette supprimée avec succès"
   }
-} 
+}
