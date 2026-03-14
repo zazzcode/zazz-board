@@ -42,7 +42,7 @@ Required document contract:
 - **Feature Requirements Document (`-FRD`)** (required per feature): long-lived, mutable user-journey and requirement contract for the feature over time.
 - **Deliverable Specification (`-SPEC`)** (required per deliverable): execution contract for one deliverable.
 - **Plan (`-PLAN`)** (optional explicit artifact): execution decomposition toward the specification. In some runtimes, planning may be internal to the agent platform instead of persisted as a standalone `-PLAN` document.
-- **Proposal (`-PROP`)** (optional, strongly recommended): pre-decision analysis for larger/new/refactor changes.
+- **Proposal (`-PROP`)** (optional, strongly recommended): ideation/debate mechanism before commitment. A proposal may be associated with a feature, a deliverable, or both, depending on scope.
 
 Opinionated naming contract:
 - Framework document names are opinionated around four artifact types: `-FRD`, `-PROP`, `-SPEC`, and `-PLAN`.
@@ -50,6 +50,12 @@ Opinionated naming contract:
 - `-SPEC` is reserved for deliverables.
 - `-PROP` is optional and used when pre-decision analysis is needed.
 - `-PLAN` may be explicit (document) or implicit (agent-internal/runtime-native), depending on platform capability and team policy.
+
+Proposal scope and placement guidance:
+- **Feature-scoped proposal**: discusses user journeys/requirements evolution and lives with the feature context (for example `features/task-graph/task-graph-PROP.md`).
+- **Deliverable-scoped proposal**: discusses implementation options/tradeoffs for a concrete deliverable and lives with the deliverable context (for example `deliverables/DLV-142/DLV-142-PROP.md`).
+- **Joint proposal**: may be linked to both a feature and a deliverable when it covers both requirements and implementation tradeoffs.
+- A proposal is exploratory and non-authoritative; authoritative contracts are FRDs for features and SPECs for deliverables.
 
 Recommended supporting artifacts:
 - milestone-level acceptance/reference notes for grouped deliverables
@@ -64,12 +70,13 @@ Location flexibility model:
 
 Baseline structure under the configured root:
 - `standards/` for framework standards (single canonical standards location)
-- `features/` for long-lived feature directories that contain deliverable documents over time
+- `features/` for long-lived feature requirements and user-journey artifacts
+- `deliverables/` for deliverable execution artifacts (`-SPEC`, optional `-PROP`, optional `-PLAN`)
 - optional `milestones/` for milestone-level artifacts
 
 Required directory contract:
-- Each repository adopting the framework should expose both `standards/` and `features/` under its configured docs root.
-- The docs root itself is flexible (`.zazz/`, `docs/`, or repository-defined), but these two subdirectories are part of the opinionated framework shape.
+- Each repository adopting the framework should expose `standards/`, `features/`, and `deliverables/` under its configured docs root.
+- The docs root itself is flexible (`.zazz/`, `docs/`, or repository-defined), but these subdirectories are part of the opinionated framework shape.
 
 Single-standards-location rule:
 - For framework clarity, standards are assumed to live in one canonical standards location under the configured docs root.
@@ -83,8 +90,12 @@ Feature directory and naming contract:
   - stable **feature key** (slashless `kebab-case`, for example `task-graph`) used for paths and references
 - The feature directory name should be the feature key.
 - Feature requirements should be long-lived and maintained in-place (for example `task-graph-FRD.md`).
-- Deliverable documents should live under the feature directory, ideally in a deliverable subdirectory, and follow framework naming (for example `deliverables/DLV-142/DLV-142-SPEC.md`, optional `deliverables/DLV-142/DLV-142-PROP.md`, optional `deliverables/DLV-142/DLV-142-PLAN.md`).
-- A single feature directory may contain many deliverables across the lifecycle of that capability.
+
+Deliverable directory and naming contract:
+- Each deliverable must have its own directory under `deliverables/` (for example `deliverables/DLV-142/`).
+- Deliverable execution artifacts live in that directory: required `DLV-142-SPEC.md`, optional `DLV-142-PROP.md`, optional `DLV-142-PLAN.md`.
+- Deliverable IDs should be stable and unique within the project scope.
+- Deliverables are linked to features by references/metadata, not by physical nesting under `features/`.
 
 ---
 
@@ -135,6 +146,11 @@ A deliverable may satisfy requirements from one or more features and may contrib
 A deliverable is strictly scoped to one repository (including a monorepo) and one dedicated git worktree.
 Its implementation and framework documents are versioned in that same repository.
 Once closed, a Deliverable SPEC is treated as frozen/immutable (except explicit amendment records).
+Deliverable-to-feature linkage guidance:
+- Requirement-changing deliverables (for example MVPs, enhancements, bug fixes) should link to one or more features.
+- Shared supporting deliverables may link to multiple features when they satisfy multiple feature requirements.
+- Chore/platform-maintenance deliverables may have no feature linkage.
+- Refactor deliverables link to features when they affect user-journey requirements; pure internal refactors may remain feature-agnostic.
 
 ### Task
 The smallest execution unit inside a deliverable.
@@ -156,6 +172,7 @@ The smallest execution unit inside a deliverable.
 - Milestones may include deliverables from multiple repositories.
 - No single deliverable is split across repositories or across multiple worktrees.
 - Deliverables and features are many-to-many at requirements level: one deliverable can satisfy multiple feature requirements, and one feature requirement can require multiple deliverables over time.
+- Deliverables are not required to be feature-linked in all cases (for example chores); however, requirement-changing deliverables should link to relevant features.
 - Rework, bug-fix, and enhancement deliverables can belong to the same milestone when they are required for milestone acceptance.
 
 Milestone completion is judged at the milestone level:
@@ -175,6 +192,8 @@ This flow runs per deliverable while preserving continuity with the long-lived F
 ### Proposal (`-PROP`, optional)
 Used to clarify options, rationale, tradeoffs, and constraints before committing to a Deliverable SPEC.
 Strongly recommended for new capabilities and major refactors.
+Proposal discussions may include both user-journey requirements and technical implementation options.
+Proposal output is input to decisions, not the final contract.
 
 ### Specification (`-SPEC`)
 Defines the desired state and acceptance contract.
@@ -227,7 +246,7 @@ Zazz is intentionally iterative:
 Specification stewardship is shared across the lifecycle:
 - spec-builder creates the initial Deliverable SPEC baseline
 - QA refines and hardens the Deliverable SPEC through controlled updates under framework rules
-- feature owners/stewards reconcile accepted outcomes into the Feature Requirements Document (`-FRD`)
+- feature owners/stewards reconcile accepted outcomes into linked Feature Requirements Documents (`-FRD`) when the deliverable changes feature requirements
 - SPEC change history should remain explicit and traceable
 
 ---
@@ -256,7 +275,7 @@ Default collaboration model:
 Branch and worktree naming contract:
 - Worktree directory name must match the branch name used for that deliverable.
 - Branch names must be slashless (no `/`) so branch and worktree names map cleanly to a single directory path.
-- Branch/worktree naming should align with feature and deliverable identifiers used in `features/` when practical (for example `feature-id-deliverable-id`).
+- Branch/worktree naming should align with feature identifiers in `features/` and deliverable identifiers in `deliverables/` when practical (for example `feature-id-deliverable-id`).
 
 Locking philosophy:
 - prefer runtime-native concurrency/ownership guarantees when they are stronger
@@ -304,12 +323,13 @@ These checkpoints are quality controls, not convergence controls.
 10. Convergence is agent-driven; human acceptance is deliberately scoped to post-convergence UAT and PR merge checkpoints.
 11. Context engineering is required: least-necessary context, role-scoped context, and step-scoped context.
 12. The framework is opinionated about required document types and subdirectory shape, but flexible about document root location.
-13. `features/` and `standards/` are required framework directories under the configured docs root.
+13. `features/`, `deliverables/`, and `standards/` are required framework directories under the configured docs root.
 14. Features define user journeys and requirements (what/why); deliverables define and implement scoped specification contracts (what/how) for execution.
-15. Branch/worktree naming is opinionated: worktree equals branch name, and branch names are slashless.
-16. Standards are expected in one canonical location under the configured docs root.
-17. Framework philosophy is implementation-agnostic.
-18. Board services are optional accelerators, not mandatory prerequisites.
+15. Proposals are optional ideation artifacts and may attach to features, deliverables, or both; they are not authoritative contracts.
+16. Branch/worktree naming is opinionated: worktree equals branch name, and branch names are slashless.
+17. Standards are expected in one canonical location under the configured docs root.
+18. Framework philosophy is implementation-agnostic.
+19. Board services are optional accelerators, not mandatory prerequisites.
 
 ---
 
