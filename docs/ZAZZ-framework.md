@@ -6,6 +6,7 @@ Zazz is a spec-driven framework with an explicit convergence model: agents itera
 Core concepts and capabilities:
 - **Desired-state convergence**: work iterates until implementation aligns with the specification.
 - **Feature requirements + deliverable spec contract**: each feature has a long-lived Feature Requirements Document, and each deliverable has its own Deliverable SPEC.
+- **User-journey-first feature definition**: features are defined by user journeys and requirements, including human users, agents, and other systems.
 - **Structured document flow**: optional Proposal (`-PROP`) → required Deliverable Specification (`-SPEC`) → optional explicit Plan (`-PLAN`) → build/validate loop.
 - **Opinionated documentation contract**: required document types plus opinionated naming and directory structure, with flexible root location.
 - **Feature lifecycle model**: a product is a collection of long-lived features that evolve through multiple deliverables over time.
@@ -126,6 +127,7 @@ A project may span one or more repositories.
 A long-lived capability object within the product/application.
 Features span time and can receive many deliverables (initial version, enhancements, bug fixes, and rework).
 Each feature has one long-lived Feature Requirements Document (`-FRD`) that evolves over time.
+Feature scope is driven by user journeys and requirements (human users, agents, or external systems).
 Features may have dependency relationships with other features.
 
 ### Milestone
@@ -263,6 +265,12 @@ Zazz commonly uses these roles:
 The active agent runtime (for example Claude, Codex, Warp, Gemini CLI) may provide built-in planning, orchestration, or subagent/team capabilities.
 The framework is role-oriented and convergence-oriented, not tied to a single runtime.
 
+Companion skills repository:
+- `zazz-skills` is the skills repository for the Zazz Framework.
+- It contains reusable agent skills and API skills that implement framework workflows across environments.
+- In service-assisted adoption, teams may consume skills from `zazz-skills` to standardize spec-builder/planner/worker/qa behavior and board API interactions.
+- This framework document may be copied or moved into `zazz-skills`; when that happens, the philosophy and contracts remain the same, while repository-specific integration notes may differ.
+
 ---
 
 ## Collaboration Philosophy
@@ -286,6 +294,7 @@ Locking philosophy:
 ## Service Adoption Philosophy
 
 Zazz supports two valid adoption paths:
+The framework can be adopted either alongside the Zazz Board application/tools or independently as a process-only operating model.
 
 1. **Process-only adoption**: apply the framework philosophy and document flow without any board service.
 2. **Service-assisted adoption**: add Zazz Board API/UI for orchestration, visibility, and locking support.
@@ -326,10 +335,12 @@ These checkpoints are quality controls, not convergence controls.
 13. `features/`, `deliverables/`, and `standards/` are required framework directories under the configured docs root.
 14. Features define user journeys and requirements (what/why); deliverables define and implement scoped specification contracts (what/how) for execution.
 15. Proposals are optional ideation artifacts and may attach to features, deliverables, or both; they are not authoritative contracts.
-16. Branch/worktree naming is opinionated: worktree equals branch name, and branch names are slashless.
-17. Standards are expected in one canonical location under the configured docs root.
-18. Framework philosophy is implementation-agnostic.
-19. Board services are optional accelerators, not mandatory prerequisites.
+16. User journeys are the core boundary signal for features and may represent human users, agents, or other systems.
+17. Branch/worktree naming is opinionated: worktree equals branch name, and branch names are slashless.
+18. Standards are expected in one canonical location under the configured docs root.
+19. Framework philosophy is implementation-agnostic.
+20. Board services are optional accelerators, not mandatory prerequisites.
+21. `zazz-skills` is the skills repository for the Zazz Framework.
 
 ---
 

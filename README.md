@@ -6,7 +6,7 @@
 
 **Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
 
-**Framework:** Zazz Board is the tool that enables teams to practice the [Zazz Framework](docs/ZAZZ-FRAMEWORK.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners (Project Owners and Deliverable Owners) and agents collaborate.
+**Framework:** Zazz Board is the tool that enables teams to practice the [Zazz Framework](docs/ZAZZ-framework.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners (Project Owners and Deliverable Owners) and agents collaborate.
 
 ---
 
@@ -52,7 +52,7 @@
 
 ### Sample project (seed data)
 
-Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See [docs/ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md) for the full structure.
+Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See [docs/ZAZZ-framework.md](docs/ZAZZ-framework.md) for the full structure.
 
 ---
 
@@ -379,10 +379,10 @@ This repository is developed using the Zazz framework (dogfooding). Zazz Board i
 
 ## Documentation
 
-- **[docs/ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md)** — Full framework overview: terminology (SPEC, PLAN), workflow stages, agent roles, two kanban boards, TDD, and how to follow the methodology.
+- **[docs/ZAZZ-framework.md](docs/ZAZZ-framework.md)** — Full framework overview: terminology (SPEC, PLAN), workflow stages, agent roles, two kanban boards, TDD, and how to follow the methodology.
 - **[AGENTS.md](./AGENTS.md)** — Primary reference for agents and developers: repo layout, full API route list, DB setup, test strategy (Vitest + PactumJS + test DB), troubleshooting.
 - **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
-- **`.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md) Repository Structure.
+- **`.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [ZAZZ-framework.md](docs/ZAZZ-framework.md) Repository Structure.
 - **`.agents/skills/`** — Agent skills. Current release focus: `spec-builder`, `planner`, `worker`, and `zazz-board-api` (coordinator/qa skills are not current release focus). Developed here; synced to zazz-skills repo when stable.
 - **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
