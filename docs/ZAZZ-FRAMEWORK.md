@@ -1,212 +1,268 @@
 # The Zazz Framework
+Zazz is a spec-driven framework with an explicit convergence model: agents iteratively refine the specification and implementation until gaps are resolved and the deliverable satisfies the final SPEC.
 
-Zazz is an opinionated, spec-driven framework for building software deliverables with agents.
+## Framework Introduction (At a Glance)
 
-This document defines the **current implementation focus** and the **future capability roadmap**.
+Core concepts and capabilities:
+- **Desired-state convergence**: work iterates until implementation aligns with the specification.
+- **Spec-driven contract**: the SPEC is the authoritative behavior, constraints, and acceptance contract.
+- **Structured document flow**: optional Proposal (`-PROP`) → Specification (`-SPEC`) → Plan (`-PLAN`) → build/validate loop.
+- **Opinionated documentation contract**: required document types plus opinionated naming and directory structure, with flexible root location.
+- **Milestone-centered delivery**: milestones group related deliverables into date-driven capability objectives.
+- **Repository/worktree boundary**: each deliverable is executed in exactly one repository (including a monorepo) and one dedicated worktree.
+- **Role and context decomposition**: role-scoped and step-scoped context reduces noise and improves agent focus.
+- **Iterative spec stewardship**: spec-builder initializes the SPEC; QA validates, surfaces gaps, and drives rule-governed refinements.
+- **Flexible runtime model**: supports single-agent, multi-agent, and subagent orchestration depending on runtime capability.
+- **Automation-first quality model**: maximize agent-driven convergence, then apply human quality gates at UAT and PR merge.
+- **Optional service integration**: Zazz Board services are optional accelerators, not prerequisites for adopting the framework.
 
----
+## Document Scope
 
-## Current Focus (Active Development Phase)
+This document defines the **philosophy and operating model** of Zazz.
+It is not an implementation guide.
 
-The active framework scope is intentionally strict:
+Specifically, this document does not define:
+- API route contracts
+- storage schemas
+- tool-specific command syntax
+- execution scripts
 
-1. `spec-builder-agent`
-2. `planner-agent`
-3. `worker-agent`
-4. `zazz-board-api` (required companion skill for all active agents)
-
-All implementation guidance in this document is optimized for these four capabilities only.
-
----
-
-## What Zazz Is
-
-Zazz combines:
-- A delivery framework (SPEC → PLAN → implementation execution and agent skills)
-- An opinionated set of required documents and processes for building software applications
-- An observability and coordination platform (Zazz Board API + UI)
-
-Work is organized as:
-- `Project -> Deliverable -> Task`
-
-Primary artifacts:
-- SPEC: `.zazz/deliverables/{name}-SPEC.md`
-- PLAN: `.zazz/deliverables/{name}-PLAN.md`
+Those implementation details belong in skills, standards, API docs, and repository-level technical documentation.
 
 ---
 
-## Core Process (Current Phase)
+## Documentation Architecture Philosophy
 
-## Stage 0: SPEC Creation
+Zazz is opinionated about **what documents must exist** and **how they relate**.
+Zazz is flexible about **where those documents are stored** in a repository.
 
-Actors:
-- Deliverable Owner
+Required document contract:
+- **Standards set** (required): shared conventions that govern implementation and validation.
+- **Specification (`-SPEC`)** (required): authoritative desired-state and acceptance contract for a deliverable.
+- **Plan (`-PLAN`)** (required): execution decomposition toward the specification.
+- **Proposal (`-PROP`)** (optional, strongly recommended): pre-decision analysis for larger/new/refactor changes.
+
+Recommended supporting artifacts:
+- milestone-level acceptance/reference notes for grouped deliverables
+- deliverable-level user/release documentation as needed by the milestone
+
+Location flexibility model:
+- The framework supports either `.zazz/` or `docs/` (or another repository-defined location) as the documentation root.
+- A single configured root should be used per repository for consistency.
+- Agents should resolve framework documents from a configured root path, for example `ZAZZ_DOCS_ROOT`.
+
+Baseline structure under the configured root:
+- `standards/` for framework standards (single canonical standards location)
+- `deliverables/` for deliverable/feature directories that contain `-PROP`, `-SPEC`, and `-PLAN` documents
+- optional `milestones/` for milestone-level artifacts
+
+Single-standards-location rule:
+- For framework clarity, standards are assumed to live in one canonical standards location under the configured docs root.
+- The framework does not require per-subdirectory or per-section standards partitioning.
+
+Feature directory and naming contract:
+- Each new deliverable/feature must have its own directory under `deliverables/`.
+- That directory is the canonical location for managing the feature over time (initial delivery, QA-driven rework, and later enhancements).
+- Feature directory names should use a simple, slashless identifier (recommended: `kebab-case`).
+- Deliverable documents for that feature live in that directory and use the framework suffixes (for example `feature-name-PROP.md`, `feature-name-SPEC.md`, `feature-name-PLAN.md`).
+
+---
+
+## Core Philosophy
+
+- Zazz is designed to converge deliverables toward a declared desired state.
+- The SPEC defines that desired state (behavior, constraints, and acceptance).
+- Tests define the executable verification contract.
+- Proposal, planning, execution, QA, and rework are convergence mechanisms.
+- Convergence is agent-driven and rule-driven.
+- The final deliverable must fully reflect the final SPEC.
+- Context engineering is a core design goal: provide agents only the context needed for the current decision/work step.
+- Role decomposition and step decomposition exist partly to bound context scope and reduce unnecessary prompt/context load.
+
+---
+
+## Core Entities
+
+Zazz organizes work using the following hierarchy:
+
+`Project -> Milestone -> Deliverable -> Task`
+
+### Project
+The long-lived product/application context.
+A project may span one or more repositories.
+
+### Milestone
+A first-class, date-driven grouping of deliverables, conceptually similar to a Scrum initiative (or grouped epics).
+
+A milestone exists to represent a larger capability or release objective that usually spans multiple deliverables.
+A milestone may group deliverables that live in different repositories within the same project.
+
+A milestone has:
+- an explicit completion/release date
+- milestone-level acceptance criteria
+- potential cross-deliverable outputs (for example user documentation or release notes)
+
+### Deliverable
+A bounded unit of value with its own SPEC, PLAN context, and acceptance criteria.
+One deliverable may represent only part of a milestone capability.
+A deliverable is strictly scoped to one repository (including a monorepo) and one dedicated git worktree.
+Its implementation and framework documents are versioned in that same repository.
+
+### Task
+The smallest execution unit inside a deliverable.
+
+---
+
+## Milestone and Deliverable Relationship Philosophy
+
+- Milestones are grouping and coordination constructs, not just labels.
+- Deliverables may be sequenced in series (dependency-gated) or run in parallel (independent).
+- Most milestone structures are mixed dependency graphs.
+- Milestones may include deliverables from multiple repositories.
+- No single deliverable is split across repositories or across multiple worktrees.
+- Rework, bug-fix, and enhancement deliverables can belong to the same milestone when they are required for milestone acceptance.
+
+Milestone completion is judged at the milestone level:
+- the grouped deliverables satisfy milestone acceptance criteria
+- milestone completion aligns to its target date objective
+
+---
+
+## Document Flow Philosophy
+
+Zazz uses the following conceptual flow:
+
+`PROP -> SPEC -> PLAN -> build/validate loop`
+
+### Proposal (`-PROP`, optional)
+Used to clarify options, rationale, tradeoffs, and constraints before committing to a SPEC.
+Strongly recommended for new capabilities and major refactors.
+
+### Specification (`-SPEC`)
+Defines the desired state and acceptance contract.
+This is the central convergence target.
+
+### Plan (`-PLAN`)
+Defines how work is organized to move toward the SPEC-defined state.
+Plan structure may be generated by role-specific agent skills or by runtime-native planning capabilities.
+
+---
+
+## Context Engineering Philosophy
+
+Zazz is intentionally designed to manage context as a first-class concern.
+
+Core context principles:
+- Load the **least necessary context** for the current task, role, and decision.
+- Avoid broad, undifferentiated context dumps that increase noise and ambiguity.
+- Decompose work into explicit roles and steps so each agent operates with focused context windows.
+- Use runtime-native capabilities (for example subagents/teams/planning primitives) to isolate context by workstream whenever possible.
+- Prefer iterative context refresh over monolithic one-shot prompts for complex deliverables.
+
+Outcome:
+- Better reasoning quality, lower context drift, and more predictable convergence to the SPEC-defined target state.
+
+---
+
+## Convergence Loop Philosophy (Spec Stewardship)
+
+Zazz is intentionally iterative:
+
+1. A baseline SPEC is established (typically via spec-builder).
+2. Work progresses toward that SPEC.
+3. QA validates the implementation against the SPEC and verification evidence.
+4. QA identifies gaps, inconsistencies, edge cases, missing tests, and ambiguity.
+5. QA drives rule-governed SPEC refinement and explicit rework definition when needed.
+6. Rework is generated and resolved.
+7. A fresh QA context revalidates against the updated SPEC.
+8. Repeat until implementation converges and the final deliverable fully reflects the final SPEC.
+
+Specification stewardship is shared across the lifecycle:
+- spec-builder creates the initial SPEC baseline
+- QA refines and hardens the SPEC through controlled updates under framework rules
+- SPEC change history should remain explicit and traceable
+
+---
+
+## Agent Role Philosophy
+
+Zazz commonly uses these roles:
 - `spec-builder-agent`
-
-Output:
-- Approved SPEC with testable acceptance criteria and test requirements.
-
-Rules:
-- Requirements must be explicit and testable.
-- If a requirement is ambiguous, refine before planning.
-
-## Stage 1: Planning
-
-Actor:
 - `planner-agent`
-
-Output:
-- Execution-ready PLAN with:
-  - phases and steps
-  - file assignments
-  - dependency edges
-  - parallelizable groups
-  - test command matrix
-
-Rules:
-- PLAN must be repository-grounded (no speculative files/routes).
-- PLAN must call out which tasks can run in parallel.
-
-## Stage 2: Execution
-
-Actor:
-- `worker-agent` (single or multi-agent team mode depending on platform capability)
-
-Required companion:
-- `zazz-board-api` skill
-
-Output:
-- Completed deliverable implementation with task lifecycle tracked in Zazz Board.
-
-Rules:
-- Worker reads SPEC + PLAN before implementation.
-- Worker executes in TDD mode (tests required per task).
-- Worker uses the board API during execution (not as a one-time preload) to keep task lifecycle and dependencies accurate.
-
-Implementation-phase board policy:
-- Add tasks just in time: create/reconcile only the dependency-ready tasks that are about to be worked.
-- Before a task starts, ensure it exists on the board, has required relations, and is `READY`.
-- As work proceeds, transition workflow status truthfully (`READY`, `IN_PROGRESS`, `COMPLETED`) and keep `isBlocked`/`blockedReason` accurate.
-- If course correction is needed after a completed task, add new follow-up tasks and relations to the task graph; do not reopen or rewrite completed tasks.
-- If PLAN wording changes during execution, avoid full board resync; update only the next executable tasks and relations.
-- Signal deliverable completion only when all tasks currently on the deliverable task graph are complete.
-
----
-
-## Worker Agent Responsibilities (Expanded)
-
-The worker agent is not a narrow code-only role in the current phase. It is a delivery executor with orchestration responsibilities.
-
-Mandatory responsibilities:
-
-1. Read the deliverable PLAN and SPEC first.
-2. Add and update board tasks incrementally while executing (no bulk upfront task creation).
-3. Ensure `DEPENDS_ON` relationships exist for each task before that task starts.
-4. Keep workflow statuses and block flags accurate while executing.
-5. Implement each task with TDD and evidence.
-6. Escalate ambiguity to the Owner before making unclear design decisions.
-7. If multiple valid approaches exist, present options and request Owner direction.
-8. When rework is discovered, extend the task graph with new tasks instead of rolling back completed tasks.
-
-The worker must not silently guess when requirements are underdefined.
-
----
-
-## Multi-Agent / Agent-Team Execution Policy
-
-If the runtime supports subagents or teams (for example Codex multi-agent or Claude teams), the worker agent must use that capability to maximize safe parallelism.
-
-Policy:
-
-1. Identify all tasks that are dependency-ready.
-2. From those, select tasks with non-overlapping file ownership.
-3. Spawn subagents for as many safe parallel tasks as possible.
-4. Keep status transitions synchronized in board state.
-5. Reconcile outputs and continue to next ready task wave.
-
-If the runtime does not support subagents, execute the same dependency order in single-agent mode.
-
----
-
-## Zazz Board API Requirement
-
-The `zazz-board-api` skill is mandatory for the active agent set.
-
-All active agents must use API capabilities to:
-- discover deliverables/tasks
-- create/update tasks when required by plan execution
-- create/update task relationships
-- update task status as execution progresses
-- capture task notes relevant to decisions, blockers, and clarifications
-
-OpenAPI is the source of truth for route resolution.
-
----
-
-## Task Lifecycle Policy
-
-At minimum, worker execution must keep these states accurate:
-- `TO_DO` (optional, project-dependent)
-- `READY`
-- `IN_PROGRESS`
-- `COMPLETED`
-
-Rules:
-- Do not mark a task complete before required tests pass.
-- Use task-level blocking flags (`isBlocked`, `blockedReason`) when waiting on Owner clarification/decision or file-lock contention.
-- Preserve dependency integrity when advancing tasks.
-
----
-
-## Clarification and Decision Policy
-
-Worker agent must pause and ask the Owner when:
-- instructions are unclear
-- requirements are incomplete
-- constraints conflict
-- more than one materially different solution is valid and plan/spec does not decide
-
-When asking, include:
-1. the exact ambiguity
-2. concrete options
-3. tradeoffs and recommended option
-
-Do not continue past decision gates without explicit clarification.
-
----
-
-## Future Capabilities (Not Current Active Scope)
-
-The following personas remain part of the framework roadmap but are not the current implementation focus:
-
-- `coordinator-agent`
+- `worker-agent`
 - `qa-agent`
-- additional specialized personas
+- optional coordination role (`coordinator-agent`)
 
-Current status:
-- These personas are in **research/planning phase** for future framework expansion.
-- Existing references to them should be treated as forward-looking architecture, not present-day required workflow.
-
-When these personas are activated in a future phase, this document will be expanded with their production operating policies.
+The active agent runtime (for example Claude, Codex, Warp, Gemini CLI) may provide built-in planning, orchestration, or subagent/team capabilities.
+The framework is role-oriented and convergence-oriented, not tied to a single runtime.
 
 ---
 
-## Key Principles (Current Phase Summary)
+## Collaboration Philosophy
 
-1. SPEC defines intent.
-2. PLAN defines executable decomposition.
-3. Worker executes PLAN and keeps board state truthful.
-4. TDD is required for task completion.
-5. Dependencies are explicit and enforced.
-6. Parallelism is maximized safely (dependency + file-overlap aware).
-7. Ambiguity is escalated to the Owner, not guessed.
-8. API contract truth comes from live OpenAPI.
-9. Task graph evolves during implementation; course corrections are added as new tasks.
+Default collaboration model:
+- one dedicated worktree per active deliverable branch
+- concurrent work coordinated by explicit ownership and dependency awareness
+- deliverable execution is single-repo/single-worktree; project and milestone coordination may span repositories
+
+Branch and worktree naming contract:
+- Worktree directory name must match the branch name used for that deliverable.
+- Branch names must be slashless (no `/`) so branch and worktree names map cleanly to a single directory path.
+- Branch/worktree naming should align with the deliverable/feature identifier used in `deliverables/` when practical.
+
+Locking philosophy:
+- prefer runtime-native concurrency/ownership guarantees when they are stronger
+- use service-level locking (for example Board API locking) when needed for shared-state safety and observability
 
 ---
 
-## Version
+## Service Adoption Philosophy
 
-Version: `1.3.0`  
-Last Updated: `2026-03-07`  
-Status: `Active - Core Agent Phase (Spec Builder + Planner + Worker + Board API)`
+Zazz supports two valid adoption paths:
+
+1. **Process-only adoption**: apply the framework philosophy and document flow without any board service.
+2. **Service-assisted adoption**: add Zazz Board API/UI for orchestration, visibility, and locking support.
+
+Board API integration is optional framework infrastructure, not a prerequisite for framework adoption.
+
+---
+
+## Post-Convergence Human Acceptance
+
+Human involvement is intentionally positioned after convergence, not inside it.
+Balance model:
+- Maximal automation during convergence: agents and framework rules drive refinement, validation, and rework.
+- Deliberate human quality checkpoints after convergence: user acceptance testing (UAT) and PR merge approval.
+
+Post-convergence checkpoints:
+1. **UAT checkpoint**: human validation that delivered behavior meets user/business expectations.
+2. **PR merge checkpoint**: human review/approval gate for code integration and release readiness.
+
+These checkpoints are quality controls, not convergence controls.
+
+---
+
+## Key Principles
+
+1. Desired-state convergence is the core operating model.
+2. SPEC is the authoritative desired-state contract.
+3. Milestones are first-class, date-driven groupings of deliverables.
+4. Deliverable dependencies (serial/parallel) shape milestone progression.
+5. Projects and milestones may span repositories; each deliverable remains single-repo and single-worktree.
+6. QA is an independent convergence pressure function: it finds gaps/inconsistencies, flags missing tests, and drives rule-governed refinement and rework.
+7. SPEC stewardship is iterative across spec-builder and QA.
+8. The final deliverable must fully reflect the final SPEC.
+9. Convergence is agent-driven; human acceptance is deliberately scoped to post-convergence UAT and PR merge checkpoints.
+10. Context engineering is required: least-necessary context, role-scoped context, and step-scoped context.
+11. The framework is opinionated about required document types, but flexible about document storage location via a configured docs root.
+12. Each deliverable/feature has a canonical directory under `deliverables/` for lifecycle management over time.
+13. Branch/worktree naming is opinionated: worktree equals branch name, and branch names are slashless.
+14. Standards are expected in one canonical location under the configured docs root.
+15. Framework philosophy is implementation-agnostic.
+16. Board services are optional accelerators, not mandatory prerequisites.
+
+---
+
+## Framework Maturity
+
+Pre-1.0 working draft: `0.8.1`
