@@ -2,6 +2,8 @@
 
 Methodology for agents (manager, worker, QA) to interact with the Zazz Board API and the application being developed. Agents fetch the API spec at runtime from `{API_BASE_URL}/docs/json` and infer routes from descriptions. This doc lives in a separate repo; skills reference the running Zazz Board instance.
 
+Canonical framework reference: [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md)
+
 ---
 
 ## 1. Agent Roles
