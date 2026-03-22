@@ -1,11 +1,11 @@
 # zazzctl Command Spec (Draft v0.1)
 
 ## Purpose
-`zazzctl` is a thin, vendor-neutral CLI adapter for Zazz Board API operations required by worker agents.
+`zazzctl` is a thin, vendor-neutral CLI adapter for Zazz Board API operations used by Zazz agent roles.
 It standardizes command shapes, payload construction, output, and exit codes so Claude, Codex, and other agents can run the same execution protocol.
 
 ## Scope
-This first version targets worker skill board operations:
+This first version covers the board operations needed across worker-first execution flows, while also supporting planner and spec-builder profiles through the same canonical CLI:
 - deliverables: list/get/create/status/approve/tasks
 - tasks: create/get/update/status/block/unblock/note/delete/readiness/list
 - relations: add/list/delete
@@ -24,7 +24,7 @@ This first version targets worker skill board operations:
 - `jq`
 
 ## Script Location
-- Canonical implementation: `.agents/skills/worker/scripts/zazzctl`
+- Canonical implementation: `.agents/skills/zazz-board-api/scripts/zazzctl.mjs`
 - Root convenience wrapper: `scripts/zazzctl`
 
 ## Environment Contract

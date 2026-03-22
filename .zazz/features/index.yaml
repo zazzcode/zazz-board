@@ -1,0 +1,13 @@
+features:
+  - key: features-milestones-deliverables-management
+    file: features-milestones-deliverables-management.md
+    domain: board information architecture, roadmap visibility, deliverable organization
+    current_milestone: M1 planned
+    current_state: >
+      Zazz Board manages deliverables and tasks, but it does not yet expose a
+      durable feature layer, milestone structure, or milestone-scoped grouping
+      of deliverables.
+    purpose: >
+      Defines how Zazz Board should represent long-lived feature context and
+      milestone progression without duplicating canonical feature-document
+      content that remains in Git-managed framework docs.
