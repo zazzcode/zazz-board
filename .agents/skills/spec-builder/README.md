@@ -1,25 +1,27 @@
-# Spec Builder Agent — User Guide
+# Spec Builder Skill — User Guide
 
-How to work with the Spec Builder agent to create a Deliverable Specification (SPEC) for the Zazz framework.
+How to work with the Spec Builder skill to create a Deliverable Specification (SPEC) for the Zazz framework.
+
+Examples in this guide may use `.zazz/` or `<DOCS_ROOT>/` as shorthand. In a real repo, use the framework docs root declared in `AGENTS.md`.
 
 ---
 
 ## How to Load the Skill
 
-The skill lives at `.agents/skills/spec-builder-agent/`. Different tools discover and invoke it differently.
+The skill lives at `.agents/skills/spec-builder/`. Different tools discover and invoke it differently.
 
 ### Cursor
 
 1. **Open Agent chat** — `Cmd+I` (Mac) or `Ctrl+I` (Windows/Linux).
 
 2. **Load the skill** (pick one):
-   - **Slash command**: Type `/` in the chat input, then search for `spec-builder` or `spec builder`. Select the spec-builder-agent skill.
-   - **@ mention**: Type `@` and the path: `@.agents/skills/spec-builder-agent/SKILL.md`. This adds the skill file to context.
-   - **Explicit request**: Say "Use the spec-builder-agent skill" or "Load the spec builder skill" at the start of your message.
+   - **Slash command**: Type `/` in the chat input, then search for `spec-builder` or `spec builder`. Select the `spec-builder` skill.
+   - **@ mention**: Type `@` and the path: `@.agents/skills/spec-builder/SKILL.md`. This adds the skill file to context.
+   - **Explicit request**: Say "Use the spec-builder skill" or "Load the spec builder skill" at the start of your message.
 
 3. **Start the dialogue** — e.g., "I want to create a spec for user authentication."
 
-**Note**: Cursor auto-discovers skills in `.agents/skills/`. For reliable behavior, use `/spec-builder-agent` or @ mention the skill.
+**Note**: Cursor auto-discovers skills in `.agents/skills/`. For reliable behavior, use `/spec-builder` or @ mention the skill.
 
 ---
 
@@ -30,14 +32,14 @@ Claude Code looks for skills in `.claude/skills/` (project) or `~/.claude/skills
 **Option A — Symlink** (keeps one copy):
 ```bash
 mkdir -p .claude/skills
-ln -s ../../.agents/skills/spec-builder-agent .claude/skills/spec-builder-agent
+ln -s ../../.agents/skills/spec-builder .claude/skills/spec-builder
 ```
 
-**Option B — Copy** the skill folder into `.claude/skills/spec-builder-agent/`.
+**Option B — Copy** the skill folder into `.claude/skills/spec-builder/`.
 
 Then:
 
-1. **Invoke directly**: Type `/spec-builder-agent` in the Claude Code chat. The skill name (from frontmatter) becomes the slash command.
+1. **Invoke directly**: Type `/spec-builder` in the Claude Code chat. The skill name (from frontmatter) becomes the slash command.
 2. **Auto-load**: Describe your task—e.g., "I want to create a deliverable spec for user auth." Claude may load the skill automatically when it matches the description.
 3. **Start the dialogue** — e.g., "I want to create a spec for user authentication."
 
@@ -50,9 +52,9 @@ Warp discovers skills from `.agents/skills/` (and `.claude/skills/`, `.cursor/sk
 1. **Open an Agent conversation** in Warp.
 
 2. **Load the skill** (pick one):
-   - **Slash command**: Type `/spec-builder-agent` in the chat. Warp invokes the skill directly.
-   - **Natural language**: Say "Use the spec-builder-agent skill" or "Create a deliverable spec for user authentication." The agent receives all available skills and loads this one when it matches your request.
-   - **List skills**: Ask "What skills do I have?" to see spec-builder-agent in the list.
+   - **Slash command**: Type `/spec-builder` in the chat. Warp invokes the skill directly.
+   - **Natural language**: Say "Use the spec-builder skill" or "Create a deliverable spec for user authentication." The agent receives all available skills and loads this one when it matches your request.
+   - **List skills**: Ask "What skills do I have?" to see `spec-builder` in the list.
 
 3. **Start the dialogue** — e.g., "I want to create a spec for user authentication."
 
@@ -62,17 +64,69 @@ Warp discovers skills from `.agents/skills/` (and `.claude/skills/`, `.cursor/sk
 
 ## What It Does
 
-The Spec Builder agent conducts a **dialogue** with you to produce a comprehensive SPEC document. The SPEC defines what gets built, acceptance criteria, tests, and agent guidelines. It becomes the source of truth for the Planner, Workers, and QA.
+The Spec Builder skill guides a **dialogue** with you to produce a comprehensive SPEC document. The SPEC defines what gets built, acceptance criteria, tests, and agent guidelines. It becomes the source of truth for the Planner, Workers, and QA.
+
+## How the Dialogue Works
+
+This is an interactive, back-and-forth skill.
+
+You do not need to arrive with a perfect spec in your head. A useful starting prompt plus a few rounds of clarification is enough. The agent should:
+
+- ask focused follow-up questions
+- push for testable acceptance criteria
+- help narrow scope if the deliverable is too large
+- draft the SPEC before everything is perfect so you can iterate on a real document
+
+This should feel like working with a technically strong teammate, not filling out a rigid form.
 
 ---
 
 ## How to Start
 
-1. Load the spec-builder-agent skill (see [How to Load the Skill](#how-to-load-the-skill) above for Cursor, Claude Code, or Warp). Load zazz-board-api too if you want board integration.
+1. Load the `spec-builder` skill (see [How to Load the Skill](#how-to-load-the-skill) above for Cursor, Claude Code, or Warp). Load `zazz-board-api` too if you want board integration.
 2. Tell the agent what you want to build, e.g.:
    - "I want to create a spec for user authentication"
    - "Let's define a deliverable for the API rate-limiting feature"
 3. Answer the agent's questions. It will ask about problem statement, standards, features, acceptance criteria, tests, and more.
+
+## Example Starter Prompts
+
+Use prompts like these:
+
+### Example 1: New deliverable spec
+
+```text
+Use spec-builder.
+I need a deliverable spec for adding project-scoped agent tokens to the API.
+The deliverable should cover token creation, token revocation, and authorization checks.
+Please guide me through this in a back-and-forth dialogue and help me make the acceptance criteria and tests explicit.
+```
+
+### Example 2: Refining an existing idea into a SPEC
+
+```text
+Use spec-builder.
+We already know we need a role management UI, but I want help turning that into a tight deliverable spec.
+Please ask clarifying questions, push back if the scope is too large for one deliverable, and generate a draft spec once we have enough to review.
+```
+
+### Example 3: Feature-document-to-SPEC handoff
+
+```text
+Use spec-builder.
+We have a Feature Requirements Document for role-based access control and want to create a spec for the next milestone deliverable.
+Please help me define one bounded deliverable from that milestone, including acceptance criteria, test coverage, and agent constraints.
+```
+
+### Prompt structure that works well
+
+The best starting prompts usually include:
+
+- the deliverable idea
+- what problem or milestone it supports
+- major functional expectations
+- any hard constraints or non-goals
+- a request for iterative dialogue and draft generation
 
 ---
 
@@ -97,7 +151,7 @@ The Spec Builder agent conducts a **dialogue** with you to produce a comprehensi
 
 ## Output
 
-- **File**: `.zazz/deliverables/{deliverable-name}-SPEC.md`
+- **File**: `<DOCS_ROOT>/deliverables/{deliverable-name}-SPEC.md`
 - **Board** (if not in development mode): The agent updates the deliverable card with the spec path (`dedFilePath`) so it's visible and stored in the database.
 
 ---
@@ -118,5 +172,5 @@ Use it when you want to iterate on the spec-builder skill—refine the dialogue 
 
 - **Be specific** — "Fast" → "API response < 200ms for p99". The agent will ask if you're vague.
 - **Generate early** — You can say "generate a draft" partway through to see what you have. Iterate from there.
-- **Reference standards** — The agent reads `.zazz/standards/` and will discuss which apply. You can override or add exceptions.
+- **Reference standards** — The agent reads `<DOCS_ROOT>/standards/` and will discuss which apply. You can override or add exceptions.
 - **Complex deliverables** — The agent will help you break them into components and define what can run in parallel vs sequential.

@@ -5,7 +5,7 @@
 It standardizes command shapes, payload construction, output, and exit codes so Claude, Codex, and other agents can run the same execution protocol.
 
 ## Scope
-This first version targets worker-agent board operations:
+This first version targets worker skill board operations:
 - deliverables: list/get/create/status/approve/tasks
 - tasks: create/get/update/status/block/unblock/note/delete/readiness/list
 - relations: add/list/delete
@@ -24,7 +24,7 @@ This first version targets worker-agent board operations:
 - `jq`
 
 ## Script Location
-- Canonical implementation: `.agents/skills/worker-agent/scripts/zazzctl`
+- Canonical implementation: `.agents/skills/worker/scripts/zazzctl`
 - Root convenience wrapper: `scripts/zazzctl`
 
 ## Environment Contract

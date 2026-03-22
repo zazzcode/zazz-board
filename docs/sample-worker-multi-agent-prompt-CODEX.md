@@ -5,7 +5,7 @@ Execute deliverable ZAZZ-6 from:
 Execution requirements:
 1. Use multi-agent execution with 3 subagents in parallel whenever dependencies allow.
 2. Enforce strict disjoint file ownership per subagent. If file ownership overlaps, serialize those tasks.
-3. Use the worker-agent and zazz-board-api skills and the zazzctl CLI for board operations.
+3. Use the worker and zazz-board-api skills and the zazzctl CLI for board operations.
 4. Apply harness-aware locking policy:
    - If subagents are isolated with disjoint ownership + parent-controlled merges, API file locks may be skipped for those internal subagents.
    - If any external concurrency risk is detected, use API file locks via zazzctl exec begin/tick/complete.

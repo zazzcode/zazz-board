@@ -68,11 +68,16 @@ This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. 
 | Skill              | When it applies                                        |
 | ------------------ | ------------------------------------------------------ |
 | **zazz-board-api** | Required by all framework agents — API auth, endpoints |
-| spec-builder-agent | Owner + agent creating deliverable specification       |
-| planner-agent      | One-shot SPEC → PLAN decomposition                     |
-| coordinator-agent  | Orchestrates execution after plan approval             |
-| worker-agent       | Implements tasks                                       |
-| qa-agent           | Verifies AC, creates rework tasks                      |
+| proposal-builder   | Owner/stakeholder proposal discovery and recommendations |
+| feature-doc-builder | Product/Project Owner feature requirements authoring  |
+| spec-builder       | Owner + agent creating deliverable specification       |
+| planner            | One-shot SPEC → PLAN decomposition                     |
+| coordinator        | Orchestrates execution after plan approval             |
+| worker             | Implements tasks                                       |
+| qa                 | Verifies AC, creates rework tasks                      |
+| qa-frontend        | Frontend-focused QA specialization                     |
+| qa-backend         | Backend-focused QA specialization                      |
+| pr-builder         | Packages reviewer-ready PR titles and bodies           |
 | database-baseline-refresh | Preserves live dev DB data while upgrading schema and refreshing the canonical seed baseline |
 
 
