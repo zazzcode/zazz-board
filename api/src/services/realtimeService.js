@@ -57,7 +57,7 @@ export default class RealtimeService {
     for (const [subscriberId, subscriber] of projectSubscribers.entries()) {
       try {
         subscriber.send(sseMessage);
-      } catch (error) {
+      } catch {
         // Drop dead subscribers so one broken connection does not poison broadcasts.
         this.unsubscribe(normalizedCode, subscriberId);
       }

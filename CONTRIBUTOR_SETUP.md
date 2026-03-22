@@ -18,6 +18,14 @@ cd client && npm install --legacy-peer-deps && cd ..
 cp api/.env.example api/.env
 ```
 
+The root `npm install` step also installs the Git hooks for this repo. Pre-commit checks are intentionally lightweight:
+
+- staged backend JavaScript gets ESLint
+- staged frontend JavaScript/JSX gets ESLint
+- staged Markdown gets markdownlint
+
+Full backend tests remain a manual/CI step rather than a pre-commit requirement.
+
 ## 2) Configure environment
 
 Edit `api/.env` and ensure both URLs use port **5433** and password `password`:
@@ -137,4 +145,4 @@ This repo uses **worktrees** for feature work. See [AGENTS.md](./AGENTS.md) and 
 - In worktrees, avoid manual `node_modules` symlinks. If `drizzle-kit` complains about `drizzle-orm`, re-run `npm install` at repo root plus `npm install --workspace=api`.
 - If client dependencies fail due to peer resolution, re-run with `--legacy-peer-deps`.
 - Port in use: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client).
-- Manual API token (seed): `550e8400-e29b-41d4-a716-446655440000`
+- Sample agent API token for the reference `ZAZZ` project: `660e8400-e29b-41d4-a716-446655440101`

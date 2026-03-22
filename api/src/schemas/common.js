@@ -35,7 +35,7 @@ export const taskResponseSchema = {
     projectId: { type: 'number', description: 'Project id.' },
     deliverableId: { type: 'number', description: 'Deliverable id.' },
     phase: { type: 'number', nullable: true, description: 'Phase number from the execution plan (e.g. 1, 2, 3).' },
-    phaseStep: { type: 'string', nullable: true, description: 'Human-readable phase step within the deliverable (e.g. \"1.2\", \"2.1\").' },
+    phaseStep: { type: 'string', nullable: true, description: 'Human-readable phase step within the deliverable (e.g. "1.2", "2.1").' },
     title: { type: 'string', description: 'Task title.' },
     status: { type: 'string', enum: ['TO_DO', 'READY', 'IN_PROGRESS', 'QA', 'COMPLETED'], description: 'Current workflow status.' },
     position: { type: 'number', description: 'Sort order in column.' },

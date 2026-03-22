@@ -131,7 +131,7 @@ export async function authMiddleware(request, reply) {
  * Optional authentication middleware
  * Allows routes to work with or without authentication
  */
-export async function optionalAuthMiddleware(request, reply) {
+export async function optionalAuthMiddleware(request, _reply) {
   try {
     const token = tokenService.extractTokenFromRequest(request);
     

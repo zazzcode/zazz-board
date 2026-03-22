@@ -20,7 +20,7 @@ function parseSseBlock(block) {
 
   try {
     return { eventName, data: JSON.parse(dataLines.join('\n')) };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -112,7 +112,7 @@ export function useProjectEvents(projectCode, { enabled = true, onEvent } = {}) 
         if (reader) {
           try {
             await reader.cancel();
-          } catch (error) {
+          } catch {
             // no-op
           }
         }

@@ -2,7 +2,7 @@
  * Project and project-scoped task route schemas.
  */
 
-import { idParam, codeParam, taskResponseSchema } from './common.js';
+import { idParam, taskResponseSchema } from './common.js';
 
 export const projectSchemas = {
   getProjects: {
@@ -161,7 +161,7 @@ export const projectSchemas = {
   createDeliverableTask: {
     tags: ['projects'],
     summary: 'Create task in deliverable',
-    description: 'Creates a task within a deliverable. delivId is the numeric id from the create deliverable response (not the deliverable code string). The deliverable must be approved before creating tasks. Include prompt with goal, instructions, and acceptance criteria. Use phase and phaseStep to align with PLAN structure (e.g. phase 1, phaseStep \"1.2\").',
+    description: 'Creates a task within a deliverable. delivId is the numeric id from the create deliverable response (not the deliverable code string). The deliverable must be approved before creating tasks. Include prompt with goal, instructions, and acceptance criteria. Use phase and phaseStep to align with PLAN structure (e.g. phase 1, phaseStep "1.2").',
     params: {
       type: 'object',
       required: ['code', 'delivId'],

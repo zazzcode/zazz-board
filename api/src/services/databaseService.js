@@ -1,8 +1,7 @@
-import { eq, and, sql, desc, asc, like, or, inArray, ne } from 'drizzle-orm';
+import { eq, and, sql, asc, like, or, inArray } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
 import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES, FILE_LOCKS, AGENT_TOKENS } from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
-import { keysToCamelCase } from '../utils/propertyMapper.js';
 import { randomUUID } from 'crypto';
 
 /**
@@ -1023,8 +1022,6 @@ class DatabaseService {
       status: TASKS.status,
       isCancelled: TASKS.is_cancelled
     }).from(TASKS).where(eq(TASKS.id, id)).limit(1);
-    const beforeStatus = current?.status;
-
     // Immutability: cancelled tasks cannot be uncancelled or have their status changed
     if (current?.isCancelled) {
       if (taskData.isCancelled === false) {
@@ -1060,7 +1057,7 @@ class DatabaseService {
       updateData.status = 'COMPLETED';
     }
     
-    const [task] = await db.update(TASKS)
+    await db.update(TASKS)
       .set(updateData)
       .where(eq(TASKS.id, id))
       .returning();

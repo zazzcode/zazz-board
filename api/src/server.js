@@ -4,7 +4,6 @@ import { tokenService } from './services/tokenService.js';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import { authMiddleware } from './middleware/authMiddleware.js';
 import routes from './routes/index.js';
 
 // Create Fastify instance with built-in Pino logger
@@ -15,7 +14,7 @@ const app = Fastify({
 });
 
 // Add correlation ID hook
-app.addHook('onRequest', async (request, reply) => {
+app.addHook('onRequest', async (request, _reply) => {
   request.correlationId = request.headers['x-correlation-id'] || randomUUID();
   request.log = request.log.child({ correlationId: request.correlationId });
 });

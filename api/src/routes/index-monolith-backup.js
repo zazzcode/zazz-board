@@ -8,7 +8,7 @@ import {
 
 const dbService = new DatabaseService();
 
-export default async function (app, opts) {
+export default async function (app, _opts) {
   // Health check endpoint
   app.get('/health', async (request, reply) => {
     reply.send({ status: 'ok', timestamp: new Date().toISOString() });
@@ -628,4 +628,3 @@ export default async function (app, opts) {
     }
   });
 }
-

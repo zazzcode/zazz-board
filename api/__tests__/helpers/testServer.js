@@ -17,7 +17,7 @@ export async function createTestServer() {
   });
 
   // Add correlation ID hook
-  app.addHook('onRequest', async (request, reply) => {
+  app.addHook('onRequest', async (request, _reply) => {
     request.correlationId = request.headers['x-correlation-id'] || randomUUID();
     request.log = request.log.child({ correlationId: request.correlationId });
   });

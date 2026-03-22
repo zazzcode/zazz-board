@@ -328,7 +328,6 @@ curl http://localhost:3030/openapi.json
 
 For authenticated requests, use the token header: `curl -H "TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000" http://localhost:3030/openapi.json`
 
-
 ---
 
 ## API authentication

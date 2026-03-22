@@ -140,7 +140,7 @@ expectedStatusCodes = [
 ### 3. Project Status Workflow Tests (31 tests)
 
 **File**: `routes/projectStatuses.test.mjs`  
-**Endpoints**: 
+**Endpoints**:
 - `GET /projects/:code/statuses`
 - `PUT /projects/:code/statuses`
 

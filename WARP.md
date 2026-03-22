@@ -88,7 +88,7 @@ npm run test:coverage    # Run tests with coverage
 npm run test             # Runs via workspace
 ```
 
-**Prerequisites**: 
+**Prerequisites**:
 1. Docker Postgres running via `npm run docker:up:db`
 2. Test database setup (see Environment Strategy below)
 3. Source `api/.env` before running tests to load environment variables
