@@ -23,7 +23,10 @@ api/.env.local
 !.vscode/extensions.json
 .idea
 .DS_Store
-.codex/
+.codex/*
+!.codex/config.toml
+!.codex/roles/
+!.codex/roles/*.toml
 project-page-screenshot.png
 *.suo
 *.ntvs*

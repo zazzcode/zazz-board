@@ -112,7 +112,7 @@ Objective: Align worker behavior with lock API.
 
 Changes:
 
-- `.agents/skills/worker-agent/SKILL.md`
+- `.agents/skills/worker/SKILL.md`
   - before `READY -> IN_PROGRESS`, worker must acquire file locks via API
   - on conflict, set `isBlocked=true` and `blockedReason='FILE_LOCK'` (not workflow status)
   - poll every 3 seconds and retry acquire

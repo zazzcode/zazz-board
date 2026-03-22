@@ -20,7 +20,7 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 const dbService = new DatabaseService();
 const realtimeService = new RealtimeService();
 
-export default async function routes(fastify, options) {
+export default async function routes(fastify, _options) {
   // Health check endpoint (public)
   fastify.get('/health', { schema: coreSchemas.getHealth }, async (request, reply) => {
     const tokenStats = tokenService.getCacheStats();

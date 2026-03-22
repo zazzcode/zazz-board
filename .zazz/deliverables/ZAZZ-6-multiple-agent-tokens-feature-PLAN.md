@@ -14,7 +14,7 @@
   - `.zazz/standards/data-architecture.md`
   - `.zazz/standards/coding-styles.md`
   - `.zazz/standards/testing.md`
-  - `.agents/skills/planner-agent/SKILL.md`
+  - `.agents/skills/planner/SKILL.md`
   - `.agents/skills/zazz-board-api/SKILL.md`
   - Live OpenAPI: `GET http://localhost:3030/openapi.json` (verified 2026-03-08)
 

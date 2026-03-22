@@ -60,7 +60,7 @@ export default async function projectRoutes(fastify, options) {
     const heartbeat = setInterval(() => {
       try {
         rawReply.write(': keep-alive\n\n');
-      } catch (error) {
+      } catch {
         clearInterval(heartbeat);
       }
     }, 20000);

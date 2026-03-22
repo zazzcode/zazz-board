@@ -2,7 +2,7 @@
 
 ## What is this project?
 
-Zazz Board is a Kanban-style orchestration app for coordinating AI agents and owners on software deliverables. It is the tool that enables teams to practice the Zazz Framework—a spec-driven methodology for multi-agent software development.
+Zazz Board is a Kanban-style orchestration app for coordinating AI agents and owners on software deliverables. It is the tool that enables teams to practice the [Zazz Framework](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md)—a spec-driven methodology for multi-agent software development.
 
 ## What problem does it solve?
 

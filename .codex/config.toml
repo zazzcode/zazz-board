@@ -1,0 +1,24 @@
+# Repository-scoped Codex defaults for multi-agent execution.
+# Phase 1 scope: Worker + QA (+ optional Monitor).
+
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 4
+max_depth = 2
+
+[agents.worker]
+description = "Implements assigned tasks with scoped file ownership and required automated tests."
+config_file = ".codex/roles/worker.toml"
+nickname_candidates = ["worker-a", "worker-b", "worker-c"]
+
+[agents.qa]
+description = "Validates acceptance criteria and can create rework tasks and spec updates via API."
+config_file = ".codex/roles/qa.toml"
+nickname_candidates = ["qa-a", "qa-b"]
+
+[agents.monitor]
+description = "Optional read-only progress and blocker monitor."
+config_file = ".codex/roles/monitor.toml"
+nickname_candidates = ["monitor-a"]

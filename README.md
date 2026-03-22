@@ -6,7 +6,7 @@
 
 **Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
 
-**Framework:** Zazz Board is the tool that enables teams to practice the [Zazz Framework](docs/ZAZZ-FRAMEWORK.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners (Project Owners and Deliverable Owners) and agents collaborate.
+**Framework:** Zazz Board is the tool that enables teams to practice the [Zazz Framework](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners (Project Owners and Deliverable Owners) and agents collaborate.
 
 ---
 
@@ -23,6 +23,7 @@
 - [Reference](#reference)
 - [About this repository](#about-this-repository)
 - [Documentation](#documentation)
+- [Updating skills from zazz-skills](#updating-skills-from-zazz-skills)
 
 ---
 
@@ -52,7 +53,7 @@
 
 ### Sample project (seed data)
 
-Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See [docs/ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md) for the full structure.
+Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See the canonical [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for the full structure.
 
 ---
 
@@ -327,7 +328,6 @@ curl http://localhost:3030/openapi.json
 
 For authenticated requests, use the token header: `curl -H "TB_TOKEN: 550e8400-e29b-41d4-a716-446655440000" http://localhost:3030/openapi.json`
 
-
 ---
 
 ## API authentication
@@ -379,10 +379,27 @@ This repository is developed using the Zazz framework (dogfooding). Zazz Board i
 
 ## Documentation
 
-- **[docs/ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md)** — Full framework overview: terminology (SPEC, PLAN), workflow stages, agent roles, two kanban boards, TDD, and how to follow the methodology.
+- **[zazz-framework.md (canonical)](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md)** — Full framework overview: terminology (SPEC, PLAN), workflow stages, agent roles, two kanban boards, TDD, and how to follow the methodology.
 - **[AGENTS.md](./AGENTS.md)** — Primary reference for agents and developers: repo layout, full API route list, DB setup, test strategy (Vitest + PactumJS + test DB), troubleshooting.
 - **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
-- **`.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [ZAZZ-FRAMEWORK.md](docs/ZAZZ-FRAMEWORK.md) Repository Structure.
-- **`.agents/skills/`** — Agent skills. Current release focus: `spec-builder`, `planner`, `worker`, and `zazz-board-api` (coordinator/qa skills are not current release focus). Developed here; synced to zazz-skills repo when stable.
+- **`.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for repository structure guidance.
+- **`.agents/skills/`** — Agent skills. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the reference-implementation copy plus the local-only `database-baseline-refresh` skill.
 - **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
+
+## Updating skills from zazz-skills
+
+`zazz-skills` is the canonical source for framework skill names and markdown content. This repo should treat its `.agents/skills/` copy as a downstream mirror of that source, except for local-only skills such as `database-baseline-refresh`.
+
+Typical update flow:
+
+1. Review the upstream changes in `zazz-skills` first so any renames or new skills are understood before syncing.
+2. Run `./scripts/sync-skills-from-zazz-skills.sh /absolute/path/to/zazz-skills`.
+3. Review the diff in this repo, especially `README.md`, `AGENTS.md`, and `.zazz/deliverables/`, because renamed skills often leave stale references outside the skill folders.
+4. Run `rg -n 'proposal-builder|feature-doc-builder|pr-builder|spec-builder-agent|planner-agent|coordinator-agent|worker-agent|qa-agent' README.md AGENTS.md .zazz .agents/skills` to catch old names or missing follow-up edits.
+
+Notes:
+
+- The sync script mirrors the canonical framework-managed skills: `coordinator`, `feature-doc-builder`, `planner`, `pr-builder`, `proposal-builder`, `qa`, `qa-backend`, `qa-frontend`, `spec-builder`, `worker`, and `zazz-board-api`.
+- The script intentionally does not touch `.agents/skills/database-baseline-refresh/`.
+- A rename-heavy update like this one still needs a manual documentation sweep after the file sync.

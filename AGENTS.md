@@ -37,14 +37,12 @@ If any branch/worktree adds or changes settings in `.env` or `api/.env`:
 
 Consult `.zazz/standards/` for authoritative project rules. Index: [.zazz/standards/index.yaml](.zazz/standards/index.yaml)
 
-
 | Standard                                                         | Use when                            |
 | ---------------------------------------------------------------- | ----------------------------------- |
 | [system-architecture.md](.zazz/standards/system-architecture.md) | Stack, layers, cloud deployment     |
 | [testing.md](.zazz/standards/testing.md)                         | Test patterns, PactumJS, TDD rules  |
 | [coding-styles.md](.zazz/standards/coding-styles.md)             | Naming, i18n, conventions, patterns |
 | [data-architecture.md](.zazz/standards/data-architecture.md)     | Schema, DB conventions, key tables  |
-
 
 ---
 
@@ -64,17 +62,20 @@ This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. 
 
 **Skills** (`.agents/skills/`): Role-specific capabilities for framework agents. Load with any role skill.
 
-
 | Skill              | When it applies                                        |
 | ------------------ | ------------------------------------------------------ |
 | **zazz-board-api** | Required by all framework agents — API auth, endpoints |
-| spec-builder-agent | Owner + agent creating deliverable specification       |
-| planner-agent      | One-shot SPEC → PLAN decomposition                     |
-| coordinator-agent  | Orchestrates execution after plan approval             |
-| worker-agent       | Implements tasks                                       |
-| qa-agent           | Verifies AC, creates rework tasks                      |
+| proposal-builder   | Owner/stakeholder proposal discovery and recommendations |
+| feature-doc-builder | Product/Project Owner feature requirements authoring  |
+| spec-builder       | Owner + agent creating deliverable specification       |
+| planner            | One-shot SPEC → PLAN decomposition                     |
+| coordinator        | Orchestrates execution after plan approval             |
+| worker             | Implements tasks                                       |
+| qa                 | Verifies AC, creates rework tasks                      |
+| qa-frontend        | Frontend-focused QA specialization                     |
+| qa-backend         | Backend-focused QA specialization                      |
+| pr-builder         | Packages reviewer-ready PR titles and bodies           |
 | database-baseline-refresh | Preserves live dev DB data while upgrading schema and refreshing the canonical seed baseline |
-
 
 **Rules** (`.cursor/rules/`): Always-applied for Cursor (e.g. worktree workflow).
 

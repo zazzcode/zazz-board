@@ -24,7 +24,7 @@ This enables workers in any stack (Node, Python, Go, Java, etc.) to use the same
    - list active locks
 3. Add OpenAPI/Swagger schemas for all routes.
 4. Add API tests for core lock behavior.
-5. Update worker-agent skill to require lock API usage before moving a task from `READY` to `IN_PROGRESS`.
+5. Update worker skill to require lock API usage before moving a task from `READY` to `IN_PROGRESS`.
 6. Worker behavior when lock conflict occurs:
    - set task `isBlocked=true` with `blockedReason='FILE_LOCK'` (workflow status stays in its column)
    - poll lock API every 3 seconds until files are available

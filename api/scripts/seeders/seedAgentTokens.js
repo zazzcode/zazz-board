@@ -57,7 +57,7 @@ export async function seedAgentTokens() {
 async function runFromCli() {
   try {
     await seedAgentTokens();
-  } catch (error) {
+  } catch {
     process.exitCode = 1;
   } finally {
     await client.end();

@@ -1,21 +1,27 @@
 ---
-name: planner-agent
+name: planner
 description: Creates or updates an execution-ready implementation PLAN from an approved SPEC for any deliverable. Use when an Owner asks for a phased plan with dependency-safe decomposition, repository-verified scope, AC/test traceability, parallelization strategy, and explicit verification commands.
 ---
 
-# Planner Agent Skill
+# Planner Skill
+
+## Repo Extension
+
+Before you start, check whether this repo provides extra local guidance at `.agents/skill-extensions/planner/EXTENSION.md`.
+If that file exists, read it after this skill and treat it as friendly repo-specific extension guidance for how `planner` should be applied in this application.
+
 ## First Rule: Use Built-In Planning Optimizations
 If the active agent/model provides built-in planning optimizations (plan mode, TODO/dependency tooling, structured decomposition), you MUST use them first. Then produce the PLAN in this skill’s required structure.
 
 ## Role
-Produce an execution-ready PLAN from an approved SPEC for Coordinator/Worker/QA execution in a shared worktree.
+Produce an execution-ready PLAN from an approved SPEC for Human Coordinator/Worker/QA execution in a shared worktree.
 You are planner-only in this step: DO NOT implement code.
 
 ## Framework Context
 - Zazz is spec-driven and test-driven.
 - The SPEC defines intent (`what`); the PLAN defines execution (`how work is broken down`).
 - The SPEC is read-only during planning.
-- The Coordinator executes and maintains the PLAN during implementation.
+- The human coordinator (Owner acting as coordinator) executes and maintains the PLAN during implementation.
 
 ## Companion Skill Requirement
 - For API work, you MUST load and follow `.agents/skills/zazz-board-api/SKILL.md`.
@@ -29,18 +35,35 @@ Before writing a PLAN, you MUST have:
 - SPEC file path
 If any input is missing, stop and ask the Owner.
 
+## Docs Root Convention
+Use the repo docs root declared in `AGENTS.md` as the base for framework docs. Example paths in this skill may use `<DOCS_ROOT>/...` as shorthand.
+
+## What This Skill Produces
+
+Primary artifact:
+
+- `<DOCS_ROOT>/deliverables/{deliverableCode}-{slug}-PLAN.md`
+
+Supporting discovery artifact:
+
+- update `<DOCS_ROOT>/deliverables/index.yaml` when the canonical PLAN is created or materially updated
+
+Primary work product:
+
+- an execution-ready decomposition of the approved SPEC, not implementation code
+
 ## PLAN Naming + Location (Generic Rule)
-- Store plans in `.zazz/deliverables/`.
+- Store plans in `<DOCS_ROOT>/deliverables/`.
 - Derive PLAN name by replacing `-SPEC.md` with `-PLAN.md`.
 - Use hyphen-delimited filenames.
-- Update `.zazz/deliverables/index.yaml` only when generating/updating the canonical PLAN:
+- Update `<DOCS_ROOT>/deliverables/index.yaml` only when generating/updating the canonical PLAN:
   - if deliverable entry exists, add or update its `plan` field
   - if entry does not exist, add a new deliverable record with `id`, `name`, `spec`, and `plan`
 - If the Owner asks for an alternate draft (for example `-CODEX-PLAN.md`), create it without replacing canonical `-PLAN.md` unless explicitly asked.
 
 Example:
-- SPEC: `.zazz/deliverables/ZAZZ-5-fix-routes-no-project-SPEC.md`
-- PLAN: `.zazz/deliverables/ZAZZ-5-fix-routes-no-project-PLAN.md`
+- SPEC: `<DOCS_ROOT>/deliverables/ZAZZ-5-fix-routes-no-project-SPEC.md`
+- PLAN: `<DOCS_ROOT>/deliverables/ZAZZ-5-fix-routes-no-project-PLAN.md`
 
 ## Output Requirements (CODEX-Style Structure)
 Write one markdown PLAN file. Use this section order unless the Owner explicitly requests a different order:
@@ -91,8 +114,8 @@ Optional sections (for updating an existing active plan, not mandatory on first 
 6. Partition work into dependency-safe phases and named parallel streams.
 7. Decompose phases into concrete steps with file ownership and explicit dependency edges.
 8. Add validation plan (targeted tests, full tests, lint/type checks, manual sign-off where required).
-9. Write PLAN file to `.zazz/deliverables/`.
-10. Update `.zazz/deliverables/index.yaml` only when canonical plan target changes.
+9. Write PLAN file to `<DOCS_ROOT>/deliverables/`.
+10. Update `<DOCS_ROOT>/deliverables/index.yaml` only when canonical plan target changes.
 
 ## Decomposition Rules
 1. **File-first**: every step lists affected files.
@@ -128,7 +151,7 @@ Step-level planning rule:
 When the plan is instantiated as Zazz tasks:
 - Each non-`none` `DEPENDS_ON` must map to explicit `TASK_RELATIONS` edges (`relation_type = DEPENDS_ON`).
 - Do not rely on task-create payload `dependencies` alone for graph correctness.
-- Include an edge-validation gate command when requested by Owner/Coordinator (typically a `psql` query against `TASK_RELATIONS`).
+- Include an edge-validation gate command when requested by Owner/human coordinator (typically a `psql` query against `TASK_RELATIONS`).
 
 ## Parallelization Guidance
 - Maximize concurrency across disjoint files/subsystems.

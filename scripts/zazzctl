@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-exec "$SCRIPT_DIR/../.agents/skills/worker-agent/scripts/zazzctl" "$@"
+exec node "$SCRIPT_DIR/../.agents/skills/zazz-board-api/scripts/zazzctl.mjs" "$@"

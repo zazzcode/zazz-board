@@ -83,7 +83,7 @@ async function waitForProjectEvent({ projectCode, predicate, trigger, timeoutMs 
     controller.abort();
     try {
       await reader.cancel();
-    } catch (error) {
+    } catch {
       // no-op
     }
   }

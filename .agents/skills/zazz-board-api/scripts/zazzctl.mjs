@@ -4,11 +4,77 @@
  * Cross-platform board API adapter for all agent skills.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+import { parseEnv } from 'node:util';
+
 const DEFAULT_BASE_URL = 'http://localhost:3030';
 const DEFAULT_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
 const DEFAULT_PROJECT = 'ZAZZ';
 
-const env = process.env;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function uniquePaths(paths) {
+  return [...new Set(paths.filter(Boolean))];
+}
+
+function findUp(filename, startDir) {
+  let current = path.resolve(startDir);
+  while (true) {
+    const candidate = path.join(current, filename);
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      return candidate;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+}
+
+function resolveEnvFile() {
+  if (process.env.ZAZZCTL_NO_ENV === '1') {
+    return null;
+  }
+
+  const explicit = process.env.ZAZZCTL_ENV_FILE;
+  if (explicit) {
+    const resolved = path.resolve(process.cwd(), explicit);
+    if (!fs.existsSync(resolved)) {
+      throw new Error(`ZAZZCTL_ENV_FILE does not exist: ${resolved}`);
+    }
+    return resolved;
+  }
+
+  const candidates = uniquePaths([
+    findUp('.env', process.cwd()),
+    findUp('.env', __dirname),
+  ]);
+
+  return candidates[0] || null;
+}
+
+function loadMergedEnv() {
+  const envFile = resolveEnvFile();
+  const merged = { ...process.env };
+
+  if (!envFile) {
+    return { env: merged, envFile: null };
+  }
+
+  const parsed = parseEnv(fs.readFileSync(envFile, 'utf8'));
+  for (const [key, value] of Object.entries(parsed)) {
+    if (merged[key] === undefined) {
+      merged[key] = value;
+    }
+  }
+
+  return { env: merged, envFile };
+}
+
+const { env } = loadMergedEnv();
 const config = {
   baseUrl: env.ZAZZ_API_BASE_URL || DEFAULT_BASE_URL,
   token: env.ZAZZ_API_TOKEN || DEFAULT_TOKEN,
@@ -70,8 +136,167 @@ const PROFILE_ALLOW = {
   ]),
 };
 
-function usage() {
-  const text = `Usage: zazzctl [--profile generic|worker|planner|spec_builder] <resource> <action> [options]
+const HELP = {
+  deliverable: {
+    summary: 'Deliverable lifecycle operations.',
+    actions: {
+      list: {
+        usage: 'zazzctl deliverable list [--project CODE]',
+        summary: 'List deliverables for a project.',
+      },
+      get: {
+        usage: 'zazzctl deliverable get --deliverable-id ID [--project CODE]',
+        summary: 'Fetch one deliverable by numeric ID.',
+      },
+      create: {
+        usage: 'zazzctl deliverable create --name NAME --type TYPE [--description TEXT] [--spec-filepath PATH] [--plan-filepath PATH] [--project CODE]',
+        summary: 'Create a deliverable card.',
+      },
+      update: {
+        usage: 'zazzctl deliverable update --deliverable-id ID --json JSON [--project CODE]',
+        summary: 'Replace deliverable fields using a JSON body.',
+      },
+      status: {
+        usage: 'zazzctl deliverable status --deliverable-id ID --status STATUS [--project CODE]',
+        summary: 'Patch deliverable workflow status.',
+      },
+      approve: {
+        usage: 'zazzctl deliverable approve --deliverable-id ID [--project CODE]',
+        summary: 'Approve a deliverable when the board workflow requires approval.',
+      },
+      tasks: {
+        usage: 'zazzctl deliverable tasks --deliverable-id ID [--project CODE]',
+        summary: 'List tasks for a deliverable.',
+      },
+    },
+  },
+  task: {
+    summary: 'Task lifecycle operations inside a deliverable.',
+    actions: {
+      list: {
+        usage: 'zazzctl task list --deliverable-id ID [--project CODE]',
+        summary: 'List tasks in a deliverable.',
+      },
+      create: {
+        usage: 'zazzctl task create --deliverable-id ID --title TITLE [--prompt TEXT] [--description TEXT] [--status STATUS] [--priority P] [--agent-name NAME] [--phase N] [--phase-step X.Y] [--dependencies CSV] [--project CODE]',
+        summary: 'Create a task in a deliverable.',
+      },
+      get: {
+        usage: 'zazzctl task get --deliverable-id ID --task-id ID [--project CODE]',
+        summary: 'Fetch one task by deliverable and task ID.',
+      },
+      update: {
+        usage: 'zazzctl task update --deliverable-id ID --task-id ID --json JSON [--project CODE]',
+        summary: 'Replace task fields using a JSON body.',
+      },
+      status: {
+        usage: 'zazzctl task status --deliverable-id ID --task-id ID --status STATUS [--agent-name NAME] [--project CODE]',
+        summary: 'Patch task workflow status.',
+      },
+      block: {
+        usage: 'zazzctl task block --deliverable-id ID --task-id ID --reason REASON [--project CODE]',
+        summary: 'Set a task blocker using isBlocked + blockedReason.',
+      },
+      unblock: {
+        usage: 'zazzctl task unblock --deliverable-id ID --task-id ID [--project CODE]',
+        summary: 'Clear task blocker metadata.',
+      },
+      note: {
+        usage: 'zazzctl task note --deliverable-id ID --task-id ID --note TEXT [--agent-name NAME] [--project CODE]',
+        summary: 'Append a note/comment to a task.',
+      },
+      delete: {
+        usage: 'zazzctl task delete --deliverable-id ID --task-id ID [--project CODE]',
+        summary: 'Delete a task.',
+      },
+      readiness: {
+        usage: 'zazzctl task readiness --task-id ID [--project CODE]',
+        summary: 'Check readiness for a task by numeric task ID.',
+      },
+    },
+  },
+  relation: {
+    summary: 'Task relation management.',
+    actions: {
+      list: {
+        usage: 'zazzctl relation list --task-id ID [--project CODE]',
+        summary: 'List relations for a task.',
+      },
+      add: {
+        usage: 'zazzctl relation add --task-id ID --related-task-id ID --type DEPENDS_ON|COORDINATES_WITH [--project CODE]',
+        summary: 'Create a task relation.',
+      },
+      delete: {
+        usage: 'zazzctl relation delete --task-id ID --related-task-id ID --type DEPENDS_ON|COORDINATES_WITH [--project CODE]',
+        summary: 'Delete a task relation.',
+      },
+    },
+  },
+  graph: {
+    summary: 'Deliverable graph inspection.',
+    actions: {
+      get: {
+        usage: 'zazzctl graph get --deliverable-id ID [--project CODE]',
+        summary: 'Fetch the deliverable-scoped task graph.',
+      },
+    },
+  },
+  lock: {
+    summary: 'Deliverable file lock management.',
+    actions: {
+      list: {
+        usage: 'zazzctl lock list --deliverable-id ID [--project CODE]',
+        summary: 'List active file locks for a deliverable.',
+      },
+      acquire: {
+        usage: 'zazzctl lock acquire --deliverable-id ID --task-id ID --agent-name NAME (--file PATH | --files CSV)+ [--phase-step X.Y] [--ttl-seconds N] [--project CODE]',
+        summary: 'Acquire one or more file locks for a task.',
+      },
+      heartbeat: {
+        usage: 'zazzctl lock heartbeat --deliverable-id ID --task-id ID --agent-name NAME [--file PATH | --files CSV] [--ttl-seconds N] [--project CODE]',
+        summary: 'Refresh an active lock lease.',
+      },
+      release: {
+        usage: 'zazzctl lock release --deliverable-id ID --task-id ID --agent-name NAME [--file PATH | --files CSV] [--project CODE]',
+        summary: 'Release active locks for a task.',
+      },
+    },
+  },
+  exec: {
+    summary: 'High-level worker execution helpers built on lock + status operations.',
+    actions: {
+      begin: {
+        usage: 'zazzctl exec begin --deliverable-id ID --task-id ID --agent-name NAME (--file PATH | --files CSV)+ [--phase-step X.Y] [--ttl-seconds N] [--status STATUS] [--project CODE]',
+        summary: 'Acquire locks, clear FILE_LOCK blocker, and move task into active execution.',
+      },
+      tick: {
+        usage: 'zazzctl exec tick --deliverable-id ID --task-id ID --agent-name NAME [--file PATH | --files CSV] [--ttl-seconds N] [--note TEXT] [--project CODE]',
+        summary: 'Heartbeat locks and optionally append a progress note.',
+      },
+      complete: {
+        usage: 'zazzctl exec complete --deliverable-id ID --task-id ID --agent-name NAME [--file PATH | --files CSV] [--status STATUS] [--note TEXT] [--project CODE]',
+        summary: 'Append final note, transition status, and release locks.',
+      },
+    },
+  },
+};
+
+function profilesForCommand(resource, action) {
+  const key = canonicalCommandKey(resource, action);
+  return Object.entries(PROFILE_ALLOW)
+    .filter(([, allow]) => allow === null || allow.has(key))
+    .map(([profile]) => profile);
+}
+
+function helpText(resource = null, action = null) {
+  if (!resource) {
+    return `Usage: zazzctl [--profile generic|worker|planner|spec_builder] <resource> <action> [options]
+
+Help:
+  zazzctl help
+  zazzctl help <resource>
+  zazzctl help <resource> <action>
+  zazzctl --help
 
 Resources:
   deliverable  list|get|create|update|status|approve|tasks
@@ -85,15 +310,66 @@ Environment:
   ZAZZ_API_BASE_URL (default: ${DEFAULT_BASE_URL})
   ZAZZ_API_TOKEN    (default fallback: seed token)
   ZAZZ_PROJECT_CODE (default: ${DEFAULT_PROJECT})
+  ZAZZCTL_ENV_FILE  (optional explicit env file path)
+  ZAZZCTL_NO_ENV    (set to 1 to disable env-file auto-loading)
   ZAZZCTL_PRETTY    (1 pretty JSON, 0 compact)
   ZAZZCTL_PROFILE   (generic|worker|planner|spec_builder)
 
 Examples:
+  zazzctl help task create
   zazzctl --profile worker exec begin --deliverable-id 8 --task-id 25 --agent-name worker-1 --file api/src/routes/fileLocks.js
-  zazzctl --profile planner deliverable update --deliverable-id 4 --json '{"planFilepath":".zazz/deliverables/ZAZZ-6-PLAN.md"}'
-  zazzctl --profile spec_builder deliverable create --name "Agent Tokens" --type FEATURE --spec-filepath ".zazz/deliverables/ZAZZ-6-agent-tokens-SPEC.md"
+  zazzctl --profile planner deliverable update --deliverable-id 4 --json '{"planFilepath":"<DOCS_ROOT>/deliverables/ZAZZ-6-PLAN.md"}'
+  zazzctl --profile spec_builder deliverable create --name "Agent Tokens" --type FEATURE --spec-filepath "<DOCS_ROOT>/deliverables/ZAZZ-6-agent-tokens-SPEC.md"
+  ZAZZCTL_ENV_FILE=.env zazzctl deliverable list
 `;
-  process.stderr.write(text);
+  }
+
+  const resourceHelp = HELP[resource];
+  if (!resourceHelp) {
+    return `Unknown resource: ${resource}\n\n${helpText()}`;
+  }
+
+  if (!action) {
+    const actions = Object.entries(resourceHelp.actions)
+      .map(([name, meta]) => `  ${name.padEnd(10)} ${meta.summary}`)
+      .join('\n');
+    return `Resource: ${resource}
+${resourceHelp.summary}
+
+Usage:
+  zazzctl ${resource} <action> [options]
+
+Actions:
+${actions}
+
+For detailed command help:
+  zazzctl help ${resource} <action>
+`;
+  }
+
+  const actionHelp = resourceHelp.actions[action];
+  if (!actionHelp) {
+    return `Unknown command: ${resource} ${action}\n\n${helpText(resource)}`;
+  }
+
+  const allowedProfiles = profilesForCommand(resource, action).join(', ');
+  return `Command: ${resource} ${action}
+${actionHelp.summary}
+
+Usage:
+  ${actionHelp.usage}
+
+Allowed profiles:
+  ${allowedProfiles}
+`;
+}
+
+function usage(resource = null, action = null) {
+  process.stderr.write(helpText(resource, action));
+}
+
+function printHelp(resource = null, action = null) {
+  process.stdout.write(helpText(resource, action));
 }
 
 function dieUsage(message) {
@@ -781,8 +1057,25 @@ async function main() {
     process.exit(2);
   }
 
+  if (args.length === 1 && args[0] === '--help') {
+    printHelp();
+    process.exit(0);
+  }
+
   if (args.length === 1 && args[0] === 'help') {
-    usage();
+    printHelp();
+    process.exit(0);
+  }
+
+  if (args[0] === 'help') {
+    printHelp(args[1], args[2]);
+    process.exit(0);
+  }
+
+  const helpIndex = args.indexOf('--help');
+  if (helpIndex >= 0) {
+    const beforeHelp = args.slice(0, helpIndex);
+    printHelp(beforeHelp[0], beforeHelp[1]);
     process.exit(0);
   }
 
@@ -792,7 +1085,7 @@ async function main() {
     process.exit(2);
   }
   if (resource === 'help' || action === 'help') {
-    usage();
+    printHelp(resource === 'help' ? action : resource, resource === 'help' ? rest[0] : null);
     process.exit(0);
   }
 
