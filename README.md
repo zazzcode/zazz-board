@@ -29,13 +29,15 @@
 
 ## Main views and features
 
-| View | Purpose |
-|------|--------|
-| **Project list** | Create/edit projects; configure task and deliverable workflows. |
-| **Deliverable list** | Sortable table of deliverables per project; SPEC/PLAN/PRD paths with copy-to-clipboard; PR links. |
-| **Deliverable Kanban** | Columns from project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done). Drag-and-drop deliverable cards; task progress and PR URL on cards. |
-| **Task Kanban** | Columns from project’s task workflow (To Do, Ready, In Progress, QA, Completed). Tasks show deliverable name in card footer. Drag-and-drop. |
-| **Task graph** | **Task Graph** — one deliverable’s task graph at a time; select deliverable via dropdown. Readiness and coordination types (e.g. TEST_TOGETHER, DEPLOY_TOGETHER) supported. |
+
+| View                   | Purpose                                                                                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Project list**       | Create/edit projects; configure task and deliverable workflows.                                                                                                             |
+| **Deliverable list**   | Sortable table of deliverables per project; SPEC/PLAN/PRD paths with copy-to-clipboard; PR links.                                                                           |
+| **Deliverable Kanban** | Columns from project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done). Drag-and-drop deliverable cards; task progress and PR URL on cards.           |
+| **Task Kanban**        | Columns from project’s task workflow (To Do, Ready, In Progress, QA, Completed). Tasks show deliverable name in card footer. Drag-and-drop.                                 |
+| **Task graph**         | **Task Graph** — one deliverable’s task graph at a time; select deliverable via dropdown. Readiness and coordination types (e.g. TEST_TOGETHER, DEPLOY_TOGETHER) supported. |
+
 
 ### Deliverable lifecycle (high level)
 
@@ -53,14 +55,28 @@
 
 ### Sample project (seed data)
 
-Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See the canonical [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for the full structure.
+Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in `**.zazz/deliverables/`** per the Zazz Framework; project standards live in `**.zazz/standards/`**. See the canonical [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for the full structure.
 
 ---
 
+## Prerequesites:
+
+- **Docker desktop** is installed and running
+- **Zazz Board repo** is cloned
+- **Free ports** on your machine:
+  - `5433` (Postgres)
+  - `3030` (API)
+  - `3001` (client UI)
+
 ## Quick start
-Production/self-hosted Docker setup with two flows.
+
+This setup will run Zazz Board from your own computer using Docker. It consists of two flows: install and upgrade.
+
+Before starting, ensure terminal is opened to the main project folder.
 
 ### Flow A — Initial install (first time)
+
+This step will automatically create the database tables and load sample data. It will likely take a few minutes.
 
 ```bash
 docker compose up --build
@@ -72,49 +88,47 @@ Optional non-destructive seed attempt:
 npm run docker:seed
 ```
 
+
+
 Expected result:
+
 - PostgreSQL on `localhost:5433`
 - API on `localhost:3030`
 - Client on `localhost:3001`
 - First-run schema + seed happens automatically
 
-### Verify readiness before running DB queries
+### Verify readiness
 
-Wait for the API to be ready (schema created and seed applied) before running `psql` queries:
+Once terminal settles down (no more outputs/logs in terminal), confirm readiness by running heath check:
 
 ```bash
 # Health check (wait until this returns OK)
 curl http://localhost:3030/health
 ```
 
-Expected response: `{"status":"ok"}`
+**Expected response**: `{"status":"ok"}`
 
-Once healthy, you can safely query the database. Example:
+- If first-run seed fails or sample data is missing, see [common issues](#common-issues) to fix.
+
+You can now safely query the database. Example:
 
 ```bash
 set -a && source .env && set +a
 docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT COUNT(*) AS task_count FROM \"TASKS\";"
 ```
 
-### If first-run seed fails or sample data is missing
+### Flow B — Upgrade existing install
 
-Run this as a second step from terminal (with containers running):
-
-```bash
-npm run docker:reset:seed
-```
-
-Then re-run the health check above before running DB queries.
-
-### Flow B — Upgrade existing install (preserve data)
+This will **preserve existing data** while updating.
 
 ```bash
 docker compose up --build -d
 ```
 
 Notes:
-- Do **not** run `docker compose down -v` for normal upgrades (that deletes Postgres data).
-- If schema has changed and data must be preserved, run:
+
+- Do **not** run `docker compose down -v` for normal upgrades (that **deletes** Postgres data).
+- If **schema has changed** and data must be preserved, run:
 
 ```bash
 docker compose exec api npm run db:push
@@ -140,14 +154,16 @@ ZAZZ_API_TOKEN=550e8400-e29b-41d4-a716-446655440000
 
 ### Docker Compose reference (from `docker-compose.yml`)
 
-| Service  | Container name       | Host port | Container port | Notes                    |
-|----------|----------------------|-----------|----------------|--------------------------|
-| postgres | zazz_board_postgres  | 5433      | 5432          | DB: `zazz_board_db`      |
-| api      | zazz_board_api       | 3030      | 3030          | Fastify API              |
-| client   | zazz_board_client    | 3001      | 80            | React app (Nginx)        |
 
-- **API**: http://localhost:3030
-- **Client**: http://localhost:3001
+| Service  | Container name      | Host port | Container port | Notes               |
+| -------- | ------------------- | --------- | -------------- | ------------------- |
+| postgres | zazz_board_postgres | 5433      | 5432           | DB: `zazz_board_db` |
+| api      | zazz_board_api      | 3030      | 3030           | Fastify API         |
+| client   | zazz_board_client   | 3001      | 80             | React app (Nginx)   |
+
+
+- **API**: [http://localhost:3030](http://localhost:3030)
+- **Client**: [http://localhost:3001](http://localhost:3001)
 - **Postgres** (from host): `localhost:5433`, database `zazz_board_db`
 
 ## Contributor setup
@@ -156,7 +172,7 @@ Contributor/committer instructions are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_S
 
 ### Log in from the browser with an access token
 
-1. Open `http://localhost:3001`
+1. Open `http://localhost:3001` in your browser.
 2. Click the **Zazz Board** menu in the header
 3. Click **Set Access Token**
 4. Paste this token and submit:
@@ -165,25 +181,26 @@ Contributor/committer instructions are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_S
 550e8400-e29b-41d4-a716-446655440000
 ```
 
-If that token does not work, fetch a valid one from your local DB:
+If that token does not work, check [common issues](#common-issues). 
 
-```bash
-set -a && source .env && set +a
-docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT email, access_token FROM \"USERS\";"
-```
+Local URLs (from `docker-compose.yml`)
 
-### Local URLs (from `docker-compose.yml`)
-
-- API: http://localhost:3030
-- Client: http://localhost:3001
+- API: [http://localhost:3030](http://localhost:3030)
+- Client: [http://localhost:3001](http://localhost:3001)
 
 ---
 
 ## Running in the cloud
 
+If you wish to run Zazz Board from the internet, not just from your own computer, there are three ways to do so. 
+
+- Option 1: Docker Compose (beginner-friendly)
+- Option 2: Amazon Web Services
+- Option 3: Google Cloud
+
 ### Option 1: Docker Compose (self-hosted)
 
-For a single-node deployment, use `docker-compose.prod.yml`:
+For a single-node deployment (running on 1 server), use `docker-compose.prod.yml`:
 
 ```bash
 export POSTGRES_PASSWORD=your_secure_password
@@ -191,21 +208,23 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 - **Postgres**: port 5432 (internal)
-- **API**: http://localhost:3030
-- **Client**: http://localhost:80 (Nginx)
+- **API**: [http://localhost:3030](http://localhost:3030)
+- **Client**: [http://localhost:80](http://localhost:80) (Nginx)
 
-Set `API_BASE_URL` in the API container if the client needs to reach the API at a different host (e.g. a public URL).
+If the client needs to reach the API at a different host (e.g. a public URL), set `API_BASE_URL` in the API container 
 
 ---
 
 ### Option 2: AWS (RDS + ECS)
 
-| Component | AWS service |
-|-----------|-------------|
-| Database | **RDS** PostgreSQL 15 |
-| API | **ECS Fargate** (container from `api/Dockerfile`) |
-| Client | **S3** + **CloudFront** (static build) |
+
+| Component   | AWS service                                                                      |
+| ----------- | -------------------------------------------------------------------------------- |
+| Database    | **RDS** PostgreSQL 15                                                            |
+| API         | **ECS Fargate** (container from `api/Dockerfile`)                                |
+| Client      | **S3** + **CloudFront** (static build)                                           |
 | Task images | **S3** (in work — see [Cloud deployment notes](#cloud-deployment-notes-in-work)) |
+
 
 **Flow:** Create RDS instance → build and push API image to ECR → deploy ECS task with `DATABASE_URL` pointing at RDS → build client with `VITE_API_URL` set to your API URL → upload to S3, configure CloudFront. Use **Application Load Balancer** in front of ECS for the API.
 
@@ -213,12 +232,14 @@ Set `API_BASE_URL` in the API container if the client needs to reach the API at 
 
 ### Option 3: GCP (Cloud SQL + Cloud Run)
 
-| Component | GCP service |
-|-----------|-------------|
-| Database | **Cloud SQL** (PostgreSQL 15) |
-| API | **Cloud Run** (container from `api/Dockerfile`) |
-| Client | **Cloud Storage** + **Cloud CDN** (or Firebase Hosting) |
+
+| Component   | GCP service                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| Database    | **Cloud SQL** (PostgreSQL 15)                                                               |
+| API         | **Cloud Run** (container from `api/Dockerfile`)                                             |
+| Client      | **Cloud Storage** + **Cloud CDN** (or Firebase Hosting)                                     |
 | Task images | **Cloud Storage** (in work — see [Cloud deployment notes](#cloud-deployment-notes-in-work)) |
+
 
 **Step 1 — Cloud SQL**
 
@@ -229,26 +250,26 @@ Set `API_BASE_URL` in the API container if the client needs to reach the API at 
 **Step 2 — API on Cloud Run**
 
 1. Build and push the API image to **Artifact Registry**:
-   ```bash
+  ```bash
    gcloud builds submit --tag gcr.io/YOUR_PROJECT/zazz-board-api ./api
-   ```
+  ```
 2. Deploy to Cloud Run:
-   ```bash
+  ```bash
    gcloud run deploy zazz-board-api \
      --image gcr.io/YOUR_PROJECT/zazz-board-api \
      --platform managed \
      --region us-central1 \
      --set-env-vars "DATABASE_URL=postgres://USER:PASS@/zazz_board_db?host=/cloudsql/PROJECT:REGION:INSTANCE" \
      --add-cloudsql-instances PROJECT:REGION:INSTANCE
-   ```
+  ```
 3. Use **Cloud SQL Auth Proxy** connection name in `DATABASE_URL` when using Unix socket, or configure **VPC connector** for private IP.
 
 **Step 3 — Client**
 
 1. Build the client with the API URL:
-   ```bash
+  ```bash
    cd client && VITE_API_URL=https://your-api-url.run.app npm run build
-   ```
+  ```
 2. Upload `dist/` to a **Cloud Storage** bucket and enable static website hosting, or use **Firebase Hosting**.
 3. Optionally put **Cloud CDN** in front for caching.
 
@@ -285,20 +306,22 @@ Then run tests (from `api/`):
 set -a && source .env && set +a && NODE_ENV=test npm run test
 ```
 
-See [api/__tests__/README.md](./api/__tests__/README.md) for details.
+See [api/**tests**/README.md](./api/__tests__/README.md) for details.
 
 ---
 
 ## API docs (Swagger)
 
-The API serves **OpenAPI 3.1** interactive docs (Swagger UI) at **http://localhost:3030/docs** when the API is running. The spec is **generated from Fastify route schemas** (single source of truth; no separate YAML to maintain). It includes all routes, request/response shapes, and security: **TB_TOKEN** (header) and **Bearer** (Authorization header). Access to `/docs` is **token-protected** so only authenticated users and agents can view it in production.
+The API serves **OpenAPI 3.1** interactive docs (Swagger UI) at **[http://localhost:3030/docs](http://localhost:3030/docs)** when the API is running. The spec is **generated from Fastify route schemas** (single source of truth; no separate YAML to maintain). It includes all routes, request/response shapes, and security: **TB_TOKEN** (header) and **Bearer** (Authorization header). Access to `/docs` is **token-protected** so only authenticated users and agents can view it in production.
 
 ### Spec and docs URLs
 
-| URL | Purpose |
-|-----|---------|
+
+| URL               | Purpose                                                                |
+| ----------------- | ---------------------------------------------------------------------- |
 | **/openapi.json** | Raw OpenAPI 3.1 JSON spec — no auth. Use for agents, codegen, tooling. |
-| **/docs** | Swagger UI — interactive docs. Use Authorize for try-it-out. |
+| **/docs**         | Swagger UI — interactive docs. Use Authorize for try-it-out.           |
+
 
 ### What's in the docs
 
@@ -311,16 +334,17 @@ The API serves **OpenAPI 3.1** interactive docs (Swagger UI) at **http://localho
 You need a valid **access token** (UUID from `USERS.access_token`; seed example: `550e8400-e29b-41d4-a716-446655440000`).
 
 **Option A — Browser (easiest)**  
-1. Start the API (`npm run dev` or `npm run dev:api`).  
-2. Open **http://localhost:3030/docs** (the `?token=` query string does not work; use Authorize instead)
-3. Click **Authorize**, enter `550e8400-e29b-41d4-a716-446655440000` in the **TB_TOKEN** field, then **Authorize** → **Close**  
+
+1. Start the API (`npm run dev` or `npm run dev:api`).
+2. Open **[http://localhost:3030/docs](http://localhost:3030/docs)** (the `?token=` query string does not work; use Authorize instead)
+3. Click **Authorize**, enter `550e8400-e29b-41d4-a716-446655440000` in the **TB_TOKEN** field, then **Authorize** → **Close**
 4. Use “Try it out” on any route; the token is sent on every request.
 
 **Option B — Browser (no token in URL)**  
 If you can send a header with the first request (e.g. a REST client or extension), open `http://localhost:3030/docs` with header `TB_TOKEN: <your-uuid>`. Then use **Authorize** in the UI as above for try-it-out.
 
 **Option C — Raw OpenAPI JSON (for agents and codegen)**  
-The spec is available at **`/openapi.json`** (no auth required). Agents and tooling can fetch it directly:
+The spec is available at `**/openapi.json`** (no auth required). Agents and tooling can fetch it directly:
 
 ```bash
 curl http://localhost:3030/openapi.json
@@ -333,7 +357,7 @@ For authenticated requests, use the token header: `curl -H "TB_TOKEN: 550e8400-e
 ## API authentication
 
 **Which routes require a token?**  
-All API routes except: `GET /health`, `GET /`, `GET /db-test`, `GET /token-info`, `GET /openapi.json`. The docs at `GET /docs` (and `/docs/*`) also require a valid token.
+All API routes except: `GET /health`, `GET /`, `GET /db-test`, `GET /token-info`, `GET /openapi.json`. The docs at `GET /docs` (and `/docs/`*) also require a valid token.
 
 **How is the access token set for API calls?**  
 Send one of:
@@ -349,25 +373,37 @@ For **Swagger UI**, see [How to access the docs with your access token](#how-to-
 
 ## Common issues
 
+- **Sample data missing or setup failed:** Run this as a second step from terminal (with containers running):
+  ```bash
+  npm run docker:reset:seed
+  ```
+  Re-run the health check above before moving on.
+- **[Access token](#log-in-from-the-browser-with-an-access-token) not working:** fetch a valid one from your local DB:
+  ```bash
+  set -a && source .env && set +a
+  docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT email, access_token FROM \"USERS\";"
+  ```
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test server).
 - **drizzle-kit** “please install drizzle-orm”: From repo root, `ln -sf ./api/node_modules/drizzle-orm ./node_modules/drizzle-orm`.
-- **Tests**: Always source `api/.env` and set `NODE_ENV=test`; see [AGENTS.md](./AGENTS.md) and [api/__tests__/README.md](./api/__tests__/README.md).
+- **Tests**: Always source `api/.env` and set `NODE_ENV=test`; see [AGENTS.md](./AGENTS.md) and [api/**tests**/README.md](./api/__tests__/README.md).
 
 ---
 
 ## Reference
 
-| Action | Command (project root unless noted) |
-|--------|-------------------------------------|
-| Run API + client | `npm run dev` |
-| Run API only | `npm run dev:api` |
-| Run client only | `npm run dev:client` |
-| Reset dev DB (from `api/`) | `npm run db:reset` |
-| Seed only (from `api/`) | `npm run db:seed` |
-| Reset + reseed Docker DB (containers running) | `npm run docker:reset:seed` |
-| Run tests (from `api/`) | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
 
-Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/__tests__/README.md](./api/__tests__/README.md).
+| Action                                        | Command (project root unless noted)                             |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| Run API + client                              | `npm run dev`                                                   |
+| Run API only                                  | `npm run dev:api`                                               |
+| Run client only                               | `npm run dev:client`                                            |
+| Reset dev DB (from `api/`)                    | `npm run db:reset`                                              |
+| Seed only (from `api/`)                       | `npm run db:seed`                                               |
+| Reset + reseed Docker DB (containers running) | `npm run docker:reset:seed`                                     |
+| Run tests (from `api/`)                       | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
+
+
+Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/**tests**/README.md](./api/__tests__/README.md).
 
 ---
 
@@ -381,11 +417,11 @@ This repository is developed using the Zazz framework (dogfooding). Zazz Board i
 
 - **[zazz-framework.md (canonical)](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md)** — Full framework overview: terminology (SPEC, PLAN), workflow stages, agent roles, two kanban boards, TDD, and how to follow the methodology.
 - **[AGENTS.md](./AGENTS.md)** — Primary reference for agents and developers: repo layout, full API route list, DB setup, test strategy (Vitest + PactumJS + test DB), troubleshooting.
-- **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
-- **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
-- **`.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for repository structure guidance.
-- **`.agents/skills/`** — Agent skills. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the reference-implementation copy plus the local-only `database-baseline-refresh` skill.
-- **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
+- **API docs (Swagger UI)**: **[http://localhost:3030/docs](http://localhost:3030/docs)** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
+- **[api/tests/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
+- `**.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for repository structure guidance.
+- `**.agents/skills/`** — Agent skills. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the reference-implementation copy plus the local-only `database-baseline-refresh` skill.
+- `**.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
 
 ## Updating skills from zazz-skills
 
@@ -403,3 +439,4 @@ Notes:
 - The sync script mirrors the canonical framework-managed skills: `coordinator`, `feature-doc-builder`, `planner`, `pr-builder`, `proposal-builder`, `qa`, `qa-backend`, `qa-frontend`, `spec-builder`, `worker`, and `zazz-board-api`.
 - The script intentionally does not touch `.agents/skills/database-baseline-refresh/`.
 - A rename-heavy update like this one still needs a manual documentation sweep after the file sync.
+
