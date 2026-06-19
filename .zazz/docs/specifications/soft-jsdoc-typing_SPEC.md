@@ -464,7 +464,8 @@ describe('propertyMapper', () => {
 
 ### Phase 1: Tooling Foundation
 
-1. Add dev dependencies: `typescript` and `eslint-plugin-jsdoc` as dev-only dependencies.
+1. Verify dev dependencies `typescript` and `eslint-plugin-jsdoc` are already present
+   in `api/package.json`; do not change dependency versions.
 2. Add `api/jsconfig.json` with `allowJs`, `checkJs`, `noEmit`, Node ESM settings,
    `types: ["node"]`, `noImplicitAny`, and includes for `src/**/*.js` plus `lib/**/*.js`;
    exclude tests initially.
@@ -620,18 +621,23 @@ NON-NEGOTIABLE RULES
 3. Verify standards via .zazz/standards/index.yaml before writing code.
 4. Every AC must have evidence.
 5. Do not weaken existing tests to make the implementation pass.
+6. Do not update existing libraries or run broad dependency-update commands.
+7. Do not change Drizzle, Fastify, React, React Router, Axios, or any runtime dependency.
+8. `typescript` and `eslint-plugin-jsdoc` are already installed as API dev dependencies.
+   Do not edit dependency versions or lockfiles. Package files may be edited only for
+   scripts required by this specification.
 
 PREFLIGHT
 1. Confirm the current directory is the repo root for add-soft-jsdoc-typing.
-2. Check dependency state. If `node_modules` is absent, install with `npm ci`. If install
-   fails because of sandbox, network, or registry access, request the required permission
-   once; if it still fails, halt under §5.
-3. Ensure Postgres is available for the full backend suite:
-   npm run docker:up:db
-4. Ensure the test DB exists and is reset before the full test run:
-   docker exec zazz_board_postgres psql -U postgres -c "CREATE DATABASE zazz_board_test;" 2>/dev/null || true
-   cd api && DATABASE_URL=postgres://postgres:password@localhost:5433/zazz_board_test npm run db:reset
-   cd ..
+2. Confirm root `node_modules/`, `api/node_modules/`, and `client/node_modules/` are
+   present enough for existing lint/test/build commands. Do not run `npm install`,
+   `npm update`, or `npm audit fix` as preflight cleanup.
+3. Confirm `api/.env` exists and contains `DATABASE_URL_TEST`.
+4. Confirm Postgres is already available. Do not recreate, reset, or reseed the dev DB.
+   The API test command may reset `zazz_board_test` through the existing test harness;
+   do not manually reseed the dev database.
+5. If required dependencies are missing, halt and report exactly what is missing. Do not
+   install or update packages during the implementation run.
 
 SUGGESTED CHILD AGENTS
 Use child agents when available; keep this main agent responsible for integration, final
