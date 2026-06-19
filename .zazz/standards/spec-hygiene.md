@@ -28,8 +28,7 @@ directory layout or on a file that only exists in the author's checkout.
 Every path a specification names — in prose, in a markdown link, in a required-reading list, in an agent prompt — MUST
 be relative to the repository root. Absolute machine paths and paths that climb into a sibling checkout MUST NOT
 appear. They resolve only for the author, break for other reviewers and agents, and silently encode one person's
-checkout layout into a shared document
-.
+checkout layout into a shared document.
 
 ### Desired ✅
 
@@ -44,7 +43,7 @@ Open `docs/standards/index.yaml` and load only the standards whose
 Open `<absolute-checkout-path>/docs/standards/index.yaml`
 and load only the matching standards.
 <!-- machine-specific checkout path; resolves only for the author and
-     breaks for every other reviewer/agent.
+     breaks for every other reviewer/agent. -->
 ```
 
 ## Link to standards and prior specifications; do not inline them
@@ -53,8 +52,11 @@ A specification references standards, prior specifications in the same effort, a
 relative-path link and section number. It MUST NOT paste their content inline. Inlining duplicates a source that has
 its own home and its own lifecycle: the copy drifts the moment the original changes, and it inflates the specification
 past the size a reviewer or agent can hold in context. When the implementing contract genuinely needs a constraint from
-another document, link to that document's section and state the one constraint — not the whole section
-.
+another document, link to that document's section and state the one constraint — not the whole section.
+
+Required-reading lists MUST cite the specific standard section that applies when the section is known. A specification
+SHOULD summarize only the deliverable-specific implication, not repeat the standard's full rule text. If the standard
+changes later, the specification should keep pointing at the canonical section rather than carrying a stale copy.
 
 This is also why a superseded specification is a liability once its deliverable ships: later specifications should link
 to it as historical context, not copy its contents forward to "stand alone."
@@ -66,7 +68,8 @@ to it as historical context, not copy its contents forward to "stand alone."
 
 - [reporting-m3-d1-frontend-pdf-slice-SPEC.md §4 Decisions](./reporting-m3-d1-frontend-pdf-slice-SPEC.md) —
   the page-slug vs apiSlug split this deliverable reuses.
-- [frontend.md](../standards/frontend.md) — RTK Query placement and response-schema discipline.
+- [coding-styles.md §Client mutation pattern](../standards/coding-styles.md#client-mutation-pattern-no-stale-ui-after-save) —
+  this deliverable must keep page-level hooks as the mutation owner.
 ```
 
 ### Not desired ❌
@@ -76,7 +79,13 @@ to it as historical context, not copy its contents forward to "stand alone."
 
 The prior PR shipped the viewer + hook + state-machine + registry...
 <!-- hundreds of lines of another spec's content pasted forward so the
-     document "stands alone"; drifts from the source and bloats the spec.
+     document "stands alone"; drifts from the source and bloats the spec. -->
+
+### Standards copied here
+
+API validation runs before route handlers...
+<!-- repeated from the standard instead of linking to the standard section;
+     the copy will drift when the standard changes. -->
 ```
 
 ## Reference unmerged work by relative path, annotated
@@ -84,8 +93,7 @@ The prior PR shipped the viewer + hook + state-machine + registry...
 A specification may legitimately depend on a file that is not yet on the integration branch — an in-flight standard, a
 sibling deliverable's spec, a not-yet-merged PR. Reference it by the repository-relative path it will have once merged,
 and annotate the dependency as not-yet-merged with the PR number so a reader knows why the link may not resolve on
-the integration branch yet. Do not reach outside the repository to another worktree's absolute path to "make the link work today"
-.
+the integration branch yet. Do not reach outside the repository to another worktree's absolute path to "make the link work today".
 
 ### Desired ✅
 
@@ -100,7 +108,45 @@ integration branch; tracked in PR 1234).
 Follow the iterated standards at
 `../sibling-worktree/docs/standards/`.
 <!-- points at a second checkout because the files are
-     not yet merged; unreadable from any other checkout.
+     not yet merged; unreadable from any other checkout. -->
+```
+
+## Specification length is governed by contract completeness
+
+Specification documents are not subject to the generic file-size thresholds in
+[code-structure.md](./code-structure.md#file-size-thresholds). A specification is an executable contract, and it MUST be
+long enough to carry the deliverable boundary, decisions, acceptance criteria, test plan, implementation sequence, halt
+conditions, and agent prompt needed for autonomous execution.
+
+Length is not a license for sprawl. A specification MUST stay well organized: each concept has one canonical home,
+constraints are not repeated with slightly different wording across sections, and the document flows from capability
+and scope to decisions, acceptance criteria, test plan, execution sequence, and handoff. When a later section needs a
+prior constraint, it should reference the earlier section instead of restating it.
+
+Do not compress, split, or omit required specification sections solely to satisfy a line-count target. Do compress
+repeated prose, merge duplicate concepts, and improve headings when the document becomes muddy. Split a specification
+only when the work is actually multiple deliverables, multiple review units, or a stacked/sibling branch plan that needs
+separate contracts.
+
+### Desired ✅
+
+```markdown
+One backend soft-typing specification includes scope, ACs, test plan,
+execution sequence, standards updates, and an agent prompt in one file.
+Each constraint appears once and later sections reference it by section number.
+```
+
+### Not desired ❌
+
+```markdown
+The specification drops the run-log protocol and implementation prompt
+only because the file crossed 600 lines.
+<!-- line-count threshold misapplied to a deliverable specification -->
+
+The same "no generated artifacts" constraint appears in Scope, Invariants,
+Acceptance Criteria, Test Plan, and the Agent Prompt with slightly different
+wording.
+<!-- repeated concepts make the spec muddy and create conflicting contracts -->
 ```
 
 ## Acceptance criteria are testable from the criterion alone

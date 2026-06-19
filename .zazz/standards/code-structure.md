@@ -12,17 +12,26 @@ task-specific code they are changing.
 ## File-size thresholds
 
 Authored files MUST stay small enough to review and load with the surrounding task context. Treat line count as a
-reviewability signal, not a formatting game .
+reviewability signal, not a formatting game.
 
 - Files under 400 lines are preferred.
 - Files over 400 lines SHOULD be split by context. If the file is intentionally cohesive, document the reason in the PR
   and expect a pebble-level review comment.
-- Files over 600 lines MUST be split before approval unless the reviewer accepts a concrete exception.
+- Source, test, script, and configuration files over 600 lines MUST be split before approval unless the reviewer
+  accepts a concrete exception.
 - Large test-harness data files MAY exceed the threshold, but they still SHOULD be flagged as pebble-level maintenance
   and reviewability cost.
 
-The same thresholds apply to code, tests, scripts, configuration, standards documents, `SKILL.md` files, and skill
-companion modules.
+Standards documents, `SKILL.md` files, and skill companion modules SHOULD follow the same thresholds as reviewability
+signals, but they do not have a universal hard line cap. Prefer concise, pointed prose and contextual splitting when a
+document covers multiple work contexts. If a longer standard remains cohesive because the governed area is complex, keep
+it together and make the section headings scannable rather than splitting solely to satisfy a line count.
+
+These thresholds do not apply to deliverable specifications, including `.zazz/specifications/`,
+`.zazz/docs/specifications/`, and legacy `.zazz/deliverables/*-SPEC.md` files. Specifications are executable contracts;
+their quality bar is governed by [spec-hygiene.md](./spec-hygiene.md), where completeness, testable acceptance
+criteria, review shape, and implementation instructions matter more than line count. Split a specification only when it
+actually represents multiple deliverables or review units, not because it crosses a generic file-size threshold.
 
 ## Function-complexity thresholds
 
@@ -124,7 +133,6 @@ Common slop patterns:
 - error handling that catches too broadly, swallows useful context, or invents inconsistent response shapes
 - generated runtime assets (postinstall outputs, prebuild artifacts) tracked in git alongside the script that
   regenerates them — two sources of truth that drift silently on every dep bump
-
 
 ## Compute once, return many
 
