@@ -189,6 +189,10 @@ Any need to edit `client/` or another path requires Owner sign-off and spec revi
 - runtime schema-library migration
 - DB schema changes
 - API behavior changes
+- adopting `drizzle-orm@beta`, Drizzle v1 RC, or Relational Queries v2
+- adding Drizzle-generated runtime validation schemas such as `drizzle-orm/zod`,
+  `drizzle-orm/valibot`, `drizzle-orm/typebox`, or `drizzle-orm/arktype`
+- adding Drizzle's ESLint plugin for update/delete safeguards
 - weakening, deleting, or rewriting existing tests to match implementation
 - broad annotation of every route or private helper
 - `checkJs` for `api/__tests__/` on day one
@@ -234,6 +238,26 @@ services before selected routes.
 access rules belong in `data-layer.md`, route/service boundary rules belong in
 `service-layer.md`, and annotation/checker rules belong in `jsdoc-typing.md`; one mixed
 standard would be harder to route from the standards index.
+
+### D-6 — Stay On Drizzle `0.45.2`
+
+**Decision.** Keep this deliverable on `drizzle-orm@0.45.2`. Do not adopt beta/RC
+Drizzle packages or features.
+
+**Why.** The current deliverable is a backend JSDoc/typecheck foundation. Drizzle's
+latest stable package for this branch is already `0.45.2`; Drizzle v1 remains outside
+the stable line. Folding a dependency/API evaluation into this first JSDoc slice would
+mix concerns and make unattended implementation less predictable.
+
+### Drizzle `0.45.2` Follow-On Candidate
+
+This note is intentionally non-executable for this deliverable. The implementing agent
+must not refactor query behavior unless the Owner approves a separate specification
+revision or follow-on deliverable.
+
+| Candidate | Stable in current branch? | Why it may help later | Follow-on guardrail |
+| --- | --- | --- | --- |
+| `getTableColumns` from `drizzle-orm` | Yes, available in `drizzle-orm@0.45.2` | Can reduce duplicated hand-written select maps and keep projection objects tied to `api/lib/db/schema.js`, which supports the "schema remains source of truth" invariant. | Evaluate only where it preserves exact response shape and makes service/data annotations simpler; do not refactor broad query code in this deliverable. |
 
 ---
 
