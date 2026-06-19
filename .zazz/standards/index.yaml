@@ -75,6 +75,24 @@ standards:
       error mapping, the client mutation pattern (no stale UI after save), race-safety,
       UPPER_SNAKE_CASE enums, and i18n key shape.
 
+  - file: security.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - package.json
+        - package-lock.json
+        - api/package.json
+        - api/package-lock.json
+        - client/package.json
+        - client/package-lock.json
+      activities:
+        - remediating npm audit findings
+        - upgrading runtime dependencies for security
+        - adding npm overrides for vulnerable transitive dependencies
+    purpose: >-
+      Production dependency audit baseline, runtime vulnerability remediation order,
+      focused npm override rules, and security dependency PR evidence.
+
   # --- Generic methodology (vendored from zazz-skills; refresh periodically) ---
   - file: code-structure.md
     tier: methodology

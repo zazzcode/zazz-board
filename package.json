@@ -38,12 +38,15 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "^0.45.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.6",
     "markdownlint-cli2": "^0.18.1",
     "pactum-supertest": "^1.0.0",
     "playwright": "^1.58.2"
+  },
+  "overrides": {
+    "fast-uri": "4.0.0"
   },
   "repository": {
     "type": "git",
