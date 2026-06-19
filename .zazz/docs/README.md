@@ -12,8 +12,9 @@ progression lives upstream in `zazz-skills/docs/methodology/`.
 
 ## Guides
 
-- [agent-execution-discipline.md](agent-execution-discipline.md) — agent execution discipline
-- [worktree-setup.md](worktree-setup.md) — worktree operating model setup
+- [zb-agent-orientation.md](zb-agent-orientation.md) — **first-read** Zazz Board agent orientation: repo layout, worktree policy, branch scope, database safety, verification (repo-specific)
+- [agent-execution-discipline.md](agent-execution-discipline.md) — agent execution discipline (vendored)
+- [worktree-setup.md](worktree-setup.md) — worktree operating model setup (vendored)
 - [wt-cheat-sheet.md](wt-cheat-sheet.md) — Worktrunk cheat sheet
 - [using-gh-stack.md](using-gh-stack.md) — stacked PR lanes with `gh-stack`
 - [code-review-graph.md](code-review-graph.md) — code review graph guidance
