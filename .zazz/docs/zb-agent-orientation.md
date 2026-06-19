@@ -12,16 +12,24 @@ their content — do not pull every document into context by default.
 
 ## Repo Layout
 
-Zazz Board uses standard Git worktrees. The `main` worktree mirrors GitHub
-`main` and is the source for new sibling feature worktrees.
+This directory is a **worktree container**: a shared bare Git repository under
+`.bare/` plus a set of sibling worktrees — `main/` (the integration worktree,
+read-only) and one folder per feature branch. Worktrunk is used optionally for
+worktree lifecycle management; the base capability is `git worktree`.
 
 ```text
-<repo-root>/                 e.g. /Users/michael/Dev/zazz-board/
-├── main/                    ← integration worktree (GitHub main, READ-ONLY)
-├── <feature-1>/             ← sibling feature worktree (this is where you work)
-├── <feature-2>/             ← sibling feature worktree
+/Users/michael/Dev/zazz-board/
+├── .bare/            ← shared bare Git object store (do not edit unless repo plumbing)
+├── main/             ← integration worktree (GitHub main, READ-ONLY)
+├── <feature-1>/      ← sibling feature worktree (this is where you work)
+├── <feature-2>/      ← sibling feature worktree
 └── ...
 ```
+
+Each sibling worktree's `.git` is a pointer into `.bare/worktrees/<name>`
+(`gitdir: /Users/michael/Dev/zazz-board/.bare/worktrees/<name>`), so `main/` and
+all feature worktrees share one object store. `git worktree list` confirms the
+layout.
 
 Inside any worktree the tracked layout is:
 
@@ -39,8 +47,9 @@ Inside any worktree the tracked layout is:
 
 Rules:
 
+- `.bare/` holds shared Git metadata. Do not edit unless the task is repo plumbing.
 - The `main` worktree is **read-only**. Do not edit, merge, or commit in `main`.
-- Create a feature worktree per branch: `git worktree add -b <branch> ../<worktree-name> main`.
+- Create a sibling feature worktree per branch (see Worktree Setup below).
 - Root-level agent guidance (`AGENTS.md`, `WARP.md`) and `.zazz/` are tracked
   project files; treat them as such.
 
@@ -117,7 +126,7 @@ npm run lint:md                    # markdownlint-cli2
 
 # Database (Postgres via Docker on 5433)
 npm run docker:up:db               # start Postgres only
-npm run db:reset                   # destructive: drop, push schema, seed (workspace=api)
+npm run db:reset                   # dev DB: drop, push schema, re-seed (routine in development)
 npm run db:push                    # push schema changes, preserves data (api: drizzle-kit push --force)
 npm run db:seed                    # seed only (tables must exist)
 
@@ -325,24 +334,52 @@ Before editing any file, ask:
 
 ## Database Safety
 
-Zazz Board uses PostgreSQL 15 (via Docker, host port 5433). Treat all databases
-as sensitive by default.
+Zazz Board uses PostgreSQL 15 (via Docker, host port 5433). The project is still
+in development, so the **dev** database is regularly dropped and re-seeded from
+the canonical seed baseline. This is a normal, expected operation here — not a
+last resort. `npm run db:reset` drops the tables, pushes the latest schema via
+Drizzle, and re-seeds (`api/scripts/reset-and-seed.js`). The seed scripts carry
+their own guards (environment checks, stage/prod seeding blocks).
 
-- never drop, recreate, truncate, or bulk-delete database state as a
-  troubleshooting shortcut
-- never run `npm run db:reset` against a database you cannot afford to lose —
-  it drops tables, pushes the schema, and re-seeds (destructive)
-- never assume a failing command means the database is corrupt
-- if a destructive database action might be needed, stop and ask the user
-- any command that could destroy database state must be given to the user for
-  manual execution in their own terminal
-- prefer logs, configuration checks, connection checks, and read-only `psql`
-  queries before any recovery step (see the `psql` skill for safe diagnostic
-  commands)
-- the dev DB and test DB are separate: `DATABASE_URL` (dev) vs
-  `DATABASE_URL_TEST` (`zazz_board_test`). Tests run only against the test DB
-  under `NODE_ENV=test`. Do not point `DATABASE_URL` at the test DB for manual
-  work, and never point `DATABASE_URL_TEST` at a production database.
+The safety boundary is **which database** an action targets, not whether the
+action is destructive in the abstract.
+
+- the **dev** DB (`DATABASE_URL` → `zazz_board_db` by default) is disposable:
+  dropping, resetting, and re-seeding it is routine during development. Run
+  `npm run db:reset` (or `npm run docker:reset:seed` against the Docker DB) as
+  needed. If real accumulated dev data must be preserved across a schema
+  change, use `npm run db:push` instead, or use the `database-baseline-refresh`
+  skill.
+- the **test** DB (`DATABASE_URL_TEST` → `zazz_board_test`) is owned by the
+  test suite. Tests run only against it under `NODE_ENV=test` and re-seed it
+  themselves. Do not point `DATABASE_URL` at the test DB for manual work.
+- never point `DATABASE_URL` or `DATABASE_URL_TEST` at a **production**
+  database. The seed scripts block stage/prod seeding, but treat that as a
+  backstop, not a license — confirm the target before running any DB command.
+- never run `db:reset` against a database whose data you cannot afford to lose
+  without confirming the target first.
+- do not assume a failing command means the database is corrupt; prefer logs,
+  connection checks, and read-only `psql` queries before any recovery step
+  (see the `psql` skill for safe diagnostic commands).
+- for bulk destructive actions outside the normal reset/reseed flow (manual
+  `DROP`/`TRUNCATE`, schema-wide deletes), confirm the target DB and ask the
+  user before running.
+
+### Routine dev-DB reset (normal in development)
+
+```bash
+# Start Postgres (host 5433)
+npm run docker:up:db
+# Drop, push latest schema, and re-seed the dev DB (destructive, dev-only)
+npm run db:reset
+# Or, against the Docker Compose DB while containers run:
+npm run docker:reset:seed
+```
+
+Confirm `DATABASE_URL` points at the dev DB before running. If you need to
+preserve live dev data across a schema change, use `npm run db:push` instead, or
+run the `database-baseline-refresh` skill to preserve, upgrade, and re-freeze the
+baseline.
 
 ## Local Ignores
 
@@ -376,7 +413,8 @@ Local-only notes and generated artifacts:
 
 ## Worktree Setup
 
-Zazz Board uses standard `git worktree`. Create a feature worktree from `main`:
+Zazz Board uses a `.bare` worktree container. Create a sibling feature worktree
+from `main` (run this from the container root or any existing worktree):
 
 ```bash
 git worktree add -b <branch> ../<worktree-name> main
@@ -390,7 +428,8 @@ Always copy both env files from `main` and verify parity. If a branch adds or
 changes env settings, ask the user whether those changes should also be applied
 to the `main` worktree before assuming automatic propagation.
 
-For the Worktrunk workflow and worktree lifecycle commands, see
+Worktrunk is optional for worktree lifecycle management; the base capability is
+native `git worktree`. For Worktrunk commands and the worktree lifecycle, see
 `.zazz/docs/wt-cheat-sheet.md`. For stacked branches, see
 `.zazz/docs/using-gh-stack.md`.
 
