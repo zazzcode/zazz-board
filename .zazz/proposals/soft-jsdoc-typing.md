@@ -199,6 +199,34 @@ values.
 High. This phase catches the most expensive drift: DB shape, service shape, route contract,
 and agent-generated backend mistakes.
 
+### Future Drizzle-Aligned Typing Work
+
+The current backend rollout should stay on the stable Drizzle line already in this branch:
+`drizzle-orm@0.45.2`. Drizzle 1.0 is not part of the initial soft-typing deliverable.
+
+After the JSDoc baseline is established, a separate follow-on proposal or deliverable
+should evaluate Drizzle-specific typing improvements:
+
+1. **Stable `0.45.x` cleanup with `getTableColumns`.**
+   Drizzle `0.45.2` exposes `getTableColumns`, which can help build schema-derived
+   select projections without duplicating column maps by hand. This may pair well with
+   JSDoc typedefs because projections stay closer to `api/lib/db/schema.js`, but it
+   should be adopted only where it preserves existing response shapes exactly.
+2. **Drizzle 1.0 integration after stable release.**
+   Once Drizzle 1.0 is stable, evaluate first-class validation-schema imports such as
+   Drizzle-provided Zod/Valibot/TypeBox/ArkType helpers. These could reduce duplication
+   between database schema, payload validation, and JSDoc typedefs, but they should not
+   replace Fastify/AJV route validation without a dedicated API-validation design.
+3. **Relational Queries Builder/version 2 evaluation.**
+   Drizzle's RQB material refers to Relational Queries changes in the v1 beta/RC line,
+   including centralized relation definitions through APIs such as `defineRelations`.
+   That may eventually improve relation-query ergonomics, but it is a data-layer
+   migration topic, not a prerequisite for JSDoc soft typing.
+
+These items belong in future work because each one changes data-access patterns or
+dependency posture. The soft-typing foundation should first make the current JavaScript
+contracts explicit and checkable.
+
 ### Phase 2: Frontend Browser SPA Client
 
 **Goal**: Type React hook returns, component props, and client-side domain objects.
@@ -294,6 +322,7 @@ The standard should define:
 | Client DOM checks create noise. | Begin with relaxed client nullability and tighten after the baseline is stable. |
 | Contributors perceive this as TypeScript in disguise. | Keep all source as `.js` / `.jsx`, enforce `noEmit`, and document that TypeScript is only a checker. |
 | CI gets slower. | Run JSDoc lint on staged files locally and full typecheck in CI; only add typed ESLint rules if they prove necessary. |
+| Drizzle future work expands the first backend slice. | Keep Phase 1 on `drizzle-orm@0.45.2`; evaluate Drizzle 1.0, RQB v2, and schema-derived validators in separate follow-on work. |
 
 ## Decision Checklist
 
@@ -313,6 +342,8 @@ The standard should define:
   first with only the API gate?
 - Should typedefs be manually authored for v1, or should a future task generate starter
   typedefs from JSON Schema / OpenAPI?
+- After Drizzle 1.0 is stable, should the team evaluate Drizzle-generated validation
+  schemas and Relational Queries Builder/version 2 as a separate data-layer proposal?
 - Are there specific files that should remain temporarily excluded during the first pass?
 
 ## Recommendation Summary
@@ -359,6 +390,8 @@ later annotation work follows one consistent rule set.
   correctness.
 - Backend-first sequencing is preferred because data and route contracts define the
   highest-value shared shapes.
+- Drizzle 1.0 and RQB v2 are useful future investigation areas, but they should not
+  complicate the first backend soft-typing deliverable.
 
 ## References
 
@@ -370,3 +403,11 @@ later annotation work follows one consistent rule set.
   https://github.com/gajus/eslint-plugin-jsdoc
 - Webpack JSDoc + `checkJs` migration example
   https://github.com/webpack/webpack/pull/6862
+- Drizzle ORM: latest releases
+  https://orm.drizzle.team/docs/latest-releases
+- Drizzle ORM: goodies / typed table columns
+  https://orm.drizzle.team/docs/goodies
+- Drizzle ORM: upgrading to v1 RC
+  https://orm.drizzle.team/docs/upgrade-v1
+- Drizzle ORM: Relational Queries v1 to v2
+  https://orm.drizzle.team/docs/relations-v1-v2
