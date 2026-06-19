@@ -35,14 +35,22 @@ If any branch/worktree adds or changes settings in `.env` or `api/.env`:
 
 ## Standards
 
-Consult `.zazz/standards/` for authoritative project rules. Index: [.zazz/standards/index.yaml](.zazz/standards/index.yaml)
+Consult `.zazz/standards/` for authoritative project rules. Index: [.zazz/standards/index.yaml](.zazz/standards/index.yaml). See [.zazz/standards/contextual-split.md](.zazz/standards/contextual-split.md) for how the standards are tiered and synced.
+
+Three tiers: **repo-specific** (take precedence), **generic methodology** (vendored from zazz-skills), and **placeholder stack standards** (to be expanded via the `standard-builder` skill).
+
+Repo-specific (take precedence):
 
 | Standard                                                         | Use when                            |
 | ---------------------------------------------------------------- | ----------------------------------- |
 | [system-architecture.md](.zazz/standards/system-architecture.md) | Stack, layers, cloud deployment     |
+| [data-architecture.md](.zazz/standards/data-architecture.md)     | Schema, DB conventions, key tables  |
 | [testing.md](.zazz/standards/testing.md)                         | Test patterns, PactumJS, TDD rules  |
 | [coding-styles.md](.zazz/standards/coding-styles.md)             | Naming, i18n, conventions, patterns |
-| [data-architecture.md](.zazz/standards/data-architecture.md)     | Schema, DB conventions, key tables  |
+
+Generic methodology (vendored from zazz-skills): [code-structure.md](.zazz/standards/code-structure.md), [docs-hygiene.md](.zazz/standards/docs-hygiene.md), [docs-hygiene-reference-structure.md](.zazz/standards/docs-hygiene-reference-structure.md), [spec-hygiene.md](.zazz/standards/spec-hygiene.md), [pr-process.md](.zazz/standards/pr-process.md), [contextual-split.md](.zazz/standards/contextual-split.md).
+
+Placeholder stack standards (to be expanded): [http-layer.md](.zazz/standards/http-layer.md) (Fastify), [data-layer.md](.zazz/standards/data-layer.md) (Drizzle/PostgreSQL), [frontend.md](.zazz/standards/frontend.md) (React+Mantine). Until expanded, `coding-styles.md` and `data-architecture.md` take precedence.
 
 ---
 
@@ -60,22 +68,28 @@ This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. 
 
 ## Zazz agent skills
 
-**Skills** (`.agents/skills/`): Role-specific capabilities for framework agents. Load with any role skill.
+**Skills** (`.agents/skills/`): Role-specific capabilities for framework agents. Framework skills are vendored from [zazz-skills](https://github.com/zazzcode/zazz-skills); refresh via `./scripts/sync-skills-from-zazz-skills.sh` (see [README §Updating skills](./README.md#updating-skills-from-zazz-skills)).
 
-| Skill              | When it applies                                        |
-| ------------------ | ------------------------------------------------------ |
-| **zazz-board-api** | Required by all framework agents — API auth, endpoints |
-| proposal-builder   | Owner/stakeholder proposal discovery and recommendations |
-| feature-doc-builder | Product/Project Owner feature requirements authoring  |
-| spec-builder       | Owner + agent creating deliverable specification       |
-| planner            | One-shot SPEC → PLAN decomposition                     |
-| coordinator        | Orchestrates execution after plan approval             |
-| worker             | Implements tasks                                       |
-| qa                 | Verifies AC, creates rework tasks                      |
-| qa-frontend        | Frontend-focused QA specialization                     |
-| qa-backend         | Backend-focused QA specialization                      |
-| pr-builder         | Packages reviewer-ready PR titles and bodies           |
-| database-baseline-refresh | Preserves live dev DB data while upgrading schema and refreshing the canonical seed baseline |
+| Skill                    | When it applies                                        |
+| ------------------------ | ------------------------------------------------------ |
+| **zazz-board-api**       | Required by all framework agents — API auth, endpoints |
+| proposal-builder         | Owner/stakeholder proposal discovery and recommendations |
+| feature-doc-builder      | Product/Project Owner feature requirements authoring  |
+| architecture-doc-builder | Project/feature-level architecture documents           |
+| spec-builder             | Owner + agent creating deliverable specification       |
+| standard-builder         | Inspects the codebase and drafts repo-specific standards |
+| qa-testing               | Verifies AC, frontend/backend behavior, evidence quality (replaces the former qa/qa-backend/qa-frontend skills) |
+| pr-builder               | Packages reviewer-ready PR titles and bodies           |
+| pr-review                | Automated self-review of PRs/local diffs              |
+| conformance              | One focused standards-alignment change + verified PR evidence |
+| doc-check                | Repo-local formatting/linting checks for doc changes   |
+| gh-stack                 | Manages stacked branches and dependent PRs             |
+| worktree                 | Sets up/manages the Zazz worktree model via Worktrunk  |
+| psql                     | Safe PostgreSQL diagnostic/profiling command guidance  |
+| worker *(local-only)*    | Implements tasks — core to zazz-board's dogfooded workflow; not in upstream |
+| database-baseline-refresh *(local-only)* | Preserves live dev DB data while upgrading schema and refreshing the canonical seed baseline |
+
+Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use PostgreSQL), `jira-api` (we use Zazz Board). See `IGNORE_SKILLS` in `scripts/sync-skills-from-zazz-skills.sh`.
 
 **Rules** (`.cursor/rules/`): Always-applied for Cursor (e.g. worktree workflow).
 
@@ -85,7 +99,7 @@ This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. 
 
 ```
 ├── .agents/skills/     # Zazz agent skills
-├── .zazz/              # project.md, standards/, deliverables/
+├── .zazz/              # project.md, standards/, deliverables/, docs/ (guides), execution/ (gitignored)
 ├── .cursor/rules/      # Cursor always-apply (worktree)
 ├── api/                # Fastify, routes/, services/, lib/db/schema.js, __tests__/
 ├── client/             # React, Vite, Mantine
