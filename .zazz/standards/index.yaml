@@ -1,11 +1,259 @@
 # .zazz/standards/index.yaml
-# Index of atomic project standards. Order matters for agent consumption.
+# Index of project standards. Agents consult this index to decide which
+# standard(s) to inject into context before performing a task.
+#
+# This repo's DOCS_ROOT is `.zazz/` (not `docs/`).
+#
+# Three tiers of standards:
+#   1. Repo-specific (owned by this repo; take precedence on overlap)
+#   2. Generic methodology (vendored from upstream zazz-skills; refresh periodically)
+#   3. Placeholder stack standards (analogous stubs for our stack; to be expanded)
+#
+# Fields:
+#   file        - document filename in this directory
+#   tier        - repo-specific | methodology | placeholder
+#   applies_to  - situations where the standard applies (paths + activities)
+#   purpose     - concise description of decisions governed by the file
 standards:
+  # --- Repo-specific (take precedence) ---
   - file: system-architecture.md
-    purpose: System architecture, stack, layering, cloud deployment
-  - file: testing.md
-    purpose: Test frameworks, patterns, tooling
-  - file: coding-styles.md
-    purpose: Coding conventions, style guides, patterns
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/
+        - client/
+        - docker-compose.yml
+      activities:
+        - understanding the stack, layers, or cloud deployment
+        - adding or changing a service
+    purpose: >-
+      Stack (JavaScript only, Node 22+, Fastify, React/Vite/Mantine, PostgreSQL 15, Drizzle),
+      the API/Services/Client layers, the databaseService/tokenService seam, and optional S3/GCS image storage.
+
   - file: data-architecture.md
-    purpose: Database design philosophy, schema-first, ORM, conventions
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/lib/db/schema.js
+        - api/src/services/databaseService.js
+        - api/src/utils/propertyMapper.js
+      activities:
+        - defining or changing the database schema
+        - naming tables, columns, keys, or enum codes
+        - writing databaseService queries
+    purpose: >-
+      Schema-first design, Drizzle/PostgreSQL conventions, the databaseService DB seam,
+      snake_case DB ↔ camelCase JS field mapping, UPPER_SNAKE_CASE codes, sparse task
+      positions, pre-v1 vs v1 migration workflow, and key tables.
+
+  - file: data-layer.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/src/services/databaseService.js
+        - api/lib/db/schema.js
+        - api/src/utils/propertyMapper.js
+      activities:
+        - writing or modifying databaseService queries or Drizzle schema
+        - changing the snake_case ↔ camelCase field mapping
+        - changing data-layer JSDoc typedefs or service return contracts
+    purpose: >-
+      Drizzle query composition, the databaseService DB seam, schema-derived data
+      contracts, snake_case DB to camelCase JS mapping, explicit join aliases,
+      UPPER_SNAKE_CASE domain codes, sparse positions, and data-layer review evidence.
+
+  - file: service-layer.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/src/services/
+        - api/src/middleware/
+        - api/src/routes/
+      activities:
+        - adding or changing backend service contracts
+        - changing auth context or agent-token project scoping
+        - publishing or subscribing to realtime project events
+        - marshalling data between routes, services, and the data layer
+    purpose: >-
+      Backend service boundaries, service-to-route contracts, auth context,
+      data marshalling, realtime/SSE publishing and subscription boundaries,
+      and service review evidence.
+
+  - file: jsdoc-typing.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/src/
+        - api/jsconfig.json
+        - api/eslint.config.js
+        - client/src/
+      activities:
+        - adding or changing JSDoc typedefs or annotations
+        - adding or changing check-only JavaScript typecheck tooling
+        - adding or changing scoped JSDoc linting
+        - reviewing TypeScript checker suppressions or exclusions
+    purpose: >-
+      JavaScript-only soft typing with JSDoc, centralized typedef placement,
+      type-only import style, tsc --noEmit requirements, scoped JSDoc linting,
+      and allowed checker suppressions.
+
+  - file: testing.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/__tests__/
+      activities:
+        - writing or running API tests
+        - TDD for new routes or bug fixes
+    purpose: >-
+      Vitest + PactumJS integration tests, the real zazz_board_test DB (no mocking),
+      TDD rules, the every-route-needs-PactumJS-API-tests standard, and test commands.
+
+  - file: coding-styles.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/src/
+        - client/src/
+      activities:
+        - writing or reviewing code
+        - designing API validation, schemas, or handler patterns
+        - building client mutation/edit flows
+        - adding translatable enum values or i18n keys
+    purpose: >-
+      Prettier/ESLint, camelCase JS vs snake_case DB, API validation separation from
+      business logic, schema organization, the project-scoped handler pattern, business
+      error mapping, the client mutation pattern (no stale UI after save), race-safety,
+      UPPER_SNAKE_CASE enums, and i18n key shape.
+
+  - file: security.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - package.json
+        - package-lock.json
+        - api/package.json
+        - api/package-lock.json
+        - client/package.json
+        - client/package-lock.json
+      activities:
+        - remediating npm audit findings
+        - upgrading runtime dependencies for security
+        - adding npm overrides for vulnerable transitive dependencies
+    purpose: >-
+      Production dependency audit baseline, runtime vulnerability remediation order,
+      focused npm override rules, and security dependency PR evidence.
+
+  # --- Generic methodology (vendored from zazz-skills; refresh periodically) ---
+  - file: code-structure.md
+    tier: methodology
+    applies_to:
+      paths:
+        - api/src/
+        - api/__tests__/
+        - client/src/
+        - .zazz/standards/
+        - .agents/skills/
+      activities:
+        - creating or modifying authored source files, tests, scripts, standards docs, or skills
+        - splitting oversized files or agent guides
+        - reviewing code structure, module cohesion, duplicated logic, or slop
+    purpose: >-
+      File-size thresholds, contextual splitting, module cohesion, incrementally
+      discoverable skills and docs, anti-slop patterns, and compute-once guidance.
+
+  - file: docs-hygiene.md
+    tier: methodology
+    applies_to:
+      paths:
+        - .zazz/standards/
+        - .zazz/architecture/
+        - .zazz/features/
+        - "**/*.md"
+      activities:
+        - authoring or editing standards docs and agent guides
+        - referencing MCP servers, tools, or database tables in guides
+    purpose: >-
+      Docs voice (RFC-2119), Desired/Not-desired examples, MCP/tool naming, database-table
+      query examples, cross-document links, cleanup clauses, and banned working-doc identifiers.
+
+  - file: docs-hygiene-reference-structure.md
+    tier: methodology
+    applies_to:
+      paths: []
+      activities:
+        - adding citations to standards docs
+        - structuring a standards document
+        - reviewing exclusions from standards docs
+    purpose: >-
+      Standard-doc exclusions, citation formats, section ordering, and a worked
+      well-formed section.
+
+  - file: spec-hygiene.md
+    tier: methodology
+    applies_to:
+      paths:
+        - .zazz/specifications/
+        - .zazz/docs/specifications/
+        - .zazz/deliverables/
+      activities:
+        - authoring or revising a deliverable specification
+        - reviewing a specification for path, link, or content-quality issues
+    purpose: >-
+      Specification path/link portability (repository-relative paths, link-don't-inline,
+      annotating unmerged references) and the content-quality bar a spec review holds:
+      testable acceptance criteria, proportional test plan, decisions with rationale,
+      and explicit scope/exclusions.
+
+  - file: pr-process.md
+    tier: methodology
+    applies_to:
+      paths: []
+      activities:
+        - opening or titling a pull request
+        - scoping commits or PRs
+        - CVE remediation
+    purpose: >-
+      PR title scope labels, one logical change per PR, legacy-replacement evidence, no
+      transitional cruft, CVE title format, and repo hygiene.
+
+  - file: contextual-split.md
+    tier: methodology
+    applies_to:
+      paths:
+        - .zazz/standards/
+      activities:
+        - adding, splitting, or renaming a standards document
+        - deciding which file a new rule belongs in
+    purpose: >-
+      How this repo's standards are split and maintained, the three tiers, and the sync
+      discipline that protects repo-owned standards from upstream clobbering.
+
+  # --- Placeholder stack standards (to be expanded via standard-builder) ---
+  - file: http-layer.md
+    tier: placeholder
+    applies_to:
+      paths:
+        - api/src/routes/
+        - api/src/schemas/
+        - api/src/middleware/
+      activities:
+        - creating or modifying Fastify routes or JSON Schema validation
+        - wiring route plugins or auth middleware
+    purpose: >-
+      PLACEHOLDER. Fastify route layout, endpoint naming, plugin registration, JSON Schema
+      validation wiring, and the handler/schema boundary. coding-styles.md takes precedence
+      until this is expanded.
+
+  - file: frontend.md
+    tier: placeholder
+    applies_to:
+      paths:
+        - client/src/
+      activities:
+        - building React components, hooks, or client mutation/edit flows
+        - using Mantine, @dnd-kit, @xyflow/react, or react-i18next
+    purpose: >-
+      PLACEHOLDER. React hook design, Mantine usage, the client mutation pattern,
+      drag-and-drop, the task graph, and i18n. coding-styles.md takes precedence until
+      this is expanded.

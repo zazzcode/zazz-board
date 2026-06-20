@@ -1,15 +1,21 @@
 import { tokenService } from '../services/tokenService.js';
 
-function getRouteTemplate(request) {
+/**
+ * @typedef {import('fastify').FastifyReply} FastifyReply
+ * @typedef {import('fastify').FastifyRequest} FastifyRequest
+ * @typedef {FastifyRequest & Partial<import('../types.js').AuthContext> & { params: any, routerPath?: string }} AuthFastifyRequest
+ */
+
+function getRouteTemplate(/** @type {AuthFastifyRequest} */ request) {
   return request.routeOptions?.url || request.routerPath || request.url.split('?')[0];
 }
 
-function getProjectContext(request) {
+function getProjectContext(/** @type {AuthFastifyRequest} */ request) {
   const routeTemplate = getRouteTemplate(request);
   const params = request.params || {};
   const projectCode = params.projectCode || params.code || null;
 
-  if (projectCode) {
+  if (/** @type {any} */ projectCode) {
     return {
       routeTemplate,
       hasProjectContext: true,
@@ -38,8 +44,8 @@ function getProjectContext(request) {
   };
 }
 
-function isUserTokenOnlyRoute(routeTemplate, hasProjectContext) {
-  if (routeTemplate === '/token-cache/refresh') {
+function isUserTokenOnlyRoute(/** @type {string} */ routeTemplate, /** @type {boolean} */ hasProjectContext) {
+  if (/** @type {any} */ routeTemplate === '/token-cache/refresh') {
     return true;
   }
 
@@ -55,7 +61,7 @@ function isUserTokenOnlyRoute(routeTemplate, hasProjectContext) {
  * Validates access tokens and attaches user context to requests.
  * Supports both TB_TOKEN and Authorization: Bearer header formats.
  */
-export async function authMiddleware(request, reply) {
+export async function authMiddleware(/** @type {AuthFastifyRequest} */ request, /** @type {FastifyReply} */ reply) {
   try {
     // Extract token from request headers
     const token = tokenService.extractTokenFromRequest(request);
@@ -101,7 +107,7 @@ export async function authMiddleware(request, reply) {
         });
       }
 
-      if (projectId !== null && userInfo.projectId !== projectId) {
+      if (projectId !== null && userInfo.type === 'agent' && userInfo.projectId !== projectId) {
         return reply.code(403).send({
           error: 'Forbidden',
           message: 'Agent token is not authorized for this project'
@@ -131,7 +137,7 @@ export async function authMiddleware(request, reply) {
  * Optional authentication middleware
  * Allows routes to work with or without authentication
  */
-export async function optionalAuthMiddleware(request, _reply) {
+export async function optionalAuthMiddleware(/** @type {AuthFastifyRequest} */ request, /** @type {FastifyReply} */ _reply) {
   try {
     const token = tokenService.extractTokenFromRequest(request);
     

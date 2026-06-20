@@ -2,3 +2,9 @@
 agent-locks.json
 audit.log
 api-spec.json
+
+# Local mutable execution records (run logs, handoff notes, QA findings)
+# Keep the directory but ignore its contents.
+execution/*
+!execution/.gitkeep
+!execution/README.md

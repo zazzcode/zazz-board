@@ -383,23 +383,29 @@ This repository is developed using the Zazz framework (dogfooding). Zazz Board i
 - **[AGENTS.md](./AGENTS.md)** — Primary reference for agents and developers: repo layout, full API route list, DB setup, test strategy (Vitest + PactumJS + test DB), troubleshooting.
 - **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
-- **`.zazz/`** — Zazz Framework structure: `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs). See [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for repository structure guidance.
-- **`.agents/skills/`** — Agent skills. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the reference-implementation copy plus the local-only `database-baseline-refresh` skill.
+- **`.zazz/`** — Zazz Framework structure (this repo's DOCS_ROOT is `.zazz/`): `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs), `features/`, `proposals/`, `specifications/`, `architecture/`, `docs/` (vendored methodology guides), and `execution/` (gitignored runtime records). See [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for repository structure guidance and `.zazz/standards/index.yaml` for the standards index.
+- **`.agents/skills/`** — Agent skills. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the vendored copy plus local-only skills (`worker`, `database-baseline-refresh`).
 - **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
 
 ## Updating skills from zazz-skills
 
-`zazz-skills` is the canonical source for framework skill names and markdown content. This repo should treat its `.agents/skills/` copy as a downstream mirror of that source, except for local-only skills such as `database-baseline-refresh`.
+`zazz-skills` is the canonical source for framework skill names and markdown content. This repo treats its `.agents/skills/` copy as a downstream mirror of that source, except for local-only skills.
 
 Typical update flow:
 
 1. Review the upstream changes in `zazz-skills` first so any renames or new skills are understood before syncing.
-2. Run `./scripts/sync-skills-from-zazz-skills.sh /absolute/path/to/zazz-skills`.
-3. Review the diff in this repo, especially `README.md`, `AGENTS.md`, and `.zazz/deliverables/`, because renamed skills often leave stale references outside the skill folders.
-4. Run `rg -n 'proposal-builder|feature-doc-builder|pr-builder|spec-builder-agent|planner-agent|coordinator-agent|worker-agent|qa-agent' README.md AGENTS.md .zazz .agents/skills` to catch old names or missing follow-up edits.
+2. Run `./scripts/sync-skills-from-zazz-skills.sh /absolute/path/to/zazz-skills` (or set `ZAZZ_SKILLS_REPO=...`). Add `DRY_RUN=1` to preview.
+3. Review the diff in this repo, especially `README.md`, `AGENTS.md`, and `.zazz/`, because renamed skills often leave stale references outside the skill folders.
+4. Run `rg -n 'proposal-builder|feature-doc-builder|pr-builder|spec-builder-agent|planner-agent|coordinator-agent|worker-agent|qa-agent|qa-backend|qa-frontend|\bqa\b' README.md AGENTS.md .zazz .agents/skills` to catch old names or missing follow-up edits.
 
 Notes:
 
-- The sync script mirrors the canonical framework-managed skills: `coordinator`, `feature-doc-builder`, `planner`, `pr-builder`, `proposal-builder`, `qa`, `qa-backend`, `qa-frontend`, `spec-builder`, `worker`, and `zazz-board-api`.
-- The script intentionally does not touch `.agents/skills/database-baseline-refresh/`.
-- A rename-heavy update like this one still needs a manual documentation sweep after the file sync.
+- The sync script discovers every skill under the upstream `.agents/skills/` and mirrors it here, so new upstream skills are picked up automatically.
+- `IGNORE_SKILLS` in the script lists upstream skills this project intentionally does NOT vendor (currently `sqlcmd` and `jira-api`). Edit that list as the project's needs change.
+- `LOCAL_ONLY_SKILLS` lists repo-owned skills the sync never touches: `worker` (core to zazz-board's dogfooded workflow) and `database-baseline-refresh`.
+- The script removes previously-synced skills that upstream no longer ships and that are not local-only, so obsolete skills do not linger (e.g. `qa`/`qa-backend`/`qa-frontend`, which upstream consolidated into `qa-testing`).
+- A rename-heavy update still needs a manual documentation sweep after the file sync.
+
+## Updating standards from zazz-skills
+
+The repo-specific standards under `.zazz/standards/` (`system-architecture.md`, `data-architecture.md`, `testing.md`, `coding-styles.md`) are owned by this repo and take precedence; they must not be clobbered by an upstream sync. The generic methodology standards (`code-structure.md`, `docs-hygiene.md`, `docs-hygiene-reference-structure.md`, `spec-hygiene.md`, `pr-process.md`) are vendored from upstream `zazz-skills` and should be refreshed periodically by copying them back over. The placeholder stack standards (`http-layer.md`, `data-layer.md`, `frontend.md`) and `contextual-split.md` are repo-owned and intended to be expanded into real baselines via the `standard-builder` skill. See `.zazz/standards/contextual-split.md` for the full sync discipline.

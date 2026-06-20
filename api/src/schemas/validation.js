@@ -1,7 +1,7 @@
 /**
  * Validation schemas — barrel re-export for backward compatibility.
  * All schemas are split into domain files under ./schemas/.
- * @see ./index.js
+ * @see {@link ./index.js}
  */
 export {
   idParam,

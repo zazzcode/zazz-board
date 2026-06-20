@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 
 const DEFAULT_BASE_URL = 'http://localhost:3030';
-const DEFAULT_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
+const DEFAULT_TOKEN = '660e8400-e29b-41d4-a716-446655440101';
 const DEFAULT_PROJECT = 'ZAZZ';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -263,7 +263,7 @@ const HELP = {
     },
   },
   exec: {
-    summary: 'High-level worker execution helpers built on lock + status operations.',
+    summary: 'High-level execution helpers built on lock + status operations.',
     actions: {
       begin: {
         usage: 'zazzctl exec begin --deliverable-id ID --task-id ID --agent-name NAME (--file PATH | --files CSV)+ [--phase-step X.Y] [--ttl-seconds N] [--status STATUS] [--project CODE]',
@@ -317,9 +317,9 @@ Environment:
 
 Examples:
   zazzctl help task create
-  zazzctl --profile worker exec begin --deliverable-id 8 --task-id 25 --agent-name worker-1 --file api/src/routes/fileLocks.js
-  zazzctl --profile planner deliverable update --deliverable-id 4 --json '{"planFilepath":"<DOCS_ROOT>/deliverables/ZAZZ-6-PLAN.md"}'
-  zazzctl --profile spec_builder deliverable create --name "Agent Tokens" --type FEATURE --spec-filepath "<DOCS_ROOT>/deliverables/ZAZZ-6-agent-tokens-SPEC.md"
+  zazzctl --profile worker exec begin --deliverable-id 8 --task-id 25 --agent-name implementation-agent-1 --file src/routes/example.js
+  zazzctl --profile planner deliverable update --deliverable-id 4 --json '{"specFilepath":"<DOCS_ROOT>/specifications/sample-feature.md"}'
+  zazzctl --profile spec_builder deliverable create --name "Agent Tokens" --type FEATURE --spec-filepath "<DOCS_ROOT>/deliverables/ZAZZ-6/agent-tokens-SPEC.md"
   ZAZZCTL_ENV_FILE=.env zazzctl deliverable list
 `;
   }

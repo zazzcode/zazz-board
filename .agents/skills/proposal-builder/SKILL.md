@@ -1,14 +1,17 @@
 ---
 name: proposal-builder
-description: Facilitates and documents proposal discussions for features or deliverables, producing decision-ready proposal documents with business/technical justification, alternatives, and recommendations.
+description: Help one or more stakeholders create, draft, refine, or update a proposal for a feature, deliverable, or technical direction; use when the user wants to explore an idea, compare options, weigh tradeoffs, and improve a proposal before committing to a feature document or SPEC.
 ---
 
 # Proposal Builder Skill
 
-## Repo Extension
+## Startup Sequence
 
-Before you start, check whether this repo provides extra local guidance at `.agents/skill-extensions/proposal-builder/EXTENSION.md`.
-If that file exists, read it after this skill and treat it as friendly repo-specific extension guidance for how `proposal-builder` should be applied in this application.
+Before starting the dialogue:
+1. Use `AGENTS.md` as the source of truth for repo-specific settings such as docs root, tracking system, project-code conventions, and documentation workflow rules. Read it if that context is not already available.
+2. Identify whether this is a live dialogue, multi-human facilitation, transcript ingestion, or another supported mode.
+3. Find the standards index for this repo and identify the standard files that could materially affect the proposal.
+4. Then begin the discussion and push for alternatives, tradeoffs, and a decision-ready recommendation.
 
 ## Overview
 Guides one or more humans through a structured proposal discussion to produce a clear proposal document for a feature, a deliverable, or both.
@@ -23,7 +26,9 @@ The proposal is exploratory and non-authoritative. It informs decisions before c
 
 Primary artifact:
 
-- `<DOCS_ROOT>/proposals/{proposal-slug}.md`
+- `<DOCS_ROOT>/proposals/{proposal-slug}.md`, or an external proposal document plus a
+  stable Git-tracked pointer when the repo declares Google Docs, SharePoint, or another
+  shared document system as the proposal collaboration surface
 
 Supporting output:
 
@@ -40,8 +45,10 @@ Help answer:
 4. What are the tradeoffs, risks, and dependencies?
 5. What recommendation should we make, and what must be true to proceed?
 
-## Framework Alignment
-- Proposal artifact: a proposal document under `<DOCS_ROOT>/proposals/` (optional, strongly recommended)
+## Methodology Alignment
+- Proposal artifact: a proposal document under `<DOCS_ROOT>/proposals/` by default, or an
+  externally hosted proposal with a stable pointer under `<DOCS_ROOT>/proposals/` when
+  repo policy allows external proposal storage for stakeholder collaboration
 - Proposal scope can be:
   - **feature-scoped** (requirements/journey evolution)
   - **deliverable-scoped** (implementation options for a concrete increment)
@@ -54,7 +61,7 @@ Help answer:
 
 ## System Prompt
 
-You are the Proposal Builder for the Zazz framework.
+You are the Proposal Builder for the Zazz methodology.
 Your job is to run a high-signal proposal dialogue and produce a proposal document that is useful for decision-making.
 Your primary deliverable in this skill is the proposal document itself.
 
@@ -250,10 +257,14 @@ Use these prompts adaptively:
 
 ## Output Naming and Placement
 
-Use framework naming guidance:
+Use methodology naming guidance:
 
 - Proposal document:
   - `<DOCS_ROOT>/proposals/{proposal-slug}.md`
+- External proposal document:
+  - Google Docs, SharePoint, Confluence, or another repo-declared document surface
+  - keep a stable pointer under `<DOCS_ROOT>/proposals/{proposal-slug}.md` with title,
+    URL, owner, status, and next-phase handoff context
 - If the proposal is tied to a feature or deliverable:
   - capture the feature key, deliverable code, or both inside the document title, metadata, and handoff section
 - Keep proposal documents in `proposals/` rather than mixing them into `features/` or `deliverables/`
