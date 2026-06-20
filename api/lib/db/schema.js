@@ -89,7 +89,7 @@ export const AGENT_TOKENS = pgTable('AGENT_TOKENS', {
   token: varchar('token', { length: 36 }).notNull().unique(),
   label: varchar('label', { length: 100 }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
+}, (/** @type {any} */ table) => [
   index('idx_agent_tokens_token').on(table.token),
   index('idx_agent_tokens_user_project').on(table.user_id, table.project_id),
 ]);
@@ -167,7 +167,7 @@ export const TASKS = pgTable('TASKS', {
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
+}, (/** @type {any} */ table) => [
   // phase_step must be unique within a deliverable (e.g. "1.1" unique per deliverable)
   unique('uq_tasks_deliverable_phase_step').on(table.deliverable_id, table.phase_step),
 ]);
@@ -185,7 +185,7 @@ export const TASK_RELATIONS = pgTable('TASK_RELATIONS', {
   relation_type: taskRelationTypeEnum('relation_type').notNull(),
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
+}, (/** @type {any} */ table) => [
   primaryKey({ columns: [table.task_id, table.related_task_id, table.relation_type] }),
   index('idx_task_relations_task_id').on(table.task_id),
   index('idx_task_relations_related_task_id').on(table.related_task_id),
@@ -206,7 +206,7 @@ export const FILE_LOCKS = pgTable('FILE_LOCKS', {
   created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
+}, (/** @type {any} */ table) => [
   unique('uq_file_locks_deliverable_file').on(table.deliverable_id, table.file_relative_path),
   index('idx_file_locks_deliv_expiry').on(table.deliverable_id, table.lease_expires_at),
   index('idx_file_locks_task_id').on(table.task_id),
@@ -223,7 +223,7 @@ export const IMAGE_METADATA = pgTable('IMAGE_METADATA', {
   url: varchar('url', { length: 500 }).notNull(), // Local DB URL or S3 URL
   storage_type: varchar('storage_type', { length: 20 }).notNull().default('local'), // 'local' or 's3'
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
+}, (/** @type {any} */ table) => [
   check(
     'image_metadata_single_owner_chk',
     sql`((${table.task_id} IS NOT NULL AND ${table.deliverable_id} IS NULL) OR (${table.task_id} IS NULL AND ${table.deliverable_id} IS NOT NULL))`
@@ -238,11 +238,11 @@ export const IMAGE_DATA = pgTable('IMAGE_DATA', {
 });
 
 // Relations
-export const usersRelations = relations(USERS, ({ many }) => ({
+export const usersRelations = relations(USERS, (/** @type {any} */ { many }) => ({
   agentTokens: many(AGENT_TOKENS),
 }));
 
-export const projectsRelations = relations(PROJECTS, ({ one, many }) => ({
+export const projectsRelations = relations(PROJECTS, (/** @type {any} */ { one, many }) => ({
   leader: one(USERS, {
     fields: [PROJECTS.leader_id],
     references: [USERS.id],
@@ -252,7 +252,7 @@ export const projectsRelations = relations(PROJECTS, ({ one, many }) => ({
   tasks: many(TASKS),
 }));
 
-export const agentTokensRelations = relations(AGENT_TOKENS, ({ one }) => ({
+export const agentTokensRelations = relations(AGENT_TOKENS, (/** @type {any} */ { one }) => ({
   user: one(USERS, {
     fields: [AGENT_TOKENS.user_id],
     references: [USERS.id],
@@ -263,7 +263,7 @@ export const agentTokensRelations = relations(AGENT_TOKENS, ({ one }) => ({
   }),
 }));
 
-export const deliverablesRelations = relations(DELIVERABLES, ({ one, many }) => ({
+export const deliverablesRelations = relations(DELIVERABLES, (/** @type {any} */ { one, many }) => ({
   project: one(PROJECTS, {
     fields: [DELIVERABLES.project_id],
     references: [PROJECTS.id],
@@ -281,7 +281,7 @@ export const deliverablesRelations = relations(DELIVERABLES, ({ one, many }) => 
   images: many(IMAGE_METADATA),
 }));
 
-export const tasksRelations = relations(TASKS, ({ one, many }) => ({
+export const tasksRelations = relations(TASKS, (/** @type {any} */ { one, many }) => ({
   project: one(PROJECTS, {
     fields: [TASKS.project_id],
     references: [PROJECTS.id],
@@ -297,7 +297,7 @@ export const tasksRelations = relations(TASKS, ({ one, many }) => ({
   relatedRelations: many(TASK_RELATIONS, { relationName: 'relatedTaskRelations' }),
 }));
 
-export const fileLocksRelations = relations(FILE_LOCKS, ({ one }) => ({
+export const fileLocksRelations = relations(FILE_LOCKS, (/** @type {any} */ { one }) => ({
   project: one(PROJECTS, {
     fields: [FILE_LOCKS.project_id],
     references: [PROJECTS.id],
@@ -320,7 +320,7 @@ export const fileLocksRelations = relations(FILE_LOCKS, ({ one }) => ({
   }),
 }));
 
-export const taskRelationsRelations = relations(TASK_RELATIONS, ({ one }) => ({
+export const taskRelationsRelations = relations(TASK_RELATIONS, (/** @type {any} */ { one }) => ({
   task: one(TASKS, {
     fields: [TASK_RELATIONS.task_id],
     references: [TASKS.id],
@@ -333,11 +333,11 @@ export const taskRelationsRelations = relations(TASK_RELATIONS, ({ one }) => ({
   }),
 }));
 
-export const tagsRelations = relations(TAGS, ({ many }) => ({
+export const tagsRelations = relations(TAGS, (/** @type {any} */ { many }) => ({
   taskTags: many(TASK_TAGS),
 }));
 
-export const taskTagsRelations = relations(TASK_TAGS, ({ one }) => ({
+export const taskTagsRelations = relations(TASK_TAGS, (/** @type {any} */ { one }) => ({
   task: one(TASKS, {
     fields: [TASK_TAGS.task_id],
     references: [TASKS.id],
@@ -348,7 +348,7 @@ export const taskTagsRelations = relations(TASK_TAGS, ({ one }) => ({
   }),
 }));
 
-export const imageMetadataRelations = relations(IMAGE_METADATA, ({ one }) => ({
+export const imageMetadataRelations = relations(IMAGE_METADATA, (/** @type {any} */ { one }) => ({
   task: one(TASKS, {
     fields: [IMAGE_METADATA.task_id],
     references: [TASKS.id],
@@ -363,7 +363,7 @@ export const imageMetadataRelations = relations(IMAGE_METADATA, ({ one }) => ({
   }),
 }));
 
-export const imageDataRelations = relations(IMAGE_DATA, ({ one }) => ({
+export const imageDataRelations = relations(IMAGE_DATA, (/** @type {any} */ { one }) => ({
   metadata: one(IMAGE_METADATA, {
     fields: [IMAGE_DATA.id],
     references: [IMAGE_METADATA.id],

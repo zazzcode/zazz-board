@@ -3,6 +3,10 @@ import { AGENT_TOKENS, PROJECTS, USERS } from '../../lib/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 /**
+ * @typedef {import('../types.js').TokenContext} TokenContext
+ */
+
+/**
  * Token Service
  * Manages user and agent access tokens for API authorization.
  * Caches token-to-context mapping plus project lookup tables for fast auth checks.
@@ -114,8 +118,10 @@ class TokenService {
 
   /**
    * Validate token and return user info
+   * @param {string|null|undefined} token - Raw access token from the request.
+   * @returns {TokenContext|null} Cached token context, or null for missing/invalid tokens.
    */
-  validateToken(token) {
+  validateToken(/** @type {string|null|undefined} */ token) {
     if (!this.isInitialized) {
       throw new Error('Token service not initialized');
     }
@@ -130,12 +136,14 @@ class TokenService {
   /**
    * Extract token from request headers
    * Supports both TB_TOKEN and Authorization: Bearer formats
+   * @param {import('fastify').FastifyRequest} request - Incoming Fastify request.
+   * @returns {string|null} Raw token if present.
    */
-  extractTokenFromRequest(request) {
+  extractTokenFromRequest(/** @type {import('fastify').FastifyRequest} */ request) {
     // Check for TB_TOKEN header first (case insensitive)
     const tbToken = request.headers['tb-token'] || request.headers['TB_TOKEN'] || request.headers['tb_token'];
     if (tbToken) {
-      return tbToken;
+      return Array.isArray(tbToken) ? tbToken[0] : tbToken;
     }
 
     // Check for Authorization: Bearer header
@@ -171,16 +179,16 @@ class TokenService {
     };
   }
 
-  getProjectIdByCode(projectCode) {
+  getProjectIdByCode(/** @type {any} */ projectCode) {
     return this.projectIdByCode.get(projectCode) ?? null;
   }
 
-  getProjectCodeById(projectId) {
+  getProjectCodeById(/** @type {any} */ projectId) {
     const normalizedProjectId = Number(projectId);
     return this.projectCodeById.get(normalizedProjectId) ?? null;
   }
 
-  addAgentTokenToCache({ token, userId, projectId, projectCode, email = null, fullName = null, label = null }) {
+  addAgentTokenToCache(/** @type {any} */ { token, userId, projectId, projectCode, email = null, fullName = null, label = null }) {
     if (!token) {
       throw new Error('token is required to add agent token to cache');
     }
@@ -206,7 +214,7 @@ class TokenService {
     });
   }
 
-  removeAgentTokenFromCache(token) {
+  removeAgentTokenFromCache(/** @type {any} */ token) {
     if (!token) {
       return;
     }

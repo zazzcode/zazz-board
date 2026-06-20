@@ -1,6 +1,10 @@
 /**
  * Property Mapper Utility
  * Handles conversion between snake_case (database) and camelCase (API) formats
+ *
+ * @typedef {import('../types.js').PlainObject} PlainObject
+ * @typedef {PlainObject|unknown[]} MappableContainer
+ * @typedef {MappableContainer|null|undefined|unknown} MappableValue
  */
 
 /**
@@ -23,8 +27,8 @@ function toSnakeCase(str) {
 
 /**
  * Convert object keys from snake_case to camelCase
- * @param {Object|Array} obj - Object or array to convert
- * @returns {Object|Array} Object with camelCase keys
+ * @param {MappableValue} obj - Object, array, or scalar value to convert.
+ * @returns {MappableValue} Object with camelCase keys.
  */
 function keysToCamelCase(obj) {
   if (obj === null || obj === undefined) {
@@ -36,6 +40,7 @@ function keysToCamelCase(obj) {
   }
 
   if (typeof obj === 'object' && obj.constructor === Object) {
+    /** @type {PlainObject} */
     const converted = {};
     for (const [key, value] of Object.entries(obj)) {
       const camelKey = toCamelCase(key);
@@ -49,8 +54,8 @@ function keysToCamelCase(obj) {
 
 /**
  * Convert object keys from camelCase to snake_case
- * @param {Object|Array} obj - Object or array to convert
- * @returns {Object|Array} Object with snake_case keys
+ * @param {MappableValue} obj - Object, array, or scalar value to convert.
+ * @returns {MappableValue} Object with snake_case keys.
  */
 function keysToSnakeCase(obj) {
   if (obj === null || obj === undefined) {
@@ -62,6 +67,7 @@ function keysToSnakeCase(obj) {
   }
 
   if (typeof obj === 'object' && obj.constructor === Object) {
+    /** @type {PlainObject} */
     const converted = {};
     for (const [key, value] of Object.entries(obj)) {
       const snakeKey = toSnakeCase(key);

@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import { defineConfig, globalIgnores } from 'eslint/config';
+import jsdoc from 'eslint-plugin-jsdoc';
 
 const vitestGlobals = {
   describe: 'readonly',
@@ -34,6 +35,28 @@ export default defineConfig([
         ...globals.node,
         ...vitestGlobals,
       },
+    },
+  },
+  {
+    files: [
+      'src/types.js',
+      'src/utils/propertyMapper.js',
+      'src/services/databaseService.js',
+      'src/services/tokenService.js',
+      'src/services/realtimeService.js',
+      'src/services/gitStatus.js',
+      'src/middleware/authMiddleware.js',
+      'src/routes/projects.js',
+    ],
+    plugins: {
+      jsdoc,
+    },
+    rules: {
+      'jsdoc/check-tag-names': 'error',
+      'jsdoc/check-types': 'error',
+      'jsdoc/valid-types': 'error',
+      'jsdoc/require-param-type': 'error',
+      'jsdoc/require-returns-type': 'error',
     },
   },
 ]);

@@ -30,6 +30,7 @@
     "lint:client": "cd client && npm run lint",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#client/node_modules\" \"#client/dist\"",
     "lint:staged": "lint-staged",
+    "typecheck:api": "npm run typecheck --workspace=api",
     "test": "npm run test --workspace=api",
     "test:watch": "npm run test:watch --workspace=api"
   },

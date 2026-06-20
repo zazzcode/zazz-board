@@ -5,6 +5,18 @@ import { getRandomTagColor } from '../utils/tagColors.js';
 import { randomUUID } from 'crypto';
 
 /**
+ * @typedef {import('../types.js').User} User
+ * @typedef {import('../types.js').Project} Project
+ * @typedef {import('../types.js').Deliverable} Deliverable
+ * @typedef {import('../types.js').Task} Task
+ * @typedef {import('../types.js').Tag} Tag
+ * @typedef {import('../types.js').StatusDefinition} StatusDefinition
+ * @typedef {import('../types.js').FileLock} FileLock
+ * @typedef {import('../types.js').ImageMetadata} ImageMetadata
+ * @typedef {import('../types.js').TaskRelationType} TaskRelationType
+ */
+
+/**
  * Database Service
  * Comprehensive service layer for all database operations.
  * Uses Drizzle ORM aliasing for snake_case to camelCase field mapping.
@@ -16,7 +28,8 @@ class DatabaseService {
   /**
    * Get all users with optional search
    */
-  async getUsers(searchTerm = null) {
+  async getUsers(/** @type {any} */ searchTerm = null) {
+    /** @type {any} */
     let query = db.select({
       id: USERS.id,
       fullName: USERS.full_name,
@@ -39,8 +52,10 @@ class DatabaseService {
 
   /**
    * Get user by ID
+   * @param {number} id - User primary key.
+   * @returns {Promise<User|null>} User contract or null when not found.
    */
-  async getUserById(id) {
+  async getUserById(/** @type {number} */ id) {
     const [user] = await db.select({
       id: USERS.id,
       fullName: USERS.full_name,
@@ -58,7 +73,7 @@ class DatabaseService {
   /**
    * Create new user
    */
-  async createUser(userData) {
+  async createUser(/** @type {any} */ userData) {
     const [user] = await db.insert(USERS)
       .values({
         full_name: userData.fullName,
@@ -73,7 +88,7 @@ class DatabaseService {
   /**
    * Update user
    */
-  async updateUser(id, userData) {
+  async updateUser(/** @type {any} */ id, /** @type {any} */ userData) {
     const updateData = {};
     if (userData.fullName !== undefined) updateData.full_name = userData.fullName;
     if (userData.email !== undefined) updateData.email = userData.email;
@@ -89,7 +104,7 @@ class DatabaseService {
   /**
    * Delete user
    */
-  async deleteUser(id) {
+  async deleteUser(/** @type {any} */ id) {
     const [user] = await db.delete(USERS)
       .where(eq(USERS.id, id))
       .returning();
@@ -148,7 +163,7 @@ class DatabaseService {
   /**
    * Get project by ID with full details
    */
-  async getProjectById(id) {
+  async getProjectById(/** @type {any} */ id) {
     const [project] = await db.select({
       id: PROJECTS.id,
       title: PROJECTS.title,
@@ -175,8 +190,10 @@ class DatabaseService {
 
   /**
    * Get project by code
+   * @param {string} code - Immutable project code.
+   * @returns {Promise<Project|null>} Project contract or null when not found.
    */
-  async getProjectByCode(code) {
+  async getProjectByCode(/** @type {string} */ code) {
     const [project] = await db.select({
       id: PROJECTS.id,
       title: PROJECTS.title,
@@ -204,7 +221,7 @@ class DatabaseService {
   /**
    * Create new project
    */
-  async createProject(projectData) {
+  async createProject(/** @type {any} */ projectData) {
     const [project] = await db.insert(PROJECTS)
       .values({
         title: projectData.title,
@@ -222,7 +239,7 @@ class DatabaseService {
   /**
    * Update project - Project codes are immutable after creation
    */
-  async updateProject(id, projectData) {
+  async updateProject(/** @type {any} */ id, /** @type {any} */ projectData) {
     const updateData = {};
     if (projectData.title !== undefined) updateData.title = projectData.title;
     // Project codes are immutable - cannot be updated after creation
@@ -251,7 +268,7 @@ class DatabaseService {
   /**
    * Delete project and all associated tasks/tags
    */
-  async deleteProject(id) {
+  async deleteProject(/** @type {any} */ id) {
     // First delete task-tag relationships for this project's tasks
     const projectTasks = await db.select({ id: TASKS.id })
       .from(TASKS)
@@ -277,7 +294,7 @@ class DatabaseService {
   /**
    * Get project's status workflow
    */
-  async getProjectStatusWorkflow(projectId) {
+  async getProjectStatusWorkflow(/** @type {any} */ projectId) {
     const [project] = await db.select({
       id: PROJECTS.id,
       code: PROJECTS.code,
@@ -293,7 +310,7 @@ class DatabaseService {
   /**
    * Update project's status workflow
    */
-  async updateProjectStatusWorkflow(projectId, statusWorkflow, updatedBy) {
+  async updateProjectStatusWorkflow(/** @type {any} */ projectId, /** @type {any} */ statusWorkflow, /** @type {any} */ updatedBy) {
     const [project] = await db.update(PROJECTS)
       .set({ 
         status_workflow: statusWorkflow,
@@ -309,7 +326,7 @@ class DatabaseService {
   /**
    * Check if any tasks in project use a specific status
    */
-  async hasTasksWithStatus(projectId, status) {
+  async hasTasksWithStatus(/** @type {any} */ projectId, /** @type {any} */ status) {
     const [result] = await db.select({ 
       count: sql`COUNT(*)`.as('count') 
     })
@@ -324,7 +341,7 @@ class DatabaseService {
     return parseInt(result.count) > 0;
   }
 
-  async hasDeliverablesWithStatus(projectId, status) {
+  async hasDeliverablesWithStatus(/** @type {any} */ projectId, /** @type {any} */ status) {
     const [result] = await db.select({
       count: sql`COUNT(*)`.as('count')
     })
@@ -334,7 +351,7 @@ class DatabaseService {
     return parseInt(result.count) > 0;
   }
 
-  async getProjectDeliverableStatusWorkflow(projectId) {
+  async getProjectDeliverableStatusWorkflow(/** @type {any} */ projectId) {
     const [project] = await db.select({
       id: PROJECTS.id,
       code: PROJECTS.code,
@@ -346,7 +363,7 @@ class DatabaseService {
     return project || null;
   }
 
-  async updateProjectDeliverableStatusWorkflow(projectId, deliverableStatusWorkflow, updatedBy) {
+  async updateProjectDeliverableStatusWorkflow(/** @type {any} */ projectId, /** @type {any} */ deliverableStatusWorkflow, /** @type {any} */ updatedBy) {
     const [project] = await db.update(PROJECTS)
       .set({
         deliverable_status_workflow: deliverableStatusWorkflow,
@@ -358,7 +375,12 @@ class DatabaseService {
     return project || null;
   }
 
-  async getAgentTokensForUser(projectId, userId) {
+  /**
+   * @param {number} projectId - Project primary key.
+   * @param {number} userId - User primary key.
+   * @returns {Promise<object|null>} Agent token rows grouped by user.
+   */
+  async getAgentTokensForUser(/** @type {number} */ projectId, /** @type {number} */ userId) {
     const user = await this.getUserById(userId);
     if (!user) {
       return null;
@@ -382,7 +404,7 @@ class DatabaseService {
     };
   }
 
-  async getAgentTokensForProject(projectId) {
+  async getAgentTokensForProject(/** @type {any} */ projectId) {
     const [users, tokenRows] = await Promise.all([
       this.getUsers(),
       db.select({
@@ -410,7 +432,7 @@ class DatabaseService {
       });
     }
 
-    return users.map((user) => ({
+    return users.map((/** @type {any} */ user) => ({
       userId: user.id,
       userName: user.fullName,
       userEmail: user.email,
@@ -418,7 +440,7 @@ class DatabaseService {
     }));
   }
 
-  async getAgentTokenById(id) {
+  async getAgentTokenById(/** @type {any} */ id) {
     const [token] = await db.select({
       id: AGENT_TOKENS.id,
       userId: AGENT_TOKENS.user_id,
@@ -439,7 +461,7 @@ class DatabaseService {
     return token || null;
   }
 
-  async createAgentToken(projectId, userId, label = null) {
+  async createAgentToken(/** @type {any} */ projectId, /** @type {any} */ userId, /** @type {any} */ label = null) {
     const project = await this.getProjectById(projectId);
     if (!project) {
       throw new Error('Project not found');
@@ -474,7 +496,7 @@ class DatabaseService {
     };
   }
 
-  async deleteAgentToken(id) {
+  async deleteAgentToken(/** @type {any} */ id) {
     const existing = await this.getAgentTokenById(id);
     if (!existing) {
       return null;
@@ -484,7 +506,7 @@ class DatabaseService {
     return existing;
   }
 
-  async getDeliverablesForProject(projectId, filters = {}) {
+  async getDeliverablesForProject(/** @type {any} */ projectId, /** @type {any} */ filters = {}) {
     const conditions = [eq(DELIVERABLES.project_id, projectId)];
     if (filters.status) conditions.push(eq(DELIVERABLES.status, filters.status));
     if (filters.type) conditions.push(eq(DELIVERABLES.type, filters.type));
@@ -548,7 +570,11 @@ class DatabaseService {
     return rows;
   }
 
-  async getDeliverableById(id) {
+  /**
+   * @param {number} id - Deliverable primary key.
+   * @returns {Promise<Deliverable|null>} Deliverable contract or null when not found.
+   */
+  async getDeliverableById(/** @type {number} */ id) {
     const [deliverable] = await db.select({
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
@@ -587,8 +613,8 @@ class DatabaseService {
     return deliverable || null;
   }
 
-  async createDeliverable(projectId, data, userId) {
-    const created = await db.transaction(async (tx) => {
+  async createDeliverable(/** @type {any} */ projectId, /** @type {any} */ data, /** @type {any} */ userId) {
+    const created = await db.transaction(async (/** @type {any} */ tx) => {
       const [project] = await tx.select().from(PROJECTS).where(eq(PROJECTS.id, projectId)).limit(1);
       if (!project) throw new Error('Project not found');
 
@@ -626,7 +652,7 @@ class DatabaseService {
     return await this.getDeliverableById(created.id);
   }
 
-  async updateDeliverable(id, data, userId) {
+  async updateDeliverable(/** @type {any} */ id, /** @type {any} */ data, /** @type {any} */ userId) {
     const updateData = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.description !== undefined) updateData.description = data.description;
@@ -646,12 +672,12 @@ class DatabaseService {
     return await this.getDeliverableById(id);
   }
 
-  async deleteDeliverable(id) {
+  async deleteDeliverable(/** @type {any} */ id) {
     const [deleted] = await db.delete(DELIVERABLES).where(eq(DELIVERABLES.id, id)).returning();
     return deleted || null;
   }
 
-  async approveDeliverablePlan(id, userId) {
+  async approveDeliverablePlan(/** @type {any} */ id, /** @type {any} */ userId) {
     const deliverable = await this.getDeliverableById(id);
     if (!deliverable) throw new Error('Deliverable not found');
     if (!deliverable.planFilepath) throw new Error('plan_filepath must be set before approval');
@@ -666,7 +692,7 @@ class DatabaseService {
     return await this.getDeliverableById(id);
   }
 
-  async updateDeliverableStatus(id, status, userId) {
+  async updateDeliverableStatus(/** @type {any} */ id, /** @type {any} */ status, /** @type {any} */ userId) {
     const deliverable = await this.getDeliverableById(id);
     if (!deliverable) throw new Error('Deliverable not found');
 
@@ -677,6 +703,7 @@ class DatabaseService {
     const nextHistory = Array.isArray(deliverable.statusHistory) ? [...deliverable.statusHistory] : [];
     nextHistory.push({ status, changedAt: new Date().toISOString(), changedBy: userId });
 
+    /** @type {Record<string, any>} */
     const updateData = {
       status,
       status_history: nextHistory,
@@ -700,7 +727,11 @@ class DatabaseService {
     return await this.getDeliverableById(id);
   }
 
-  async getTasksForDeliverable(deliverableId) {
+  /**
+   * @param {number} deliverableId - Deliverable primary key.
+   * @returns {Promise<Task[]>} Tasks in the deliverable.
+   */
+  async getTasksForDeliverable(/** @type {number} */ deliverableId) {
     return await this.getTasks({ deliverableId });
   }
 
@@ -709,7 +740,7 @@ class DatabaseService {
   /**
    * Get tasks for a specific project with assignees and tags
    */
-  async getTasksForProject(projectId) {
+  async getTasksForProject(/** @type {any} */ projectId) {
     const tasks = await db.select({
       id: TASKS.id,
       taskId: TASKS.id,
@@ -739,7 +770,7 @@ class DatabaseService {
 
     // Get tags for each task
     const tasksWithTags = await Promise.all(
-      tasks.map(async (task) => {
+      tasks.map(async (/** @type {any} */ task) => {
         const tags = await this.getTagsForTask(task.id);
         return { ...task, tags };
       })
@@ -751,7 +782,8 @@ class DatabaseService {
   /**
    * Get all tasks with filters
    */
-  async getTasks(filters = {}) {
+  async getTasks(/** @type {any} */ filters = {}) {
+    /** @type {any} */
     let query = db.select({
       id: TASKS.id,
       taskId: TASKS.id,
@@ -814,7 +846,7 @@ class DatabaseService {
     
     // Get tags for each task
     const tasksWithTags = await Promise.all(
-      tasks.map(async (task) => {
+      tasks.map(async (/** @type {any} */ task) => {
         const tags = await this.getTagsForTask(task.id);
         return { ...task, tags };
       })
@@ -826,7 +858,7 @@ class DatabaseService {
   /**
    * Get task by ID with full details
    */
-  async getTaskById(id) {
+  async getTaskById(/** @type {any} */ id) {
     const [task] = await db.select({
       id: TASKS.id,
       taskId: TASKS.id,
@@ -869,7 +901,7 @@ class DatabaseService {
   /**
    * Get task by task_id (project code + sequence) with full details
    */
-  async getTaskByTaskId(taskId) {
+  async getTaskByTaskId(/** @type {any} */ taskId) {
     const [task] = await db.select({
       id: TASKS.id,
       taskId: TASKS.id,
@@ -913,12 +945,12 @@ class DatabaseService {
    * Create new task with phase_step generation, dependency wiring, and auto-promotion.
    * Leader provides phase + optional dependencies array; system handles the rest.
    */
-  async createTask(taskData) {
+  async createTask(/** @type {any} */ taskData) {
     if (!taskData.deliverableId) {
       throw new Error('deliverableId is required');
     }
 
-    const task = await db.transaction(async (tx) => {
+    const task = await db.transaction(async (/** @type {any} */ tx) => {
       const [deliverable] = await tx.select().from(DELIVERABLES).where(eq(DELIVERABLES.id, taskData.deliverableId)).limit(1);
       if (!deliverable) throw new Error('Deliverable not found');
       if (taskData.projectId && taskData.projectId !== deliverable.project_id) {
@@ -994,7 +1026,7 @@ class DatabaseService {
       // --- Wire DEPENDS_ON relations from dependencies array ---
       // Leader is responsible for DAG ordering; no cycle check on creation
       if (taskData.dependencies && taskData.dependencies.length > 0) {
-        const depValues = taskData.dependencies.map(depId => ({
+    const depValues = taskData.dependencies.map((/** @type {any} */ depId) => ({
           task_id: newTask.id,
           related_task_id: depId,
           relation_type: 'DEPENDS_ON'
@@ -1016,7 +1048,7 @@ class DatabaseService {
   /**
    * Update task
    */
-  async updateTask(id, taskData) {
+  async updateTask(/** @type {any} */ id, /** @type {any} */ taskData) {
     // Read current state including cancellation flag
     const [current] = await db.select({
       status: TASKS.status,
@@ -1074,7 +1106,7 @@ class DatabaseService {
   /**
    * Update task position and handle related task adjustments
    */
-  async updateTaskPosition(taskId, newPosition, status) {
+  async updateTaskPosition(/** @type {any} */ taskId, /** @type {any} */ newPosition, /** @type {any} */ status) {
     // Get the current task
     const [currentTask] = await db.select()
       .from(TASKS)
@@ -1165,7 +1197,7 @@ class DatabaseService {
   /**
    * Redistribute positions in a column using sparse positioning
    */
-  async redistributeColumnPositions(projectId, status) {
+  async redistributeColumnPositions(/** @type {any} */ projectId, /** @type {any} */ status) {
     const tasks = await db.select()
       .from(TASKS)
       .where(
@@ -1177,7 +1209,7 @@ class DatabaseService {
       .orderBy(asc(TASKS.position));
 
     // Update all tasks with new sparse positions
-    const updatePromises = tasks.map((task, index) => {
+    const updatePromises = tasks.map((/** @type {any} */ task, /** @type {any} */ index) => {
       const newPosition = (index + 1) * 10;
       return db.update(TASKS)
         .set({ 
@@ -1193,7 +1225,7 @@ class DatabaseService {
   /**
    * Delete task
    */
-  async deleteTask(id) {
+  async deleteTask(/** @type {any} */ id) {
     // Delete task tags first
     await db.delete(TASK_TAGS).where(eq(TASK_TAGS.task_id, id));
     
@@ -1212,7 +1244,7 @@ class DatabaseService {
    * - Only hyphens (-) allowed as separators
    * - Cannot start or end with hyphen
    */
-  validateTagName(tagName) {
+  validateTagName(/** @type {any} */ tagName) {
     if (!tagName || typeof tagName !== 'string') {
       throw new Error('Tag name is required and must be a string');
     }
@@ -1238,8 +1270,11 @@ class DatabaseService {
 
   /**
    * Get all tags with optional search and usage counts
+   * @param {string|null} searchTerm - Optional tag search term.
+   * @returns {Promise<Tag[]>} Tags with usage counts.
    */
-  async getTags(searchTerm = null) {
+  async getTags(/** @type {string|null} */ searchTerm = null) {
+    /** @type {any} */
     let query = db.select({
       tag: TAGS.tag,
       color: TAGS.color,
@@ -1261,7 +1296,7 @@ class DatabaseService {
   /**
    * Get tag by tag name
    */
-  async getTagByName(tagName) {
+  async getTagByName(/** @type {any} */ tagName) {
     const [tag] = await db.select({
       tag: TAGS.tag,
       color: TAGS.color,
@@ -1277,7 +1312,7 @@ class DatabaseService {
   /**
    * Create new tag with random color
    */
-  async createTag(tagData) {
+  async createTag(/** @type {any} */ tagData) {
     // Validate tag name
     this.validateTagName(tagData.tag || tagData.name);
     
@@ -1301,7 +1336,7 @@ class DatabaseService {
   /**
    * Update tag
    */
-  async updateTag(tagName, tagData) {
+  async updateTag(/** @type {any} */ tagName, /** @type {any} */ tagData) {
     // Validate tag name if it's being updated
     if (tagData.tag || tagData.name) {
       this.validateTagName(tagData.tag || tagData.name);
@@ -1325,7 +1360,7 @@ class DatabaseService {
   /**
    * Delete tag
    */
-  async deleteTag(tagName) {
+  async deleteTag(/** @type {any} */ tagName) {
     const [tag] = await db.delete(TAGS)
       .where(eq(TAGS.tag, tagName))
       .returning();
@@ -1340,7 +1375,7 @@ class DatabaseService {
   /**
    * Get tags for a specific task
    */
-  async getTagsForTask(taskId) {
+  async getTagsForTask(/** @type {any} */ taskId) {
     const tags = await db.select({
       tag: TAGS.tag,
       color: TAGS.color
@@ -1356,13 +1391,13 @@ class DatabaseService {
   /**
    * Set tags for a task (replaces existing tags)
    */
-  async setTaskTags(taskId, tagNames) {
+  async setTaskTags(/** @type {any} */ taskId, /** @type {any} */ tagNames) {
     // Remove existing tags
     await db.delete(TASK_TAGS).where(eq(TASK_TAGS.task_id, taskId));
     
     // Add new tags
     if (tagNames && tagNames.length > 0) {
-      const taskTagData = tagNames.map(tagName => ({
+      const taskTagData = tagNames.map((/** @type {any} */ tagName) => ({
         task_id: taskId,
         tag: tagName
       }));
@@ -1376,7 +1411,7 @@ class DatabaseService {
   /**
    * Get all images for a task
    */
-  async getTaskImages(taskId) {
+  async getTaskImages(/** @type {any} */ taskId) {
     const images = await db.select({
       id: IMAGE_METADATA.id,
       taskId: IMAGE_METADATA.task_id,
@@ -1398,7 +1433,7 @@ class DatabaseService {
   /**
    * Get all images attached directly to a deliverable
    */
-  async getDeliverableImages(deliverableId) {
+  async getDeliverableImages(/** @type {any} */ deliverableId) {
     const images = await db.select({
       id: IMAGE_METADATA.id,
       taskId: IMAGE_METADATA.task_id,
@@ -1419,8 +1454,12 @@ class DatabaseService {
 
   /**
    * Store task-owned image with metadata and binary data
+   * @param {number} taskId - Owning task primary key.
+   * @param {{ originalName: string, contentType: string, fileSize: number, base64Data?: string, data?: string, thumbnailData?: string|null }} imageData - Image payload.
+   * @param {string} [imageUrlBase] - Base URL for generated image URLs.
+   * @returns {Promise<ImageMetadata>} Stored image metadata.
    */
-  async storeTaskImage(taskId, imageData, imageUrlBase = '/images') {
+  async storeTaskImage(/** @type {number} */ taskId, /** @type {{ originalName: string, contentType: string, fileSize: number, base64Data?: string, data?: string, thumbnailData?: string|null }} */ imageData, /** @type {string} */ imageUrlBase = '/images') {
     // Insert image metadata
     const [metadata] = await db.insert(IMAGE_METADATA)
       .values({
@@ -1464,7 +1503,7 @@ class DatabaseService {
   /**
    * Store deliverable-owned image with metadata and binary data
    */
-  async storeDeliverableImage(deliverableId, imageData, imageUrlBase = '/images') {
+  async storeDeliverableImage(/** @type {any} */ deliverableId, /** @type {any} */ imageData, /** @type {any} */ imageUrlBase = '/images') {
     const [metadata] = await db.insert(IMAGE_METADATA)
       .values({
         task_id: null,
@@ -1505,7 +1544,7 @@ class DatabaseService {
   /**
    * Get image with binary data for serving
    */
-  async getImageWithData(imageId) {
+  async getImageWithData(/** @type {any} */ imageId) {
     const [result] = await db
       .select({
         id: IMAGE_METADATA.id,
@@ -1530,7 +1569,7 @@ class DatabaseService {
   /**
    * Get image metadata only
    */
-  async getImageMetadata(imageId) {
+  async getImageMetadata(/** @type {any} */ imageId) {
     const [image] = await db.select({
       id: IMAGE_METADATA.id,
       taskId: IMAGE_METADATA.task_id,
@@ -1552,7 +1591,7 @@ class DatabaseService {
   /**
    * Delete image and its binary data
    */
-  async deleteImage(imageId) {
+  async deleteImage(/** @type {any} */ imageId) {
     // Delete binary data first (cascade will handle this, but being explicit)
     await db.delete(IMAGE_DATA)
       .where(eq(IMAGE_DATA.id, imageId));
@@ -1573,15 +1612,15 @@ class DatabaseService {
 
   // ==================== FILE LOCK OPERATIONS ====================
 
-  normalizeLockFileRelativePaths(fileRelativePaths = []) {
+  normalizeLockFileRelativePaths(/** @type {any} */ fileRelativePaths = []) {
     if (!Array.isArray(fileRelativePaths)) return [];
     const normalized = fileRelativePaths
-      .map((value) => String(value || '').trim())
+      .map((/** @type {any} */ value) => String(value || '').trim())
       .filter(Boolean);
     return [...new Set(normalized)];
   }
 
-  normalizeLockTtlSeconds(ttlSeconds) {
+  normalizeLockTtlSeconds(/** @type {any} */ ttlSeconds) {
     const parsed = Number.parseInt(ttlSeconds, 10);
     if (!Number.isFinite(parsed)) return 30;
     if (parsed < 5) return 5;
@@ -1589,7 +1628,7 @@ class DatabaseService {
     return parsed;
   }
 
-  mapFileLock(lock) {
+  mapFileLock(/** @type {any} */ lock) {
     return {
       id: lock.id,
       projectId: lock.project_id,
@@ -1607,7 +1646,7 @@ class DatabaseService {
     };
   }
 
-  async reclaimExpiredFileLocks(tx, deliverableId) {
+  async reclaimExpiredFileLocks(/** @type {any} */ tx, /** @type {any} */ deliverableId) {
     return tx
       .delete(FILE_LOCKS)
       .where(
@@ -1618,8 +1657,12 @@ class DatabaseService {
       );
   }
 
-  async listActiveFileLocks({ projectId, deliverableId }) {
-    return db.transaction(async (tx) => {
+  /**
+   * @param {{ projectId: number, deliverableId: number }} input - Project and deliverable scope.
+   * @returns {Promise<FileLock[]>} Active file locks after expired leases are reclaimed.
+   */
+  async listActiveFileLocks(/** @type {{ projectId: number, deliverableId: number }} */ { projectId, deliverableId }) {
+    return db.transaction(async (/** @type {any} */ tx) => {
       await this.reclaimExpiredFileLocks(tx, deliverableId);
       const rows = await tx
         .select()
@@ -1632,11 +1675,15 @@ class DatabaseService {
           )
         )
         .orderBy(asc(FILE_LOCKS.file_relative_path));
-      return rows.map((row) => this.mapFileLock(row));
+      return rows.map((/** @type {any} */ row) => this.mapFileLock(row));
     });
   }
 
-  async acquireFileLocks({ projectId, deliverableId, taskId, phaseStep = null, agentName, fileRelativePaths, ttlSeconds = 30, userId = null }) {
+  /**
+   * @param {{ projectId: number, deliverableId: number, taskId: number, phaseStep?: string|null, agentName: string, fileRelativePaths: string[], ttlSeconds?: number, userId?: number|null }} input - Lock acquisition request.
+   * @returns {Promise<{ acquired: boolean, locks?: FileLock[], ttlSeconds?: number, error?: string, conflicts?: Array<object>, pollIntervalSeconds?: number }>} Lock acquisition result.
+   */
+  async acquireFileLocks(/** @type {{ projectId: number, deliverableId: number, taskId: number, phaseStep?: string|null, agentName: string, fileRelativePaths: string[], ttlSeconds?: number, userId?: number|null }} */ { projectId, deliverableId, taskId, phaseStep = null, agentName, fileRelativePaths, ttlSeconds = 30, userId = null }) {
     const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
     if (normalizedFileRelativePaths.length === 0) {
       throw new Error('fileRelativePaths is required and must contain at least one path');
@@ -1647,7 +1694,7 @@ class DatabaseService {
     }
     const ttl = this.normalizeLockTtlSeconds(ttlSeconds);
 
-    return db.transaction(async (tx) => {
+    return db.transaction(async (/** @type {any} */ tx) => {
       await this.reclaimExpiredFileLocks(tx, deliverableId);
 
       const [task] = await tx.select({
@@ -1675,8 +1722,8 @@ class DatabaseService {
         );
 
       const conflicts = existingLocks
-        .filter((lock) => !(lock.task_id === taskId && lock.agent_name === normalizedAgentName))
-        .map((lock) => ({
+        .filter((/** @type {any} */ lock) => !(lock.task_id === taskId && lock.agent_name === normalizedAgentName))
+        .map((/** @type {any} */ lock) => ({
           fileRelativePath: lock.file_relative_path,
           taskId: lock.task_id,
           phaseStep: lock.phase_step,
@@ -1697,7 +1744,7 @@ class DatabaseService {
       const leaseExpiresAt = new Date(now.getTime() + ttl * 1000);
 
       for (const fileRelativePath of normalizedFileRelativePaths) {
-        const existing = existingLocks.find((lock) => lock.file_relative_path === fileRelativePath);
+        const existing = existingLocks.find((/** @type {any} */ lock) => lock.file_relative_path === fileRelativePath);
         if (existing) {
           await tx
             .update(FILE_LOCKS)
@@ -1746,13 +1793,13 @@ class DatabaseService {
 
       return {
         acquired: true,
-        locks: acquiredRows.map((row) => this.mapFileLock(row)),
+        locks: acquiredRows.map((/** @type {any} */ row) => this.mapFileLock(row)),
         ttlSeconds: ttl,
       };
     });
   }
 
-  async heartbeatFileLocks({ projectId, deliverableId, taskId, agentName, fileRelativePaths = [], ttlSeconds = 30, userId = null }) {
+  async heartbeatFileLocks(/** @type {any} */ { projectId, deliverableId, taskId, agentName, fileRelativePaths = [], ttlSeconds = 30, userId = null }) {
     const normalizedAgentName = String(agentName || '').trim();
     if (!normalizedAgentName) {
       throw new Error('agentName is required');
@@ -1760,7 +1807,7 @@ class DatabaseService {
     const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
     const ttl = this.normalizeLockTtlSeconds(ttlSeconds);
 
-    return db.transaction(async (tx) => {
+    return db.transaction(async (/** @type {any} */ tx) => {
       await this.reclaimExpiredFileLocks(tx, deliverableId);
 
       const now = new Date();
@@ -1792,19 +1839,19 @@ class DatabaseService {
       return {
         refreshedCount: refreshedRows.length,
         ttlSeconds: ttl,
-        locks: refreshedRows.map((row) => this.mapFileLock(row)),
+        locks: refreshedRows.map((/** @type {any} */ row) => this.mapFileLock(row)),
       };
     });
   }
 
-  async releaseFileLocks({ projectId, deliverableId, taskId, agentName, fileRelativePaths = [] }) {
+  async releaseFileLocks(/** @type {any} */ { projectId, deliverableId, taskId, agentName, fileRelativePaths = [] }) {
     const normalizedAgentName = String(agentName || '').trim();
     if (!normalizedAgentName) {
       throw new Error('agentName is required');
     }
     const normalizedFileRelativePaths = this.normalizeLockFileRelativePaths(fileRelativePaths);
 
-    return db.transaction(async (tx) => {
+    return db.transaction(async (/** @type {any} */ tx) => {
       await this.reclaimExpiredFileLocks(tx, deliverableId);
 
       const conditions = [
@@ -1824,7 +1871,7 @@ class DatabaseService {
 
       return {
         releasedCount: releasedRows.length,
-        locks: releasedRows.map((row) => this.mapFileLock(row)),
+        locks: releasedRows.map((/** @type {any} */ row) => this.mapFileLock(row)),
       };
     });
   }
@@ -1839,14 +1886,15 @@ class DatabaseService {
       const result = await db.execute(sql`SELECT 1 as test`);
       return { status: 'connected', result };
     } catch (error) {
-      throw new Error(`Database connection failed: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Database connection failed: ${message}`);
     }
   }
 
   /**
    * Get column positions for a specific project and status
    */
-  async getColumnPositions(projectId, status) {
+  async getColumnPositions(/** @type {any} */ projectId, /** @type {any} */ status) {
     const tasks = await db.select({
       id: TASKS.id,
       position: TASKS.position
@@ -1866,9 +1914,9 @@ class DatabaseService {
   /**
    * Update multiple task positions in a column (optimized for sparse positioning)
    */
-  async updateColumnPositions(projectId, status, positionUpdates) {
+  async updateColumnPositions(/** @type {any} */ projectId, /** @type {any} */ status, /** @type {any} */ positionUpdates) {
     // Update only the tasks that need position changes
-    const updatePromises = positionUpdates.map(({ taskId, newPosition }) => {
+    const updatePromises = positionUpdates.map((/** @type {any} */ { taskId, newPosition }) => {
       return db.update(TASKS)
         .set({ 
           position: newPosition,
@@ -1886,7 +1934,7 @@ class DatabaseService {
   /**
    * Calculate optimal positions for sparse positioning
    */
-  calculateSparsePositions(tasks, insertIndex, insertPosition) {
+  calculateSparsePositions(/** @type {any} */ tasks, /** @type {any} */ insertIndex, /** @type {any} */ insertPosition) {
     const positions = [];
     let needsRedistribution = false;
 
@@ -1925,7 +1973,7 @@ class DatabaseService {
   /**
    * Get all relations for a task (both directions)
    */
-  async getTaskRelations(taskId) {
+  async getTaskRelations(/** @type {any} */ taskId) {
     const relations = await db.select({
       taskId: TASK_RELATIONS.task_id,
       relatedTaskId: TASK_RELATIONS.related_task_id,
@@ -1946,8 +1994,13 @@ class DatabaseService {
   /**
    * Create a task relation
    * For COORDINATES_WITH, automatically creates the mirror row
+   * @param {number} taskId - Source task primary key.
+   * @param {number} relatedTaskId - Related task primary key.
+   * @param {TaskRelationType} relationType - Relation kind.
+   * @param {number|null} [updatedBy] - User primary key for audit fields.
+   * @returns {Promise<object>} Created relation row.
    */
-  async createTaskRelation(taskId, relatedTaskId, relationType, updatedBy = null) {
+  async createTaskRelation(/** @type {number} */ taskId, /** @type {number} */ relatedTaskId, /** @type {TaskRelationType} */ relationType, /** @type {number|null} */ updatedBy = null) {
     // Prevent self-referencing
     if (taskId === relatedTaskId) {
       throw new Error('A task cannot relate to itself');
@@ -1983,6 +2036,7 @@ class DatabaseService {
       )
       .limit(1);
     if (existing) {
+      /** @type {Error & { isDuplicate?: boolean }} */
       const err = new Error('This relation already exists');
       err.isDuplicate = true;
       throw err;
@@ -2021,7 +2075,7 @@ class DatabaseService {
    * Delete a task relation
    * For COORDINATES_WITH, automatically deletes the mirror row
    */
-  async deleteTaskRelation(taskId, relatedTaskId, relationType) {
+  async deleteTaskRelation(/** @type {any} */ taskId, /** @type {any} */ relatedTaskId, /** @type {any} */ relationType) {
     // Delete the primary relation
     const [deleted] = await db.delete(TASK_RELATIONS)
       .where(
@@ -2051,7 +2105,7 @@ class DatabaseService {
   /**
    * Get the full task graph for a project: all tasks + all relations
    */
-  async getProjectTaskGraph(projectId) {
+  async getProjectTaskGraph(/** @type {any} */ projectId) {
     const tasks = await db.select({
       id: TASKS.id,
       taskId: TASKS.id,
@@ -2092,7 +2146,7 @@ class DatabaseService {
    * Get the task graph for a single deliverable: tasks + relations scoped to that deliverable.
    * Only returns relations where BOTH task endpoints belong to this deliverable.
    */
-  async getDeliverableTaskGraph(deliverableId) {
+  async getDeliverableTaskGraph(/** @type {any} */ deliverableId) {
     const tasks = await db.select({
       id: TASKS.id,
       taskId: TASKS.id,
@@ -2140,7 +2194,7 @@ class DatabaseService {
    * Uses iterative BFS from relatedTaskId following DEPENDS_ON edges
    * Returns true if taskId is reachable from relatedTaskId (i.e. cycle)
    */
-  async wouldCreateCycle(taskId, relatedTaskId) {
+  async wouldCreateCycle(/** @type {any} */ taskId, /** @type {any} */ relatedTaskId) {
     // If we add taskId -> relatedTaskId (taskId DEPENDS_ON relatedTaskId),
     // there's a cycle if relatedTaskId already (transitively) depends on taskId.
     // So: BFS from relatedTaskId following DEPENDS_ON, see if we reach taskId.
@@ -2188,7 +2242,7 @@ class DatabaseService {
    * the project's completionCriteriaStatus (or DONE if not set)
    * Returns { ready: boolean, blockedBy: [{id, taskId, status}] }
    */
-  async checkTaskReadiness(taskId) {
+  async checkTaskReadiness(/** @type {any} */ taskId) {
     // Get the task and its project
     const [task] = await db.select({
       id: TASKS.id,
@@ -2252,7 +2306,7 @@ class DatabaseService {
    * can now be auto-promoted from TO_DO to READY.
    * Returns array of promoted task IDs.
    */
-  async checkAndPromoteDependents(completedTaskId) {
+  async checkAndPromoteDependents(/** @type {any} */ completedTaskId) {
     // Find tasks that depend on the completed task
     const dependents = await db.select({
       taskId: TASK_RELATIONS.task_id
@@ -2318,7 +2372,7 @@ class DatabaseService {
   /**
    * Get coordination type by code
    */
-  async getCoordinationTypeByCode(code) {
+  async getCoordinationTypeByCode(/** @type {any} */ code) {
     const [def] = await db.select({
       code: COORDINATION_TYPES.code,
       description: COORDINATION_TYPES.description,
@@ -2353,7 +2407,7 @@ class DatabaseService {
   /**
    * Get status definition by code
    */
-  async getStatusDefinitionByCode(code) {
+  async getStatusDefinitionByCode(/** @type {any} */ code) {
     const [status] = await db.select({
       code: STATUS_DEFINITIONS.code,
       description: STATUS_DEFINITIONS.description,
@@ -2372,7 +2426,7 @@ class DatabaseService {
   /**
    * Get translations by language code
    */
-  async getTranslationsByLanguage(languageCode) {
+  async getTranslationsByLanguage(/** @type {any} */ languageCode) {
     const [translation] = await db.select({
       id: TRANSLATIONS.id,
       languageCode: TRANSLATIONS.language_code,

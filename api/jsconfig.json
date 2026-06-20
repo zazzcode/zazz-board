@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "noImplicitAny": true,
+    "strictNullChecks": false,
+    "types": ["node"],
+    "maxNodeModuleJsDepth": 0,
+    "skipLibCheck": true
+  },
+  "include": [
+    "lib/**/*.js",
+    "src/types.js",
+    "src/utils/propertyMapper.js",
+    "src/services/databaseService.js",
+    "src/services/tokenService.js",
+    "src/services/realtimeService.js",
+    "src/services/gitStatus.js",
+    "src/middleware/authMiddleware.js",
+    "src/routes/projects.js"
+  ],
+  "exclude": ["__tests__/**", "node_modules/**", "coverage/**"]
+}

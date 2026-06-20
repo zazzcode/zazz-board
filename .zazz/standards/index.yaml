@@ -46,6 +46,57 @@ standards:
       snake_case DB ↔ camelCase JS field mapping, UPPER_SNAKE_CASE codes, sparse task
       positions, pre-v1 vs v1 migration workflow, and key tables.
 
+  - file: data-layer.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/src/services/databaseService.js
+        - api/lib/db/schema.js
+        - api/src/utils/propertyMapper.js
+      activities:
+        - writing or modifying databaseService queries or Drizzle schema
+        - changing the snake_case ↔ camelCase field mapping
+        - changing data-layer JSDoc typedefs or service return contracts
+    purpose: >-
+      Drizzle query composition, the databaseService DB seam, schema-derived data
+      contracts, snake_case DB to camelCase JS mapping, explicit join aliases,
+      UPPER_SNAKE_CASE domain codes, sparse positions, and data-layer review evidence.
+
+  - file: service-layer.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/src/services/
+        - api/src/middleware/
+        - api/src/routes/
+      activities:
+        - adding or changing backend service contracts
+        - changing auth context or agent-token project scoping
+        - publishing or subscribing to realtime project events
+        - marshalling data between routes, services, and the data layer
+    purpose: >-
+      Backend service boundaries, service-to-route contracts, auth context,
+      data marshalling, realtime/SSE publishing and subscription boundaries,
+      and service review evidence.
+
+  - file: jsdoc-typing.md
+    tier: repo-specific
+    applies_to:
+      paths:
+        - api/src/
+        - api/jsconfig.json
+        - api/eslint.config.js
+        - client/src/
+      activities:
+        - adding or changing JSDoc typedefs or annotations
+        - adding or changing check-only JavaScript typecheck tooling
+        - adding or changing scoped JSDoc linting
+        - reviewing TypeScript checker suppressions or exclusions
+    purpose: >-
+      JavaScript-only soft typing with JSDoc, centralized typedef placement,
+      type-only import style, tsc --noEmit requirements, scoped JSDoc linting,
+      and allowed checker suppressions.
+
   - file: testing.md
     tier: repo-specific
     applies_to:
@@ -193,20 +244,6 @@ standards:
       PLACEHOLDER. Fastify route layout, endpoint naming, plugin registration, JSON Schema
       validation wiring, and the handler/schema boundary. coding-styles.md takes precedence
       until this is expanded.
-
-  - file: data-layer.md
-    tier: placeholder
-    applies_to:
-      paths:
-        - api/src/services/databaseService.js
-        - api/lib/db/schema.js
-      activities:
-        - writing or modifying databaseService queries or Drizzle schema
-        - changing the snake_case ↔ camelCase field mapping
-    purpose: >-
-      PLACEHOLDER. The databaseService DB seam, Drizzle query composition, field mapping,
-      and the routes-never-touch-the-DB rule. data-architecture.md takes precedence until
-      this is expanded.
 
   - file: frontend.md
     tier: placeholder

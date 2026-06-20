@@ -1,10 +1,21 @@
 import { projectSchemas } from '../schemas/validation.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
-export default async function projectRoutes(fastify, options) {
+/**
+ * @typedef {import('fastify').FastifyInstance} FastifyInstance
+ * @typedef {import('../types.js').RealtimeEventPayload} RealtimeEventPayload
+ */
+
+/**
+ * Register project-scoped routes.
+ * @param {FastifyInstance} fastify - Fastify app instance.
+ * @param {{ dbService: any, realtimeService?: import('../services/realtimeService.js').default|null }} options - Route dependencies.
+ * @returns {Promise<void>}
+ */
+export default async function projectRoutes(/** @type {FastifyInstance} */ fastify, /** @type {{ dbService: any, realtimeService?: import('../services/realtimeService.js').default|null }} */ options) {
   const { dbService, realtimeService } = options;
 
-  const publishEvent = (projectCode, payload) => {
+  const publishEvent = (/** @type {string} */ projectCode, /** @type {RealtimeEventPayload} */ payload) => {
     if (!realtimeService) return;
     realtimeService.publish(projectCode, payload);
   };
@@ -32,7 +43,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     const { code } = request.params;
     const project = await dbService.getProjectByCode(code);
     if (!project) {
@@ -54,7 +65,7 @@ export default async function projectRoutes(fastify, options) {
     if (rawReply.flushHeaders) rawReply.flushHeaders();
 
     const subscriberId = realtimeService.subscribe(projectCode, {
-      send: (message) => rawReply.write(message)
+      send: (/** @type {any} */ message) => rawReply.write(message)
     });
 
     const heartbeat = setInterval(() => {
@@ -84,7 +95,7 @@ export default async function projectRoutes(fastify, options) {
   // GET /projects - List all projects with details
   fastify.get('/projects', {
     schema: projectSchemas.getProjects
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const projects = await dbService.getProjectsWithDetails();
       reply.send(projects);
@@ -97,7 +108,7 @@ export default async function projectRoutes(fastify, options) {
   // GET /projects/:id - Get specific project
   fastify.get('/projects/:id', {
     schema: projectSchemas.getProjectById
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { id } = request.params;
       const project = await dbService.getProjectById(parseInt(id));
@@ -116,7 +127,7 @@ export default async function projectRoutes(fastify, options) {
   // POST /projects - Create new project
   fastify.post('/projects', {
     schema: projectSchemas.createProject
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const project = await dbService.createProject(request.body);
       reply.code(201).send(project);
@@ -129,7 +140,7 @@ export default async function projectRoutes(fastify, options) {
   // PUT /projects/:id - Update project
   fastify.put('/projects/:id', {
     schema: projectSchemas.updateProject
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { id } = request.params;
       const project = await dbService.updateProject(parseInt(id), request.body);
@@ -148,7 +159,7 @@ export default async function projectRoutes(fastify, options) {
   // DELETE /projects/:id - Delete project
   fastify.delete('/projects/:id', {
     schema: projectSchemas.deleteProject
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { id } = request.params;
       const project = await dbService.deleteProject(parseInt(id));
@@ -167,7 +178,7 @@ export default async function projectRoutes(fastify, options) {
   // GET /projects/:id/tasks - Get tasks for project
   fastify.get('/projects/:id/tasks', {
     schema: projectSchemas.getProjectTasks
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { id } = request.params;
       const { status, priority } = request.query;
@@ -196,7 +207,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { id, status } = request.params;
       const projectId = parseInt(id);
@@ -242,7 +253,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, status } = request.params;
       const { positionUpdates } = request.body;
@@ -258,7 +269,7 @@ export default async function projectRoutes(fastify, options) {
         type: 'task',
         eventType: 'task.column_reordered',
         status,
-        taskIds: positionUpdates.map((item) => item.taskId),
+        taskIds: positionUpdates.map((/** @type {any} */ item) => item.taskId),
       });
       reply.send(updatedTasks);
     } catch (error) {
@@ -290,7 +301,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, taskId } = request.params;
       const { newPosition, status } = request.body;
@@ -324,7 +335,7 @@ export default async function projectRoutes(fastify, options) {
   // PATCH /projects/:code/tasks/:taskId/status - Change task status (project-scoped)
   fastify.patch('/projects/:code/tasks/:taskId/status', {
     schema: projectSchemas.updateTaskStatus
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, taskId } = request.params;
       const { status } = request.body;
@@ -354,7 +365,7 @@ export default async function projectRoutes(fastify, options) {
       
       // Calculate new position (at the bottom of the column)
       const newPosition = targetColumnTasks.length > 0 ? 
-        Math.max(...targetColumnTasks.map(t => t.position || 0)) + 10 : 10;
+        Math.max(...targetColumnTasks.map((/** @type {any} */ t) => t.position || 0)) + 10 : 10;
       
       // Update task with new status and position — updateTask handles auto-promotion
       const updatedTask = await dbService.updateTask(currentTask.id, {
@@ -383,7 +394,7 @@ export default async function projectRoutes(fastify, options) {
   // PUT /projects/:code/tasks/:taskId - Update task (project-scoped)
   fastify.put('/projects/:code/tasks/:taskId', {
     schema: projectSchemas.updateTask
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, taskId } = request.params;
       const taskData = request.body;
@@ -430,7 +441,7 @@ export default async function projectRoutes(fastify, options) {
   // DELETE /projects/:code/tasks/:taskId - Delete task (project-scoped)
   fastify.delete('/projects/:code/tasks/:taskId', {
     schema: projectSchemas.deleteTask
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, taskId } = request.params;
       
@@ -494,7 +505,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code } = request.params;
       
@@ -535,7 +546,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code } = request.params;
       const { statusWorkflow } = request.body;
@@ -553,9 +564,9 @@ export default async function projectRoutes(fastify, options) {
       
       // Validate all status codes exist in STATUS_DEFINITIONS
       const validStatuses = await dbService.getStatusDefinitions();
-      const validStatusCodes = validStatuses.map(s => s.code);
+      const validStatusCodes = validStatuses.map((/** @type {any} */ s) => s.code);
       
-      const invalidStatuses = statusWorkflow.filter(status => !validStatusCodes.includes(status));
+      const invalidStatuses = statusWorkflow.filter((/** @type {any} */ status) => !validStatusCodes.includes(status));
       if (invalidStatuses.length > 0) {
         return reply.code(400).send({ 
           error: 'Invalid status codes', 
@@ -565,7 +576,7 @@ export default async function projectRoutes(fastify, options) {
       
       // Check if any statuses being removed have tasks
       const currentWorkflow = project.statusWorkflow;
-      const removedStatuses = currentWorkflow.filter(status => !statusWorkflow.includes(status));
+      const removedStatuses = currentWorkflow.filter((/** @type {any} */ status) => !statusWorkflow.includes(status));
       
       for (const status of removedStatuses) {
         const hasTasks = await dbService.hasTasksWithStatus(project.id, status);
@@ -607,7 +618,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code } = request.params;
       const project = await dbService.getProjectByCode(code);
@@ -644,7 +655,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code } = request.params;
       const { deliverableStatusWorkflow } = request.body;
@@ -655,14 +666,14 @@ export default async function projectRoutes(fastify, options) {
       }
 
       const validStatuses = await dbService.getStatusDefinitions();
-      const validStatusCodes = validStatuses.map(s => s.code);
-      const invalidStatuses = deliverableStatusWorkflow.filter(status => !validStatusCodes.includes(status));
+      const validStatusCodes = validStatuses.map((/** @type {any} */ s) => s.code);
+      const invalidStatuses = deliverableStatusWorkflow.filter((/** @type {any} */ status) => !validStatusCodes.includes(status));
       if (invalidStatuses.length > 0) {
         return reply.code(400).send({ error: 'Invalid status codes', invalidStatuses });
       }
 
       const currentWorkflow = project.deliverableStatusWorkflow || [];
-      const removedStatuses = currentWorkflow.filter(status => !deliverableStatusWorkflow.includes(status));
+      const removedStatuses = currentWorkflow.filter((/** @type {any} */ status) => !deliverableStatusWorkflow.includes(status));
       for (const status of removedStatuses) {
         const hasDeliverables = await dbService.hasDeliverablesWithStatus(project.id, status);
         if (hasDeliverables) {
@@ -689,7 +700,7 @@ export default async function projectRoutes(fastify, options) {
   // POST /projects/:code/deliverables/:delivId/tasks - Create task
   fastify.post('/projects/:code/deliverables/:delivId/tasks', {
     schema: projectSchemas.createDeliverableTask
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId } = request.params;
       const deliverableId = parseInt(delivId);
@@ -736,7 +747,7 @@ export default async function projectRoutes(fastify, options) {
   // GET /projects/:code/deliverables/:delivId/tasks/:taskId - Get single task
   fastify.get('/projects/:code/deliverables/:delivId/tasks/:taskId', {
     schema: projectSchemas.getDeliverableTask
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId, taskId } = request.params;
       const deliverableId = parseInt(delivId);
@@ -764,7 +775,7 @@ export default async function projectRoutes(fastify, options) {
   // PUT /projects/:code/deliverables/:delivId/tasks/:taskId - Update task
   fastify.put('/projects/:code/deliverables/:delivId/tasks/:taskId', {
     schema: projectSchemas.updateDeliverableTask
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId, taskId } = request.params;
       const deliverableId = parseInt(delivId);
@@ -823,7 +834,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId, taskId } = request.params;
       const deliverableId = parseInt(delivId);
@@ -884,7 +895,7 @@ export default async function projectRoutes(fastify, options) {
         additionalProperties: false
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId, taskId } = request.params;
       const { note, agentName } = request.body;
@@ -953,7 +964,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId, taskId } = request.params;
       const { status, agentName } = request.body;
@@ -990,7 +1001,7 @@ export default async function projectRoutes(fastify, options) {
       });
 
       const newPosition = targetColumnTasks.length > 0 ?
-        Math.max(...targetColumnTasks.map(t => t.position || 0)) + 10 : 10;
+        Math.max(...targetColumnTasks.map((/** @type {any} */ t) => t.position || 0)) + 10 : 10;
 
       // Update task — agent claims by setting agentName alongside status
       const updatedTask = await dbService.updateTask(taskIdNum, {
@@ -1033,7 +1044,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId, taskId } = request.params;
       const deliverableId = parseInt(delivId);
@@ -1098,7 +1109,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId, taskId } = request.params;
       const { position } = request.body;
@@ -1164,7 +1175,7 @@ export default async function projectRoutes(fastify, options) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (/** @type {any} */ request, /** @type {any} */ reply) => {
     try {
       const { code, delivId, taskId } = request.params;
       const { tagIds } = request.body;

@@ -2,12 +2,15 @@
  * Core route schemas (health, root, db-test, token-info).
  */
 
+/** @type {[]} */
+const noSecurity = [];
+
 export const coreSchemas = {
   getHealth: {
     tags: ['core'],
     summary: 'Health check',
     description: 'Returns API health and token cache stats. No authentication required.',
-    security: [],
+    security: noSecurity,
     response: {
       200: {
         description: 'API is healthy',
@@ -31,7 +34,7 @@ export const coreSchemas = {
     tags: ['core'],
     summary: 'API info',
     description: 'Returns API message and endpoint list. No authentication required.',
-    security: [],
+    security: noSecurity,
     response: {
       200: {
         description: 'API info',
@@ -49,7 +52,7 @@ export const coreSchemas = {
     tags: ['core'],
     summary: 'Database connectivity test',
     description: 'Tests database connection. No authentication required.',
-    security: [],
+    security: noSecurity,
     response: {
       200: {
         description: 'Database connected',
@@ -74,7 +77,7 @@ export const coreSchemas = {
     tags: ['core'],
     summary: 'Token cache debug',
     description: 'Returns token cache stats for debugging. No authentication required.',
-    security: [],
+    security: noSecurity,
     response: {
       200: {
         description: 'Token cache info',
