@@ -151,6 +151,53 @@
     "dragToReorder": "Arrastra para reordenar tareas",
     "dropToMove": "Suelta para mover tarea"
   },
+  "gantt": {
+    "title": "Gantt",
+    "milestone": "Hito",
+    "milestones": "Hitos",
+    "configuration": "Configuración de Gantt",
+    "defaultMilestone": "Predeterminado",
+    "numberedMilestone": "Hito {{number}}",
+    "empty": "No hay datos de hitos disponibles",
+    "errorTitle": "No se pudo cargar la vista Gantt",
+    "createMilestone": "Crear Hito",
+    "editMilestone": "Editar Hito",
+    "timelineLabel": "Medido por la escala del proyecto",
+    "projectSettings": "Configuración de Gantt",
+    "projectSettingsOwnerOnly": "Solo el líder del proyecto puede editar la configuración de Gantt",
+    "addDeliverable": "Agregar entregable",
+    "noAssignedDeliverables": "No hay entregables asignados",
+    "noAvailableDeliverables": "No hay entregables disponibles",
+    "moveDeliverableUp": "Subir {{name}}",
+    "moveDeliverableDown": "Bajar {{name}}",
+    "removeDeliverable": "Quitar {{name}}",
+    "fields": {
+      "name": "Nombre",
+      "generatedName": "Se genera automáticamente si está vacío",
+      "startDate": "Fecha de Inicio",
+      "endDate": "Fecha de Fin",
+      "deliverables": "Entregables",
+      "selectDeliverables": "Seleccionar entregables",
+      "timelineMode": "Modo de Escala",
+      "periodStartDate": "Fecha de Inicio del Período",
+      "sprintLengthWeeks": "Duración del Sprint (semanas)",
+      "startingNumber": "Número Inicial",
+      "sprintPrefix": "Prefijo de Sprint",
+      "weekPrefix": "Prefijo de Semana",
+      "showDateLabels": "Mostrar etiquetas de fecha",
+      "showDefaultMilestone": "Mostrar hito predeterminado"
+    },
+    "timelineModes": {
+      "dates": "Fechas",
+      "weeks": "Semanas",
+      "sprints": "Sprints"
+    },
+    "columns": {
+      "item": "Elemento",
+      "status": "Estado",
+      "progress": "Progreso"
+    }
+  },
   "users": {
     "title": "Usuarios",
     "fullName": "Nombre Completo",

@@ -151,6 +151,53 @@
     "dragToReorder": "Glissez pour réorganiser les tâches",
     "dropToMove": "Déposez pour déplacer la tâche"
   },
+  "gantt": {
+    "title": "Gantt",
+    "milestone": "Jalon",
+    "milestones": "Jalons",
+    "configuration": "Configuration Gantt",
+    "defaultMilestone": "Par défaut",
+    "numberedMilestone": "Jalon {{number}}",
+    "empty": "Aucune donnée de jalon disponible",
+    "errorTitle": "Impossible de charger la vue Gantt",
+    "createMilestone": "Créer un Jalon",
+    "editMilestone": "Modifier le Jalon",
+    "timelineLabel": "Mesuré selon le calendrier du projet",
+    "projectSettings": "Paramètres Gantt",
+    "projectSettingsOwnerOnly": "Seul le responsable du projet peut modifier les paramètres Gantt",
+    "addDeliverable": "Ajouter un livrable",
+    "noAssignedDeliverables": "Aucun livrable attribué",
+    "noAvailableDeliverables": "Aucun livrable disponible",
+    "moveDeliverableUp": "Déplacer {{name}} vers le haut",
+    "moveDeliverableDown": "Déplacer {{name}} vers le bas",
+    "removeDeliverable": "Retirer {{name}}",
+    "fields": {
+      "name": "Nom",
+      "generatedName": "Généré automatiquement si vide",
+      "startDate": "Date de Début",
+      "endDate": "Date de Fin",
+      "deliverables": "Livrables",
+      "selectDeliverables": "Sélectionner des livrables",
+      "timelineMode": "Mode de Chronologie",
+      "periodStartDate": "Date de Début de Période",
+      "sprintLengthWeeks": "Durée du Sprint (semaines)",
+      "startingNumber": "Numéro de Départ",
+      "sprintPrefix": "Préfixe de Sprint",
+      "weekPrefix": "Préfixe de Semaine",
+      "showDateLabels": "Afficher les libellés de date",
+      "showDefaultMilestone": "Afficher le jalon par défaut"
+    },
+    "timelineModes": {
+      "dates": "Dates",
+      "weeks": "Semaines",
+      "sprints": "Sprints"
+    },
+    "columns": {
+      "item": "Élément",
+      "status": "Statut",
+      "progress": "Progression"
+    }
+  },
   "users": {
     "title": "Utilisateurs",
     "fullName": "Nom Complet",

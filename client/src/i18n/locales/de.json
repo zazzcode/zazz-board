@@ -151,6 +151,53 @@
     "dragToReorder": "Ziehen Sie, um Aufgaben neu zu ordnen",
     "dropToMove": "Lassen Sie los, um Aufgabe zu verschieben"
   },
+  "gantt": {
+    "title": "Gantt",
+    "milestone": "Meilenstein",
+    "milestones": "Meilensteine",
+    "configuration": "Gantt-Konfiguration",
+    "defaultMilestone": "Standard",
+    "numberedMilestone": "Meilenstein {{number}}",
+    "empty": "Keine Meilensteindaten verfügbar",
+    "errorTitle": "Gantt-Ansicht konnte nicht geladen werden",
+    "createMilestone": "Meilenstein erstellen",
+    "editMilestone": "Meilenstein bearbeiten",
+    "timelineLabel": "Nach Projektzeitplan gemessen",
+    "projectSettings": "Gantt-Einstellungen",
+    "projectSettingsOwnerOnly": "Nur die Projektleitung kann Gantt-Einstellungen bearbeiten",
+    "addDeliverable": "Lieferobjekt hinzufügen",
+    "noAssignedDeliverables": "Keine Lieferobjekte zugewiesen",
+    "noAvailableDeliverables": "Keine Lieferobjekte verfügbar",
+    "moveDeliverableUp": "{{name}} nach oben verschieben",
+    "moveDeliverableDown": "{{name}} nach unten verschieben",
+    "removeDeliverable": "{{name}} entfernen",
+    "fields": {
+      "name": "Name",
+      "generatedName": "Wird automatisch erzeugt, falls leer",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "deliverables": "Lieferobjekte",
+      "selectDeliverables": "Lieferobjekte auswählen",
+      "timelineMode": "Zeitachsenmodus",
+      "periodStartDate": "Startdatum der Periode",
+      "sprintLengthWeeks": "Sprintlänge (Wochen)",
+      "startingNumber": "Startnummer",
+      "sprintPrefix": "Sprint-Präfix",
+      "weekPrefix": "Wochen-Präfix",
+      "showDateLabels": "Datumslabels anzeigen",
+      "showDefaultMilestone": "Standard-Meilenstein anzeigen"
+    },
+    "timelineModes": {
+      "dates": "Datumsangaben",
+      "weeks": "Wochen",
+      "sprints": "Sprints"
+    },
+    "columns": {
+      "item": "Eintrag",
+      "status": "Status",
+      "progress": "Fortschritt"
+    }
+  },
   "users": {
     "title": "Benutzer",
     "fullName": "Vollständiger Name",

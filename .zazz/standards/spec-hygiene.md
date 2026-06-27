@@ -4,7 +4,7 @@ last_updated_at: 2026-06-15
 
 # Spec hygiene
 
-This standard governs how deliverable specifications under `docs/specifications/` are written so they stay portable,
+This standard governs how deliverable specifications under `<DOCS_ROOT>/specifications/` are written so they stay portable,
 verifiable, and reviewable. It covers path and link portability, linking instead of inlining, how to reference work
 that is not yet merged, and the content-quality bar a reviewer holds a specification to. The audience is anyone
 authoring or reviewing a specification — human or agent.
@@ -17,7 +17,7 @@ specific to specifications and does not restate those.
 
 ## Specifications are often uncommitted
 
-A specification is the contract for one deliverable. It may be committed under `docs/specifications/{slug}.md`, or it
+A specification is the contract for one deliverable. It may be committed under `<DOCS_ROOT>/specifications/{slug}.md`, or it
 may live only on its feature branch while the PR is open, or in an external tracker. All three are normal. Treat a
 specification as portable reference material that any reviewer or agent might open from any worktree, on any branch,
 before or after merge. The rules below follow from that: nothing in a specification may depend on one machine's
@@ -33,14 +33,14 @@ checkout layout into a shared document.
 ### Desired ✅
 
 ```markdown
-Open `docs/standards/index.yaml` and load only the standards whose
+Open `<DOCS_ROOT>/standards/index.yaml` and load only the standards whose
 `applies_to` matches this deliverable's file list.
 ```
 
 ### Not desired ❌
 
 ```markdown
-Open `<absolute-checkout-path>/docs/standards/index.yaml`
+Open `<absolute-checkout-path>/<DOCS_ROOT>/standards/index.yaml`
 and load only the matching standards.
 <!-- machine-specific checkout path; resolves only for the author and
      breaks for every other reviewer/agent. -->
@@ -98,7 +98,7 @@ the integration branch yet. Do not reach outside the repository to another workt
 ### Desired ✅
 
 ```markdown
-Follow the iterated standards at `docs/standards/` (not yet merged to the
+Follow the iterated standards at `<DOCS_ROOT>/standards/` (not yet merged to the
 integration branch; tracked in PR 1234).
 ```
 
@@ -106,7 +106,7 @@ integration branch; tracked in PR 1234).
 
 ```markdown
 Follow the iterated standards at
-`../sibling-worktree/docs/standards/`.
+`../sibling-worktree/<DOCS_ROOT>/standards/`.
 <!-- points at a second checkout because the files are
      not yet merged; unreadable from any other checkout. -->
 ```

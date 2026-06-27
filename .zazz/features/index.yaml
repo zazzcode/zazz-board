@@ -1,7 +1,19 @@
 features:
-  - key: features-milestones-deliverables-management
-    file: features-milestones-deliverables-management.md
-    domain: board information architecture, roadmap visibility, deliverable organization
+  - key: rbac
+    file: rbac-feature.md
+    domain: role-based access control, project membership, permissions
+    current_milestone: M1 proposed
+    current_state: >
+      Zazz Board authenticates users and project-scoped agent tokens, and some
+      project settings are project-leader-only, but most collaboration permissions
+      are not yet expressed as project-scoped roles.
+    purpose: >
+      Defines how Zazz Board should evolve from a project-owner-only model to
+      project-scoped roles and server-enforced permissions for owners, planners,
+      contributors, reviewers, and agents.
+  - key: project-milestones
+    file: project-milestones-feature.md
+    domain: project milestones, Gantt planning, deliverable organization
     current_milestone: M1 planned
     current_state: >
       Zazz Board manages deliverables and tasks, but it does not yet expose a

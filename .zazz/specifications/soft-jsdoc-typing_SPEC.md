@@ -147,7 +147,7 @@ Allowed modification paths:
 - `api/`
 - `.github/workflows/test.yml`
 - `.zazz/standards/`
-- `.zazz/docs/specifications/soft-jsdoc-typing_SPEC.md`
+- `.zazz/specifications/soft-jsdoc-typing_SPEC.md`
 - `.zazz/proposals/soft-jsdoc-typing.md` only for direct consistency corrections
 - `package.json` / `package-lock.json` only for root scripts or lockfile changes
 - `api/package-lock.json` only if the dependency command updates the workspace lockfile
@@ -606,7 +606,7 @@ Paste this into a fresh implementation session:
 You are starting fresh in the feature worktree for branch add-soft-jsdoc-typing.
 Implement backend service/data-layer soft JSDoc typing.
 
-Specification: .zazz/docs/specifications/soft-jsdoc-typing_SPEC.md
+Specification: .zazz/specifications/soft-jsdoc-typing_SPEC.md
 Run log: .zazz/execution/soft-jsdoc-typing-run-log.md
 Standards improvement notes: .zazz/execution/soft-jsdoc-typing-standards-improvements.md
 
@@ -674,7 +674,7 @@ After your own DoD is green, dispatch:
 
   "Verify backend service/data-layer soft JSDoc typing in
   the current add-soft-jsdoc-typing worktree. Read
-  .zazz/docs/specifications/soft-jsdoc-typing_SPEC.md and the run log if present.
+  .zazz/specifications/soft-jsdoc-typing_SPEC.md and the run log if present.
   Review .zazz/execution/soft-jsdoc-typing-standards-improvements.md only to confirm it
   is separate from execution history; do not grade ACs from that file.
   For each AC, independently run the cited test or command. Verify git diff main --stat

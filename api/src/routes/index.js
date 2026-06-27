@@ -15,6 +15,7 @@ import taskGraphRoutes from './taskGraph.js';
 import deliverableRoutes from './deliverables.js';
 import fileLockRoutes from './fileLocks.js';
 import agentTokenRoutes from './agentTokens.js';
+import ganttRoutes from './gantt.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const dbService = new DatabaseService();
@@ -96,4 +97,5 @@ export default async function routes(fastify, _options) {
   await fastify.register(deliverableRoutes, pluginOptions);
   await fastify.register(fileLockRoutes, pluginOptions);
   await fastify.register(agentTokenRoutes, pluginOptions);
+  await fastify.register(ganttRoutes, pluginOptions);
 }

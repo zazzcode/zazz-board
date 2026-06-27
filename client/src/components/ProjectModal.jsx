@@ -1,9 +1,37 @@
 import { useState, useEffect } from 'react';
-import { Modal, Tabs, TextInput, Textarea, Button, Group, Stack, Select, Alert } from '@mantine/core';
-import { IconInfoCircle, IconSettings } from '@tabler/icons-react';
+import {
+  Alert,
+  Button,
+  Group,
+  Modal,
+  NumberInput,
+  Select,
+  SimpleGrid,
+  Stack,
+  Switch,
+  Tabs,
+  Textarea,
+  TextInput,
+} from '@mantine/core';
+import { IconChartBar, IconInfoCircle, IconSettings } from '@tabler/icons-react';
 import { StatusWorkflowEditor } from './StatusWorkflowEditor.jsx';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useStatusDefinitions } from '../hooks/useStatusDefinitions.js';
+
+const defaultGanttSettings = {
+  timelineMode: 'sprint',
+  showDateLabels: false,
+  showDefaultMilestone: false,
+  periodStartDate: '2026-06-01',
+  sprintLengthWeeks: 2,
+  periodNumberStart: 1,
+  sprintLabelPrefix: 'Sprint',
+  weekLabelPrefix: 'W',
+};
+
+function createDefaultGanttSettings() {
+  return { ...defaultGanttSettings };
+}
 
 export function ProjectModal({ 
   opened, 
@@ -17,6 +45,7 @@ export function ProjectModal({
   const { statusDefinitions, loading: loadingStatuses } = useStatusDefinitions();
   const [activeTab, setActiveTab] = useState('details');
   const [saving, setSaving] = useState(false);
+  const [loadingGanttSettings, setLoadingGanttSettings] = useState(false);
   const [error, setError] = useState(null);
 
   // Form state
@@ -25,7 +54,8 @@ export function ProjectModal({
     title: '',
     description: '',
     leaderId: null,
-    statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE']  // Default workflow
+    statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE'],  // Default workflow
+    ganttSettings: createDefaultGanttSettings(),
   });
 
   const [statusesWithTasks, setStatusesWithTasks] = useState([]);
@@ -40,11 +70,53 @@ export function ProjectModal({
           title: project.title || '',
           description: project.description || '',
           leaderId: project.leaderId || null,
-          statusWorkflow: project.statusWorkflow || ['TO_DO', 'IN_PROGRESS', 'DONE']
+          statusWorkflow: project.statusWorkflow || ['TO_DO', 'IN_PROGRESS', 'DONE'],
+          ganttSettings: {
+            ...createDefaultGanttSettings(),
+            ...(project.ganttSettings || {}),
+          },
         });
         // TODO: Fetch which statuses have tasks for this project
         // For now, assume no restrictions in edit mode
         setStatusesWithTasks([]);
+
+        const token = localStorage.getItem('TB_TOKEN');
+        if (token && project.code) {
+          let cancelled = false;
+          setLoadingGanttSettings(true);
+
+          fetch(`http://localhost:3030/projects/${project.code}/gantt/settings`, {
+            method: 'GET',
+            headers: {
+              'TB_TOKEN': token,
+              'Content-Type': 'application/json',
+            },
+          })
+            .then(async (response) => {
+              if (!response.ok) return null;
+              return response.json();
+            })
+            .then((settings) => {
+              if (cancelled || !settings) return;
+              setFormData(prev => ({
+                ...prev,
+                ganttSettings: {
+                  ...createDefaultGanttSettings(),
+                  ...settings,
+                },
+              }));
+            })
+            .catch(() => {})
+            .finally(() => {
+              if (!cancelled) setLoadingGanttSettings(false);
+            });
+
+          return () => {
+            cancelled = true;
+          };
+        }
+
+        setLoadingGanttSettings(false);
       } else {
         // Create mode - reset to defaults
         setFormData({
@@ -52,8 +124,10 @@ export function ProjectModal({
           title: '',
           description: '',
           leaderId: null,
-          statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE']
+          statusWorkflow: ['TO_DO', 'IN_PROGRESS', 'DONE'],
+          ganttSettings: createDefaultGanttSettings(),
         });
+        setLoadingGanttSettings(false);
         setStatusesWithTasks([]);
       }
       setActiveTab('details');
@@ -91,6 +165,16 @@ export function ProjectModal({
     setFormData(prev => ({ ...prev, statusWorkflow: newWorkflow }));
   };
 
+  const handleGanttSettingsChange = (patch) => {
+    setFormData(prev => ({
+      ...prev,
+      ganttSettings: {
+        ...prev.ganttSettings,
+        ...patch,
+      },
+    }));
+  };
+
   const isEditMode = !!project;
   // If creating new project, current user will be leader (or can select). If editing, check if they match leaderId.
   // Note: currentUser might be null if not loaded yet, default to false safe.
@@ -118,6 +202,9 @@ export function ProjectModal({
           </Tabs.Tab>
           <Tabs.Tab value="workflow" leftSection={<IconSettings size={16} />}>
             Status Workflow
+          </Tabs.Tab>
+          <Tabs.Tab value="gantt" leftSection={<IconChartBar size={16} />}>
+            {t('gantt.configuration')}
           </Tabs.Tab>
         </Tabs.List>
 
@@ -192,6 +279,82 @@ export function ProjectModal({
                 readOnly={!isLeader}
               />
             )}
+          </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="gantt" pt="md">
+          <Stack gap="md">
+            {isEditMode && !isLeader && (
+              <Alert color="blue">
+                <span style={{ color: '#228be6', fontWeight: 600 }}>Read Only:</span> Only the project leader can edit Gantt configuration.
+              </Alert>
+            )}
+
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Select
+                label={t('gantt.fields.timelineMode')}
+                data={[
+                  { value: 'dates', label: t('gantt.timelineModes.dates') },
+                  { value: 'weeks', label: t('gantt.timelineModes.weeks') },
+                  { value: 'sprint', label: t('gantt.timelineModes.sprints') },
+                ]}
+                value={formData.ganttSettings.timelineMode}
+                onChange={(value) => handleGanttSettingsChange({ timelineMode: value })}
+                disabled={!isLeader || loadingGanttSettings}
+              />
+
+              <TextInput
+                type="date"
+                label={t('gantt.fields.periodStartDate')}
+                value={formData.ganttSettings.periodStartDate}
+                onChange={(e) => handleGanttSettingsChange({ periodStartDate: e.target.value })}
+                disabled={!isLeader || loadingGanttSettings}
+              />
+
+              <NumberInput
+                label={t('gantt.fields.sprintLengthWeeks')}
+                value={formData.ganttSettings.sprintLengthWeeks}
+                onChange={(value) => handleGanttSettingsChange({ sprintLengthWeeks: value || 1 })}
+                min={1}
+                max={12}
+                disabled={!isLeader || loadingGanttSettings}
+              />
+
+              <NumberInput
+                label={t('gantt.fields.startingNumber')}
+                value={formData.ganttSettings.periodNumberStart}
+                onChange={(value) => handleGanttSettingsChange({ periodNumberStart: value || 0 })}
+                min={0}
+                disabled={!isLeader || loadingGanttSettings}
+              />
+
+              <TextInput
+                label={t('gantt.fields.sprintPrefix')}
+                value={formData.ganttSettings.sprintLabelPrefix}
+                onChange={(e) => handleGanttSettingsChange({ sprintLabelPrefix: e.target.value })}
+                disabled={!isLeader || loadingGanttSettings}
+              />
+
+              <TextInput
+                label={t('gantt.fields.weekPrefix')}
+                value={formData.ganttSettings.weekLabelPrefix}
+                onChange={(e) => handleGanttSettingsChange({ weekLabelPrefix: e.target.value })}
+                disabled={!isLeader || loadingGanttSettings}
+              />
+            </SimpleGrid>
+
+            <Switch
+              label={t('gantt.fields.showDateLabels')}
+              checked={formData.ganttSettings.showDateLabels}
+              onChange={(e) => handleGanttSettingsChange({ showDateLabels: e.currentTarget.checked })}
+              disabled={!isLeader || loadingGanttSettings}
+            />
+            <Switch
+              label={t('gantt.fields.showDefaultMilestone')}
+              checked={formData.ganttSettings.showDefaultMilestone}
+              onChange={(e) => handleGanttSettingsChange({ showDefaultMilestone: e.currentTarget.checked })}
+              disabled={!isLeader || loadingGanttSettings}
+            />
           </Stack>
         </Tabs.Panel>
       </Tabs>
