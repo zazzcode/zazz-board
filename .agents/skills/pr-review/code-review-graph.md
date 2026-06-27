@@ -1,6 +1,6 @@
 # Code-Review-Graph Optional Utility
 
-Use `code-review-graph` as an optional review accelerator for large or high-risk PRs. It can reduce token usage by
+Use the Zazz fork of `code-review-graph` as an optional review accelerator for large or high-risk PRs. It can reduce token usage by
 giving the agent compact structural context before it reads files, and can provide blast radius, impacted
 callers/dependents, affected flows, likely test gaps, and context-savings data.
 
@@ -13,6 +13,16 @@ judgment. Verify suspected issues against source, tests, standards, and spec bef
 ## Zazz Boundary
 
 This file is adapted Zazz workflow guidance, not a vendored upstream skill.
+
+Prefer the Zazz-maintained fork/checkouts for Zazz reviews:
+
+- Local checkout: `/Users/michael/Dev/zazzcode/code-review-graph/main`
+- GitHub fork: `https://github.com/zazzcode/code-review-graph`
+- Upstream reference only: `https://github.com/tirth8205/code-review-graph`
+
+Default to the stable local `main` worktree. Use another local `code-review-graph` branch/worktree only when the user
+explicitly asks to test that branch. Use PyPI/upstream commands only as a fallback when the stable Zazz checkout or an
+installed Zazz-fork CLI is unavailable.
 
 Do not copy or install upstream companion skills by default. Upstream skills such as `review-pr`, `review-delta`, and
 `build-graph` are references only; `pr-review` remains the orchestrator and still runs the Standards and Spec axes.
@@ -38,8 +48,9 @@ Load this file only when graph context is in scope:
 
 Check access in this order:
 
+1. Local Zazz checkout: test `cd /Users/michael/Dev/zazzcode/code-review-graph/main && uv run code-review-graph --version`
 1. Persistent CLI: `command -v code-review-graph`
-1. On-demand CLI: `uvx code-review-graph --version`
+1. On-demand CLI fallback: `uvx code-review-graph --version`
 1. MCP tools in the current tool list, such as `get_minimal_context_tool`, `detect_changes_tool`,
    `get_review_context_tool`, `get_impact_radius_tool`, `get_affected_flows_tool`, and `query_graph_tool`
 
@@ -60,7 +71,15 @@ Continue without graph context if the user declines. For large PRs, record the a
 
 Only install or configure with explicit user consent.
 
-Default review-only setup:
+Default review-only setup from the local Zazz checkout:
+
+```bash
+cd /Users/michael/Dev/zazzcode/code-review-graph/main
+uv run code-review-graph install --no-skills --no-hooks --no-instructions
+uv run code-review-graph build
+```
+
+Fallback review-only setup when the local checkout is unavailable:
 
 ```bash
 uvx code-review-graph install --no-skills --no-hooks --no-instructions
@@ -111,7 +130,7 @@ the user is comfortable installing into the active Python environment.
 
 After setup:
 
-1. Verify: `uvx code-review-graph --version` or `code-review-graph --version`.
+1. Verify: `uv run code-review-graph --version`, `uvx code-review-graph --version`, or `code-review-graph --version`.
 1. Build or refresh from the repo under review: `build` or `update --brief`.
 1. If MCP config changed, tell the user their AI tool may need a restart; continue with CLI output for the current
    review.
@@ -122,14 +141,14 @@ Prefer the CLI for the first graph pass. It is compact, auditable, and works eve
 
 Command form:
 
-- On-demand/default: `uvx code-review-graph ...`
+- Local Zazz checkout/default when available: `cd /Users/michael/Dev/zazzcode/code-review-graph/main && uv run code-review-graph ...`
+- On-demand fallback: `uvx code-review-graph ...`
 - Persistent install: `code-review-graph ...`
-- Local checkout while developing the tool: `uv run code-review-graph ...`
 
 Use:
 
 ```bash
-uvx code-review-graph detect-changes --brief
+cd /Users/michael/Dev/zazzcode/code-review-graph/main && uv run code-review-graph detect-changes --brief
 ```
 
 when the graph should already be fresh.
@@ -137,7 +156,7 @@ when the graph should already be fresh.
 Use:
 
 ```bash
-uvx code-review-graph update --brief
+cd /Users/michael/Dev/zazzcode/code-review-graph/main && uv run code-review-graph update --brief
 ```
 
 after a rebase, large change set, stale graph, or first review pass after edits.
@@ -145,8 +164,9 @@ after a rebase, large change set, stale graph, or first review pass after edits.
 If no graph exists, run:
 
 ```bash
-uvx code-review-graph build
-uvx code-review-graph update --brief
+cd /Users/michael/Dev/zazzcode/code-review-graph/main
+uv run code-review-graph build
+uv run code-review-graph update --brief
 ```
 
 When MCP tools are visible, use them for targeted follow-up rather than broad file loading:
