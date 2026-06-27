@@ -18,6 +18,11 @@ api/.env.local
 # Keep example file tracked
 !api/.env.example
 
+# Local owner/agent scratch files; keep the tracked README visible.
+.zazz/ephemeral/**
+!.zazz/ephemeral/
+!.zazz/ephemeral/README.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
