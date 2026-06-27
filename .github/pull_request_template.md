@@ -3,6 +3,19 @@ PR template for the zazz-board repo.
 Sourced from the Zazz pr-builder skill canonical template
 (.agents/skills/pr-builder/PR-TEMPLATE.md) and trimmed to this repo's needs.
 Omit sections that do not add reviewer value.
+
+PR title labels are required. Begin every PR title with one or more
+canonical bracketed labels:
+- [BE] Backend
+- [FE] Frontend
+- [DB] Database
+- [CI] CI/CD and infrastructure
+- [agent] Agent runtime settings, skills, hooks, and config
+- [DOC] Documentation
+
+For cross-cutting PRs, combine labels with + and no spaces, such as
+[BE+FE], [FE+CI], or [CI+agent].
+
 PR status: Draft by default; mark Ready for review only after Deliverable
 Owner confirmation. Per AGENTS.md, a human reviewer approves and merges —
 agents do not merge PRs.
