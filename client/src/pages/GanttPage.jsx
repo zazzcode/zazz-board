@@ -21,13 +21,23 @@ import { useProjectEvents } from '../hooks/useProjectEvents.js';
 import { useProjectGantt } from '../hooks/useProjectGantt.js';
 import { ProjectGantt } from '../components/gantt/ProjectGantt.jsx';
 
-const REFRESH_EVENT_TYPES = new Set(['deliverable', 'task', 'relation']);
+const REFRESH_EVENT_TYPES = new Set(['deliverable', 'task', 'relation', 'milestone', 'gantt']);
 const EMPTY_MILESTONE_FORM = {
   name: '',
   startDate: '',
   endDate: '',
   deliverableIds: [],
 };
+
+function getTokenHeaders() {
+  const token = localStorage.getItem('TB_TOKEN');
+  if (!token) throw new Error('No access token found');
+
+  return {
+    'TB_TOKEN': token,
+    'Content-Type': 'application/json',
+  };
+}
 
 function getDeliverableFormId(row) {
   return String(row.deliverableId || row.id);
@@ -41,38 +51,8 @@ function normalizeGanttEntityId(id) {
   return String(id || '').replace(/^:/, '');
 }
 
-function reorderGanttRows(rows) {
-  const milestones = rows.filter((row) => row.entityType === 'milestone');
-  const deliverables = rows.filter((row) => row.entityType === 'deliverable');
-  const otherRows = rows.filter((row) => row.entityType !== 'milestone' && row.entityType !== 'deliverable');
-  const deliverablesByParent = new Map();
-
-  deliverables.forEach((deliverable, index) => {
-    const parentId = normalizeGanttEntityId(deliverable.parentId);
-    const existing = deliverablesByParent.get(parentId) || [];
-    existing.push({ ...deliverable, originalIndex: index });
-    deliverablesByParent.set(parentId, existing);
-  });
-
-  return [
-    ...milestones.flatMap((milestone) => {
-      const milestoneId = normalizeGanttEntityId(milestone.id);
-      const children = (deliverablesByParent.get(milestoneId) || [])
-        .sort((left, right) => {
-          const leftPosition = Number.isFinite(left.milestonePosition) ? left.milestonePosition : left.originalIndex;
-          const rightPosition = Number.isFinite(right.milestonePosition) ? right.milestonePosition : right.originalIndex;
-          return leftPosition - rightPosition;
-        })
-        .map((deliverable) => {
-          const row = { ...deliverable };
-          delete row.originalIndex;
-          return row;
-        });
-
-      return [milestone, ...children];
-    }),
-    ...otherRows,
-  ];
+function getMilestoneApiId(row) {
+  return String(row?.milestoneId || normalizeGanttEntityId(row?.id).replace(/^milestone:/, ''));
 }
 
 function getDefaultMilestoneId(rows) {
@@ -118,6 +98,8 @@ export function GanttPage({ selectedProject }) {
   const [milestoneModalOpened, setMilestoneModalOpened] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState(null);
   const [milestoneForm, setMilestoneForm] = useState(EMPTY_MILESTONE_FORM);
+  const [milestoneSaving, setMilestoneSaving] = useState(false);
+  const [milestoneMutationError, setMilestoneMutationError] = useState(null);
   const [deliverableToAddId, setDeliverableToAddId] = useState(null);
   const [draftRows, setDraftRows] = useState([]);
   const workingRows = useMemo(() => (
@@ -142,6 +124,7 @@ export function GanttPage({ selectedProject }) {
   ), [workingRows]);
 
   const editingMilestoneId = normalizeGanttEntityId(editingMilestone?.id);
+  const editingMilestoneApiId = getMilestoneApiId(editingMilestone);
   const editingDefaultMilestone = Boolean(editingMilestoneId && editingMilestoneId === defaultMilestoneId);
 
   const selectedDeliverables = useMemo(() => milestoneForm.deliverableIds.map((deliverableId) => {
@@ -174,6 +157,7 @@ export function GanttPage({ selectedProject }) {
   const openCreateMilestone = useCallback(() => {
     setEditingMilestone(null);
     setMilestoneForm(EMPTY_MILESTONE_FORM);
+    setMilestoneMutationError(null);
     setDeliverableToAddId(null);
     setMilestoneModalOpened(true);
   }, []);
@@ -192,6 +176,7 @@ export function GanttPage({ selectedProject }) {
       deliverableIds,
     });
     setDeliverableToAddId(null);
+    setMilestoneMutationError(null);
     setMilestoneModalOpened(true);
   }, [getMilestoneName, workingRows]);
 
@@ -199,6 +184,7 @@ export function GanttPage({ selectedProject }) {
     setMilestoneModalOpened(false);
     setEditingMilestone(null);
     setMilestoneForm(EMPTY_MILESTONE_FORM);
+    setMilestoneMutationError(null);
     setDeliverableToAddId(null);
   }, []);
 
@@ -234,62 +220,124 @@ export function GanttPage({ selectedProject }) {
     });
   }, []);
 
-  const saveMilestoneForm = useCallback(() => {
-    if (!editingMilestone) return;
+  const requestJson = useCallback(async (url, options = {}) => {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...getTokenHeaders(),
+        ...(options.headers || {}),
+      },
+    });
 
-    const selectedIds = new Set(milestoneForm.deliverableIds);
-    const selectedPositions = new Map(milestoneForm.deliverableIds.map((deliverableId, index) => [deliverableId, index]));
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error || `Gantt request failed: ${response.status}`);
+    }
+    return payload;
+  }, []);
 
-    setDraftRows((currentRows) => {
-      const sourceRows = currentRows.length > 0 ? currentRows : (ganttData?.rows || []);
-      const updatedRows = sourceRows.map((row) => {
-        if (row.entityType === 'milestone' && normalizeGanttEntityId(row.id) === editingMilestoneId) {
-          return {
-            ...row,
-            displayName: milestoneForm.name || row.displayName,
-            startDate: milestoneForm.startDate || row.startDate,
-            endDate: milestoneForm.endDate || row.endDate,
-          };
-        }
+  const replaceMilestoneDeliverables = useCallback(async (milestoneId, deliverableIds) => {
+    return requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones/${encodeURIComponent(milestoneId)}/deliverables`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        deliverableIds: deliverableIds.map((id) => Number(id)),
+        expectedVersion: ganttData?.version,
+      }),
+    });
+  }, [ganttData?.version, projectCode, requestJson]);
 
-        if (row.entityType !== 'deliverable') return row;
+  const applySavedProjection = useCallback(async (projection) => {
+    const latestProjection = projection || await refreshGantt();
+    if (latestProjection?.rows) {
+      loadedDraftProjectRef.current = latestProjection.projectCode;
+      setDraftRows(latestProjection.rows);
+    }
+  }, [refreshGantt]);
 
-        const deliverableId = getDeliverableFormId(row);
-        const rowParentId = normalizeGanttEntityId(row.parentId);
+  const saveMilestoneForm = useCallback(async () => {
+    if (!projectCode || milestoneSaving) return;
 
-        if (selectedIds.has(deliverableId)) {
-          return {
-            ...row,
-            parentId: editingMilestoneId,
-            milestonePosition: selectedPositions.get(deliverableId),
-          };
-        }
+    setMilestoneSaving(true);
+    setMilestoneMutationError(null);
 
-        if (!editingDefaultMilestone && rowParentId === editingMilestoneId) {
-          return {
-            ...row,
-            parentId: defaultMilestoneId,
-            milestonePosition: Number.MAX_SAFE_INTEGER,
-          };
-        }
+    try {
+      const body = {
+        startDate: milestoneForm.startDate,
+        endDate: milestoneForm.endDate,
+        status: editingMilestone?.status || 'PLANNING',
+      };
 
-        return row;
+      if (!editingMilestone) {
+        const milestone = await requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        const projection = milestoneForm.deliverableIds.length > 0
+          ? await replaceMilestoneDeliverables(milestone.id, milestoneForm.deliverableIds)
+          : await refreshGantt();
+        await applySavedProjection(projection);
+        closeMilestoneModal();
+        return;
+      }
+
+      await requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones/${encodeURIComponent(editingMilestoneApiId)}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
       });
 
-      return reorderGanttRows(updatedRows);
-    });
-    closeMilestoneModal();
+      const projection = editingDefaultMilestone
+        ? await refreshGantt()
+        : await replaceMilestoneDeliverables(editingMilestoneApiId, milestoneForm.deliverableIds);
+      await applySavedProjection(projection);
+      closeMilestoneModal();
+    } catch (error) {
+      setMilestoneMutationError(error.message);
+    } finally {
+      setMilestoneSaving(false);
+    }
   }, [
+    applySavedProjection,
     closeMilestoneModal,
-    defaultMilestoneId,
     editingDefaultMilestone,
     editingMilestone,
-    editingMilestoneId,
-    ganttData?.rows,
+    editingMilestoneApiId,
     milestoneForm.deliverableIds,
     milestoneForm.endDate,
-    milestoneForm.name,
     milestoneForm.startDate,
+    milestoneSaving,
+    projectCode,
+    refreshGantt,
+    replaceMilestoneDeliverables,
+    requestJson,
+  ]);
+
+  const deleteMilestone = useCallback(async () => {
+    if (!projectCode || !editingMilestone || editingDefaultMilestone || milestoneSaving) return;
+
+    setMilestoneSaving(true);
+    setMilestoneMutationError(null);
+
+    try {
+      await requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones/${encodeURIComponent(editingMilestoneApiId)}`, {
+        method: 'DELETE',
+      });
+      await applySavedProjection(await refreshGantt());
+      closeMilestoneModal();
+    } catch (error) {
+      setMilestoneMutationError(error.message);
+    } finally {
+      setMilestoneSaving(false);
+    }
+  }, [
+    applySavedProjection,
+    closeMilestoneModal,
+    editingDefaultMilestone,
+    editingMilestone,
+    editingMilestoneApiId,
+    milestoneSaving,
+    projectCode,
+    refreshGantt,
+    requestJson,
   ]);
 
   const scheduleRefresh = useCallback(() => {
@@ -392,11 +440,17 @@ export function GanttPage({ selectedProject }) {
         size="lg"
       >
         <Stack gap="md">
+          {milestoneMutationError && (
+            <Alert color="red" title={t('gantt.errorTitle')}>
+              {milestoneMutationError}
+            </Alert>
+          )}
           <TextInput
             label={t('gantt.fields.name')}
             placeholder={t('gantt.fields.generatedName')}
             value={milestoneForm.name}
             onChange={(event) => setMilestoneForm((prev) => ({ ...prev, name: event.target.value }))}
+            disabled
           />
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
@@ -496,11 +550,27 @@ export function GanttPage({ selectedProject }) {
               </Group>
             )}
           </Stack>
-          <Group justify="flex-end">
+          <Group justify="space-between">
+            <Button
+              variant="subtle"
+              color="red"
+              onClick={deleteMilestone}
+              disabled={!editingMilestone || editingDefaultMilestone || selectedDeliverables.length > 0 || milestoneSaving}
+            >
+              {t('common.delete')}
+            </Button>
+            <Group justify="flex-end">
             <Button variant="default" onClick={closeMilestoneModal}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={saveMilestoneForm} disabled={!editingMilestone}>{t('common.save')}</Button>
+              <Button
+                onClick={saveMilestoneForm}
+                loading={milestoneSaving}
+                disabled={!milestoneForm.startDate || !milestoneForm.endDate}
+              >
+                {t('common.save')}
+              </Button>
+            </Group>
           </Group>
         </Stack>
       </Modal>
