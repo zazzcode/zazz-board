@@ -16,10 +16,10 @@ features:
     domain: project milestones, Gantt planning, deliverable organization
     current_milestone: M1 planned
     current_state: >
-      Zazz Board manages deliverables and tasks, but it does not yet expose a
-      durable feature layer, milestone structure, or milestone-scoped grouping
-      of deliverables.
+      Zazz Board manages deliverables and tasks, but it does not yet expose
+      project milestone records, Gantt-backed milestone grouping, deliverable
+      schedule timestamps, or deliverable dependency links.
     purpose: >
-      Defines how Zazz Board should represent long-lived feature context and
-      milestone progression without duplicating canonical feature-document
-      content that remains in Git-managed framework docs.
+      Defines how Zazz Board should represent project-scoped milestone
+      planning and Gantt projections while leaving database-backed feature
+      integration as a future cross-cutting capability.

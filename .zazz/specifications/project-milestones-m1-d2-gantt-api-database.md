@@ -23,11 +23,12 @@ final mocked contract.
 Implement production project milestones behind the `GET /projects/:code/gantt` contract
 proven by D1. This deliverable replaces D1's mock-data backing source with database-backed
 services, then adds database schema, databaseService methods, production milestone CRUD,
-project-level Gantt settings, seed/reset support, API tests, and realtime events needed
-for the Gantt UI to persist and reload milestone data. The production Gantt endpoint
-returns the full project Gantt planning projection in one response; it does not require
-one query or route call per milestone. Task rows are loaded through the D1-proven
-deliverable expansion contract.
+project-level Gantt settings, deliverable schedule timestamps, seed/reset support, API
+tests, and realtime events needed for the Gantt UI to persist and reload milestone data.
+The production Gantt endpoint returns the full project Gantt planning projection in one
+response; it does not require one query or route call per milestone. The production D2
+Gantt chart surfaces milestone and deliverable rows; tasks remain dynamic execution
+detail and are not required as chart rows.
 
 ---
 
@@ -103,8 +104,8 @@ D1's `GET /projects/:code/gantt` path stable while replacing the mock backing so
 `GET /projects/:code/gantt` returns all milestones, deliverables, and initial
 deliverable-level links needed for the first chart render in one response. The service
 may use multiple database queries internally for correctness or performance, but the HTTP
-contract is one project-scoped planning projection payload. Task rows are fetched for an
-expanded deliverable through the D1 task expansion route.
+contract is one project-scoped planning projection payload. Production D2 does not need
+to fetch or render task rows inside the Gantt chart.
 
 ### INVARIANT 3 — Database Access Stays In `databaseService`
 
@@ -114,6 +115,13 @@ Routes must not import Drizzle tables or the DB instance directly.
 
 M1 must not add `TASKS.milestone_id`. A task belongs to a milestone through its
 deliverable.
+
+### INVARIANT 4a — Deliverables Belong To Exactly One Milestone
+
+Every deliverable belongs to exactly one project-owned milestone after D2 seed/reset and
+project creation rules run. New deliverables start in the project default milestone until
+an owner assigns them to a planned milestone. A deliverable must never appear under more
+than one milestone in the Gantt projection.
 
 ### INVARIANT 5 — Existing Deliverables Always Fit The Hierarchy
 
@@ -161,9 +169,9 @@ contract, stop and revise D1/D2 with Owner sign-off.
 
 | Path | New / Modified | Reason |
 | --- | --- | --- |
-| `api/lib/db/schema.js` | Modified | Add `MILESTONES`, relations, `DELIVERABLES.milestone_id`, milestone-scoped deliverable order, and project Gantt settings persistence. |
-| `api/src/services/databaseService.js` | Modified | Add milestone CRUD, default milestone creation, ordered assignment, Gantt settings, and Gantt projection methods. |
-| `api/src/routes/gantt.js` | Modified | Replace mock-backed projection/task expansion with database-backed projection/task expansion and add production Gantt/settings operations. |
+| `api/lib/db/schema.js` | Modified | Add `MILESTONES`, relations, `DELIVERABLES.milestone_id`, milestone-scoped deliverable order, deliverable schedule timestamp fields, deliverable dependency persistence, and project Gantt settings persistence. |
+| `api/src/services/databaseService.js` | Modified | Add milestone CRUD, default milestone creation, ordered assignment, deliverable dependency projection, Gantt settings, and Gantt projection methods. |
+| `api/src/routes/gantt.js` | Modified | Replace mock-backed projection with database-backed projection and add production Gantt/settings operations. |
 | `api/src/routes/milestones.js` | New if separated from `gantt.js` | Project-scoped milestone CRUD routes. |
 | `api/src/routes/index.js` | Modified | Register new route plugin. |
 | `api/src/schemas/gantt.js` or `api/src/schemas/milestones.js` | New | JSON schemas for Gantt/milestone routes. |
@@ -177,8 +185,8 @@ contract, stop and revise D1/D2 with Owner sign-off.
 
 ### Out Of Scope
 
-- first-class deliverable dependency table
 - task-level milestone foreign key
+- deliverable dependency authoring/editing UI
 - rich milestone editor UX beyond what D1/D2 needs for MVP persistence
 - importing Git-authored feature documents
 - sync between `.zazz/features/` and database milestones
@@ -189,15 +197,51 @@ contract, stop and revise D1/D2 with Owner sign-off.
 
 ## 4. Decisions
 
-### D-1 — Add `MILESTONES` Between Project And Deliverable
+### D-1 — Add Project-Owned `MILESTONES` Between Project And Deliverable
 
 **Decision.** Add `MILESTONES.project_id`, `DELIVERABLES.milestone_id`, and a
 milestone-scoped deliverable order field such as `DELIVERABLES.milestone_position`.
+`MILESTONES.project_id` is required because project code is the route and authorization
+boundary for current and future role-based access control. Milestone service methods
+must validate that the milestone and deliverable both belong to the project resolved
+from `/projects/:code/...`.
 
 **Why.** The product hierarchy is project -> milestone -> deliverable -> task. Keeping the
 task relationship unchanged preserves the existing agent execution model. The additional
 position field lets owners order deliverables inside a milestone without adding manual
 ordering to the milestones themselves.
+
+### D-1.1 — Persist Deliverable Schedule Timestamps For The Gantt Projection
+
+**Decision.** Add deliverable schedule timestamp fields on `DELIVERABLES`, recommended
+as `planned_start_at`, `planned_completion_at`, `actual_start_at`, and
+`actual_completion_at` using the existing `timestamp(..., { withTimezone: true })`
+pattern. Expose the planned values as `startDate` and `endDate` on deliverable Gantt rows
+to preserve the D1 client contract. Use the actual values for completion/progress
+metadata and future schedule variance indicators. If legacy deliverables lack planned
+timestamps during reset/backfill, assign a conservative default inside the default
+milestone or derive a temporary projection timestamp in the service and make the fallback
+visible in tests.
+
+**Why.** The D1 Gantt contract requires deliverable `startDate` and `endDate`, but the
+current `DELIVERABLES` table only has lifecycle timestamps such as `created_at`,
+`updated_at`, and `approved_at`. Those are audit facts, not schedule intent. Persisting
+explicit schedule timestamps keeps the Gantt view driven by owner planning and execution
+data without overloading audit timestamps as roadmap dates. The `*_at` suffix matches
+the existing schema convention for datetime fields.
+
+### D-1.2 — Do Not Add Task Scheduling Or Task Rows In M1
+
+**Decision.** D2 should keep task milestone membership implicit through deliverables and
+should not add task-specific planned date columns. Production D2 also should not require
+expanded task rows in the Gantt chart. Task data may still inform deliverable-level
+metadata such as task counts, completion counts, or status rollups where the current
+service layer already supports that safely.
+
+**Why.** Agent tasks are execution detail and can change rapidly. Adding a full task
+scheduling model or task-row chart surface in the persistence slice would broaden M1
+beyond project milestone planning. Deliverables are the planning unit the Gantt chart
+needs; tasks remain operational detail in task Kanban and task graph views.
 
 ### D-1a — Sort Milestones Chronologically
 
@@ -260,6 +304,17 @@ as a side effect of editing a different milestone.
 different owner-planned milestone. A later explicit move flow can support direct planned
 milestone-to-planned-milestone moves.
 
+### D-2a.1 — Use "Planned Milestone" For Non-Default Milestones
+
+**Decision.** Use `default milestone` for the system-created assignment bucket and
+`planned milestone` for owner-created, dated roadmap milestones. Avoid `active
+milestone` and `real milestone` in the API/spec language because they imply lifecycle
+state rather than membership type.
+
+**Why.** A planned milestone may be `PLANNING`, `PENDING`, `IN_PROGRESS`, or `DONE`.
+Calling it active would conflict with those statuses, while calling it real would make
+the default milestone sound fake even though it is durable database state.
+
 ### D-2b — Persist Default Milestone Visibility As A Project Gantt Setting
 
 **Decision.** Store default milestone visibility with project Gantt settings as a boolean
@@ -274,17 +329,60 @@ consistent for the project while preserving a deliberate inspection/testing path
 ### D-3 — Implement `/projects/:code/gantt` As A Projection Endpoint
 
 **Decision.** Keep D1's `GET /projects/:code/gantt` path and replace the mock backing
-source with a database-backed projection that returns the ready-to-render hierarchy and
-links in one HTTP response. Keep the D1 deliverable task expansion path and replace its
-mock backing with database-backed task rows and task links.
+source with a database-backed projection that returns the ready-to-render milestone and
+deliverable hierarchy plus links in one HTTP response. The D1 deliverable task expansion
+path does not need to become part of the production D2 Gantt contract; if the route is
+kept for compatibility during the transition, it must not drive the main production
+chart.
 
 **Why.** The client should not assemble milestones and deliverables from several
 endpoints on initial load. A projection endpoint keeps the widget fast and reduces client
 coupling to table structure. SVAR React Gantt accepts `tasks` and `links` arrays, so the
 Zazz API should assemble the initial planning projection before the client adapter
-converts it to the SVAR shape. Task detail is more volatile during agent execution, so it
-is loaded through the expansion contract D1 proves. Keeping the D1 routes stable avoids a
-throwaway client integration.
+converts it to the SVAR shape. Task detail is more volatile during agent execution and
+belongs in task-focused views unless a later feature deliberately designs task scheduling
+for the Gantt.
+
+The implementation priority is:
+
+1. inventory the mock Gantt payload and client adapter fields
+2. create schema/seed/service support for those fields
+3. make `databaseService.getProjectGantt(...)` produce the same projection from real data
+4. replace the mock-backed `GET /projects/:code/gantt` route with that service
+5. then implement or harden mutation/CRUD routes around the proven projection
+
+### D-3.1 — Prove Field-Level Parity With The Mock Contract
+
+**Decision.** D2 must reconcile the production Gantt projection against the current mock
+payload and client adapter before implementation. The database-backed response must
+continue to provide every field the frontend uses from the mock contract: project code,
+project name, range, resolved timeline settings, row hierarchy fields, row status,
+progress, completion flag, generated label metadata, deliverable code/title, task count,
+milestone order, deliverable order, and link fields. D2 may add fields the frontend now
+needs, especially the four deliverable schedule timestamps and normalized status
+metadata, but it must not silently drop a mock-backed field that the adapter or page
+consumes.
+
+**Why.** D2 is not only a schema task. It is the production backing source for an
+already-proven UI contract. A field-level parity pass keeps the database design honest
+against the actual Gantt screen and gives the frontend room to add color-coding and
+schedule variance without another database redesign.
+
+### D-3.2 — Return Raw And Normalized Status Metadata For Gantt Styling
+
+**Decision.** Milestone and deliverable rows must include the raw domain `status`,
+`completed`, and `progress` fields already present in the mock contract. They should also
+include normalized styling metadata such as `statusCategory` and `blocked`, where
+`statusCategory` uses a small stable set like `NOT_STARTED`, `IN_PROGRESS`,
+`COMPLETED`, and `BLOCKED`. Deliverable `blocked` may be derived from blocked child
+tasks or a later deliverable-level blocked signal. Because production D2 does not render
+task rows in the Gantt chart, task status should be returned as aggregate metadata such
+as `taskCount`, `completedTaskCount`, `blockedTaskCount`, and `taskStatusCounts` rather
+than one row per task.
+
+**Why.** Project workflows can use different status codes over time, while the Gantt
+needs stable visual categories. Returning both raw status and normalized status metadata
+lets the frontend show exact workflow state in text while color-coding bars consistently.
 
 ### D-3a — Use Server-Authoritative Save And Projection Replacement
 
@@ -332,12 +430,24 @@ projection/move operations use `/projects/:code/gantt`.
 **Why.** Milestones are domain records; Gantt is a view contract. Separating them keeps
 future non-Gantt milestone UI possible.
 
-### D-5 — Reuse Task Relations For M1 Dependency Lines
+### D-5 — Persist Deliverable Dependencies For Gantt Link Lines
 
-**Decision.** M1 links come from `TASK_RELATIONS`, not a new deliverable dependency table.
+**Decision.** D2 adds first-class deliverable dependency persistence so
+`GET /projects/:code/gantt` can return deliverable-to-deliverable links in the same
+`links[]` shape proven by the mock API. The recommended schema is a join table such as
+`DELIVERABLE_RELATIONS` with `deliverable_id`, `related_deliverable_id`,
+`relation_type`, and audit fields, modeled after `TASK_RELATIONS`. `DEPENDS_ON` is the
+required relation type for M1. The service must validate that both deliverables belong to
+the project resolved from `/projects/:code/...` and must reject self-dependencies.
+Dependency editing UI is out of scope, but seed/reset and tests must create enough
+deliverable dependency records for the database-backed Gantt chart to draw the same kind
+of connector lines shown by the mock data.
 
-**Why.** Task dependency data already exists and is agent-maintained. First-class
-deliverable dependency editing can wait until owners need that separate abstraction.
+**Why.** The Gantt screenshot and mock payload show dependency lines between deliverable
+bars, including planned/proposed deliverables that may not have task rows yet. Deriving
+all Gantt links from `TASK_RELATIONS` would make future planning dependencies disappear
+until tasks exist. Deliverable dependencies are planning data, while task relations remain
+execution-detail data for task graph surfaces.
 
 ### D-6 — Treat SVAR Backend Helpers As Optional
 
@@ -428,7 +538,9 @@ Adaptive guidance:
 Maintain `.zazz/execution/project-milestones-m1-run-log.md`, section `D2`. Record:
 
 - D1 contract revision consumed
+- mock field inventory and D2 production field contract
 - schema decisions and any changes from this specification
+- deliverable dependency schema and `links[]` projection evidence
 - DB reset/push evidence
 - API test evidence
 - manual OpenAPI/Swagger evidence if used
@@ -451,12 +563,21 @@ The agent must stop and surface to the Owner if:
 ## 6. Acceptance Criteria
 
 - **AC1 — Schema supports milestones.** `api/lib/db/schema.js` defines `MILESTONES`,
-  project relation, deliverable relation, default milestone uniqueness, date fields, and
-  `DELIVERABLES.milestone_id` plus milestone-scoped deliverable ordering; it does not
-  add a persisted manual milestone position or require localized milestone names for the
-  MVP. Milestone status is represented or projected with the milestone lifecycle
+  required project relation, deliverable relation, default milestone uniqueness, date
+  fields, and `DELIVERABLES.milestone_id` plus milestone-scoped deliverable ordering; it
+  does not add a persisted manual milestone position or require localized milestone names
+  for the MVP. Milestone status is represented or projected with the milestone lifecycle
   `PLANNING`, `PENDING`, `IN_PROGRESS`, and `DONE`, separate from the deliverable
   workflow. Verified by DB push/reset and schema review.
+- **AC1a — Deliverable schedule timestamps support Gantt rows.**
+  `api/lib/db/schema.js` adds `planned_start_at`, `planned_completion_at`,
+  `actual_start_at`, and `actual_completion_at` to `DELIVERABLES`, or this
+  specification is revised with an Owner-approved alternative. Database-backed
+  `GET /projects/:code/gantt` returns deliverable `startDate` and `endDate` from the
+  planned timestamp fields or from a documented temporary fallback for legacy rows.
+  Completion/progress metadata may use the actual timestamp fields alongside existing
+  deliverable status. Verified by DB push/reset and
+  `api/__tests__/routes/gantt.test.mjs`.
 - **AC2 — Default milestone behavior.** Project creation and seed/reset create one default
   milestone per project, and seeded deliverables are assigned to it. The API provides
   enough metadata, such as `labelKey: "gantt.defaultMilestone"`, for the client to
@@ -468,9 +589,36 @@ The agent must stop and surface to the Owner if:
   database-backed and returns the D1 JSON contract with milestones, deliverables,
   completion metadata, display-label metadata such as `labelKey`/`labelParams`, and
   initial deliverable-level links for the whole project in one response. The response
-  includes resolved project timeline metadata from persisted Gantt settings. The D1 task
-  expansion route is also database-backed. The response includes a projection version or
-  equivalent `updatedAt` marker so the client can guard stale modal saves. Verified by
+  includes resolved project timeline metadata from persisted Gantt settings and does not
+  require task rows for the production Gantt chart. The response includes a projection
+  version or equivalent `updatedAt` marker so the client can guard stale modal saves.
+  Verified by `api/__tests__/routes/gantt.test.mjs`.
+- **AC3a — Mock contract parity.** Before replacing the mock backing source, the
+  implementor inventories `api/src/mockData/gantt/`, `api/src/schemas/gantt.js`, and
+  `client/src/utils/ganttAdapter.js`, then records the D2 production field contract in
+  the run log. Database-backed `GET /projects/:code/gantt` returns every mock-backed
+  field the client consumes, including `projectCode`, `projectName`, `range`, `timeline`,
+  `rows`, `links`, row `id`, `entityType`, `parentId`, `labelKey`, `labelParams`,
+  `displayName`, `isDefault`, `deliverableId`, `deliverableCode`, `startDate`,
+  `endDate`, `status`, `progress`, `completed`, `taskCount`, and link
+  `sourceId`/`targetId`/`type`/`relationType`. Any deliberately removed mock field must
+  be approved as a spec revision. Verified by `api/__tests__/routes/gantt.test.mjs` and
+  run-log contract evidence.
+- **AC3b — Gantt status and styling metadata.** Milestone and deliverable rows expose
+  raw `status`, `completed`, and `progress` values plus stable visual-state metadata
+  such as `statusCategory` and `blocked`. Deliverable rows expose task status aggregate
+  fields needed for display or styling, such as `taskCount`, `completedTaskCount`,
+  `blockedTaskCount`, and `taskStatusCounts`, without requiring one Gantt row per task.
+  Status categories cover at least `NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, and
+  `BLOCKED`, with mapping rules documented in the service or tests. Verified by
+  `api/__tests__/routes/gantt.test.mjs`.
+- **AC3c — Deliverable dependency links.** `api/lib/db/schema.js` persists
+  deliverable-to-deliverable dependencies, and database-backed
+  `GET /projects/:code/gantt` returns those dependencies in `links[]` using the
+  mock-compatible fields `id`, `sourceId`, `targetId`, `type`, and `relationType`.
+  `sourceId` and `targetId` point at deliverable row IDs such as `deliverable:<id>` so
+  SVAR can draw connector lines between deliverable bars. The service rejects
+  cross-project dependencies and self-dependencies. Verified by
   `api/__tests__/routes/gantt.test.mjs`.
 - **AC4 — Milestone CRUD.** Project-scoped create, list, update, and delete behavior
   works for non-default milestones, validates date range/name, deletes only empty
@@ -522,14 +670,28 @@ Reference data sources:
 
 - D1 final mocked Gantt contract in `.zazz/execution/project-milestones-m1-run-log.md`
 - existing seeded `ZAZZ` project data
-- synthetic PactumJS test project, deliverables, and tasks created in test setup
+- synthetic PactumJS test project, deliverables, and optional tasks created in test setup
 
 Automated tests:
 
 - `gantt.test.mjs should return default milestone hierarchy for seeded deliverables` —
-  verifies AC2 and AC3 by asserting project, milestone, deliverable, task, completion,
-  and link fields match the D1 contract, and by confirming seeded/new deliverables remain
-  under the default milestone until assigned to a planned milestone.
+  verifies AC2 and AC3 by asserting project, milestone, deliverable, completion, and
+  link fields match the revised D1/D2 contract, and by confirming seeded/new deliverables
+  remain under the default milestone until assigned to a planned milestone.
+- `gantt.test.mjs should preserve the mock Gantt field contract from the database` —
+  verifies AC3a by asserting the database-backed projection includes every
+  client-consumed mock field, plus approved D2 additions.
+- `gantt.test.mjs should return deliverable schedule timestamps in Gantt rows` —
+  verifies AC1a by asserting deliverable rows expose `startDate` and `endDate` values
+  derived from persisted `planned_start_at` and `planned_completion_at`, plus completion
+  metadata from status and/or actual timestamp fields.
+- `gantt.test.mjs should return normalized status metadata for Gantt styling` —
+  verifies AC3b by asserting milestone/deliverable raw status, `statusCategory`,
+  `blocked`, completion/progress fields, and deliverable task status aggregates.
+- `gantt.test.mjs should return deliverable dependency links for the chart` — verifies
+  AC3c by creating or seeding deliverable dependencies and asserting `links[]` contains
+  mock-compatible source/target deliverable IDs, link type, and `DEPENDS_ON`
+  `relationType`.
 - `gantt.test.mjs should create update and list project milestones` — verifies AC4 with
   valid date behavior, generated display-label metadata, and chronological milestone
   ordering.
@@ -597,20 +759,26 @@ it('returns a project Gantt hierarchy with the default milestone', async () => {
 **Phase 1: Contract reconciliation**
 
 1.1. Read D1 final mocked contract from the run log.  
-1.2. Revise this specification if the contract materially differs.  
-1.3. Add failing PactumJS tests that prove `GET /projects/:code/gantt` no longer returns
+1.2. Inventory `api/src/mockData/gantt/`, `api/src/schemas/gantt.js`, and
+`client/src/utils/ganttAdapter.js`; record client-consumed fields in the run log.
+1.3. Revise this specification if the contract materially differs.
+1.4. Add failing PactumJS tests that prove `GET /projects/:code/gantt` no longer returns
 D1's fixed mock data and instead reflects seeded/test database state.
 
 **Phase 2: Schema and seed foundation**
 
-2.1. Add `MILESTONES`, `DELIVERABLES.milestone_id`, and
-`DELIVERABLES.milestone_position` or equivalent milestone-scoped order field to
-`api/lib/db/schema.js`.  
+2.1. Add `MILESTONES`, `DELIVERABLES.milestone_id`,
+`DELIVERABLES.milestone_position` or equivalent milestone-scoped order field, and
+deliverable schedule timestamp fields to `api/lib/db/schema.js`.
+2.1a. Add deliverable dependency persistence such as `DELIVERABLE_RELATIONS`, including
+same-project validation support, self-dependency protection, indexes, and Drizzle
+relations.
 2.2. Add project Gantt settings persistence with one settings record per project or an
 approved validated project-owned JSON alternative.  
 2.3. Add relations.  
-2.4. Update seed/reset to create default milestones, assign seeded deliverables, and
-create default Gantt settings.  
+2.4. Update seed/reset to create default milestones, assign seeded deliverables, create
+deliverable dependency records that exercise `links[]`, and create default Gantt
+settings.
 2.5. Run DB reset against test DB.
 
 **Phase 3: Data/service projection**
@@ -620,12 +788,14 @@ create default Gantt settings.
 3.3. Add `getProjectGantt(projectId)` projection matching D1; it returns all milestones,
 deliverables, and initial deliverable-level links for the project in one service
 response.  
-3.4. Add `getDeliverableGanttTasks(projectId, deliverableId)` matching the D1 lazy task
-expansion contract.  
-3.5. Add Gantt settings get/update helpers and resolve settings into projection
+3.4. Add deliverable dependency query/projection helpers that map persisted dependency
+records into mock-compatible `links[]` rows.
+3.5. Add deliverable-level task count/status rollup helpers only if needed by the
+projection; do not add a production task-row Gantt surface in D2.
+3.6. Add Gantt settings get/update helpers and resolve settings into projection
 `timeline` metadata.  
-3.6. Add deliverable milestone reassignment with same-project validation.  
-3.7. Add ordered milestone deliverable-list replacement, using the default milestone as
+3.7. Add deliverable milestone reassignment with same-project validation.
+3.8. Add ordered milestone deliverable-list replacement, using the default milestone as
 the initial source/destination for add/remove flows.
 
 **Phase 4: Routes, schemas, realtime**
@@ -700,20 +870,37 @@ export default async function ganttRoutes(fastify, options) {
 Resolve these before code is written. Log each answer in the run log.
 
 - **OQ-1** — What exact D1 JSON contract is final?
-- **RQ-2** — Milestone dates are date-only planning fields for `start_date` and
-  `end_date`. Deliverable/task start/end values may remain UTC timestamps when time
-  precision is required; the adapter handles local timezone display.
+- **RQ-2** — Milestone date boundaries remain the milestone planning fields
+  `start_date` and `end_date`. Deliverable schedule values are timestamp fields on
+  `DELIVERABLES`; task schedule values are not added for D2. The adapter handles the
+  public Gantt `startDate`/`endDate` display contract.
 - **RQ-3** — Deleting a non-default milestone is rejected unless the milestone is empty
   in M1. A later guided delete/archive flow may move deliverables back to the default
   milestone before deletion.
 - **OQ-4** — Should project creation immediately create a default milestone, or should it
   be lazily created on first Gantt access? Recommendation: create immediately.
-- **RQ-5** — Initial Gantt load contains milestones and deliverables. Task rows are
-  loaded through the D1 deliverable expansion route.
+- **RQ-5** — Initial Gantt load contains milestones and deliverables. Production D2 does
+  not need to load, timestamp, or render task rows in the Gantt chart.
 - **RQ-6** — Gantt timeline configuration is project-level. D2 should persist settings
   for timeline mode, date label visibility, period start date, sprint length, starting
   period number, and display prefixes. The projection returns resolved timeline metadata
-  while rows retain date-only start/end fields.
+  while rows retain `startDate`/`endDate` fields derived from milestone boundaries and
+  deliverable schedule timestamps.
+- **RQ-7** — Use `default milestone` for the system-created assignment bucket and
+  `planned milestone` for non-default, owner-created roadmap milestones. Avoid
+  `active milestone` and `real milestone` in D2 API/spec language.
+- **RQ-8** — D2 persists deliverable schedule timestamps on `DELIVERABLES` as
+  `planned_start_at`, `planned_completion_at`, `actual_start_at`, and
+  `actual_completion_at`. Use Drizzle `timestamp(..., { withTimezone: true })`, matching
+  the existing schema convention for datetime fields. The API may still expose
+  Gantt-facing `startDate` and `endDate` names in the JSON contract.
+- **RQ-9** — D2 does not add task schedule fields or a task-row date projection for the
+  production Gantt chart. Tasks remain dynamic execution data surfaced through task views;
+  the Gantt uses deliverable rows and deliverable status/completion metadata.
+- **RQ-10** — D2 persists deliverable-to-deliverable dependencies as planning data and
+  returns them through the Gantt projection `links[]`. Do not rely exclusively on
+  `TASK_RELATIONS` for Gantt dependency lines because planned/proposed deliverables may
+  need dependency lines before tasks exist.
 
 ---
 

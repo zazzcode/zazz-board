@@ -28,8 +28,8 @@ time-based planning questions:
 - what milestone a deliverable belongs to
 - when a milestone starts and ends
 - which deliverables sit inside a milestone
-- which tasks are active inside an expanded deliverable
-- how dependencies affect project sequence
+- what planned and actual schedule dates each deliverable carries
+- how deliverable dependencies affect project sequence
 
 The Gantt view should become the default project landing view because it shows the whole
 project shape first. From there, users can move into Kanban, task Kanban, graph, or
@@ -71,11 +71,13 @@ Today, the system does not support:
 
 - project milestone records in the database
 - assigning deliverables to milestones
+- deliverable-level planning timestamps for Gantt placement
+- deliverable-to-deliverable dependency records for Gantt link lines
 - project-level Gantt JSON or Gantt CRUD endpoints
 - a Gantt tab in the project view switcher
 - a default project landing route at `/projects/:code/gantt`
 - milestone-computed completion styling
-- lazy Gantt task-row expansion under deliverables
+- database-backed Gantt status and dependency styling metadata
 
 ## Source-Of-Truth Model
 
@@ -102,7 +104,9 @@ The board is the canonical source for:
 
 - projects
 - project milestones
+- project Gantt settings
 - deliverables
+- deliverable schedule timestamps and dependency links
 - tasks
 - workflow state
 - operational progress of execution
@@ -122,6 +126,12 @@ A long-lived application capability described by one tracked feature document un
 `.zazz/features/`, or by a feature-key directory only when the feature explicitly needs
 subdocuments.
 
+Features are product-context artifacts, not project timeline containers. A feature can
+cross-cut multiple project milestones, and one project milestone may contain deliverables
+from several features. M1 does not add database-backed feature records or feature-to-board
+sync. That integration should be designed later as its own feature so project milestones
+can prove the planning model first.
+
 ### Project Milestone
 
 A project-scoped planning container with a start date, end date, and system-managed
@@ -129,6 +139,11 @@ default flag. Milestones belong to projects and inherit project access rules. In
 Gantt tree, milestones sort chronologically by start date, then end date, then stable
 tie-breakers. Manual milestone ordering is out of scope because mixing arbitrary order
 with timeline order would make the planning view harder to read.
+
+Project milestones are dated project-planning containers, not feature milestones. They
+sequence deliverables across the whole project and may include work from multiple
+features, bug fixes, chores, or technical investments when that is how the project plan
+is shaped.
 
 Milestones use their own small planning status model rather than reusing the full
 deliverable workflow:
@@ -167,17 +182,31 @@ tree. That order is separate from milestone chronological ordering. Milestones s
 by date; deliverables within a milestone can be moved up or down to reflect the owner's
 preferred reading and execution sequence.
 
+Deliverables carry the Gantt schedule values that place their bars on the timeline:
+`planned_start_at`, `planned_completion_at`, `actual_start_at`, and
+`actual_completion_at`. The API may expose those values through Gantt-facing
+`startDate`/`endDate` fields, but the database fields follow the existing datetime
+`*_at` naming convention.
+
+Deliverables may also depend on other deliverables. Those dependencies are planning data
+for Gantt sequencing, separate from task-level execution relations.
+
 ### Task
 
 An agent-created execution item under a deliverable. Tasks inherit milestone context
 through their deliverable. A task does not get its own milestone foreign key in M1.
 
+Tasks remain dynamic execution detail. M1 does not require task schedule fields or task
+rows in the production Gantt chart. Task status may still contribute aggregate metadata
+on deliverable rows, such as task counts or blocked-task counts.
+
 ### Gantt View
 
 The project view at `/projects/:code/gantt`. It displays milestones and deliverables in a
-left-side tree with a time-scaled Gantt chart on the right. When the user expands a
-deliverable, the view loads that deliverable's task rows and inserts them under the
-deliverable. The view uses SVAR React Gantt and keeps SVAR-specific row/link details
+left-side tree with a time-scaled Gantt chart on the right. The production M1 chart is a
+project-planning view over milestones and deliverables. Task-focused detail remains in
+task Kanban and task graph views unless a later feature deliberately adds task scheduling
+to the Gantt. The view uses SVAR React Gantt and keeps SVAR-specific row/link details
 behind a Zazz hook or adapter.
 
 ### Gantt Contract
@@ -185,9 +214,11 @@ behind a Zazz hook or adapter.
 The JSON structure the client consumes to render the Gantt view. M1 proves this contract
 with mocked data before the persistence model is implemented. The initial contract
 returns the project planning projection at once: all milestones, deliverables, and
-deliverable-level links needed for first render. Task rows are loaded separately when a
-deliverable expands because agent task data may change frequently and users will not
-always need that detail visible.
+deliverable-level links needed for first render. The D2 production contract replaces the
+mock backing source with database-backed rows and links while preserving the fields the
+client consumes. It should add approved production fields such as deliverable schedule
+timestamps, normalized status metadata, and task status aggregates without requiring one
+Gantt row per task.
 
 The contract should keep calendar dates as date-only ISO strings and use optional
 timeline metadata to describe how the client labels the chart scale. For the M1 mock,
@@ -356,16 +387,20 @@ milestone introduces an owner-controlled override.
 1. Agents update task and deliverable statuses through existing execution flows.
 2. Existing project-scoped realtime events reach the Gantt page.
 3. The Gantt page refreshes or patches affected milestone and deliverable rows.
-4. If a deliverable is expanded, task events refresh or patch the visible task rows.
-5. Completed tasks, deliverables, and milestones turn green without requiring a reload.
+4. Deliverable rows show raw workflow status plus normalized visual-state metadata, such
+   as not started, in progress, completed, and blocked.
+5. Completed deliverables and milestones turn green without requiring a reload.
 
 ### Dependency Visibility Flow
 
-1. The initial Gantt contract may include deliverable-level dependency summaries inferred
-   from `TASK_RELATIONS`.
-2. Expanded deliverable task payloads include detailed task dependency links for loaded
-   task rows.
-3. The chart draws dependency lines where the selected SVAR contract supports them.
+1. Owners or seed/reset data define deliverable-to-deliverable dependencies as planning
+   relationships.
+2. The initial Gantt contract returns those dependencies in `links[]`, with each link
+   pointing at deliverable row IDs.
+3. The chart draws dependency lines so owners can see sequencing pressure while setting
+   planned deliverable dates.
+4. Task-level `TASK_RELATIONS` continue to serve execution/detail views such as task
+   graph, but they are not the sole source of Gantt dependency lines.
 
 ## SVAR React Gantt Research Notes
 
@@ -403,15 +438,15 @@ exact row/link contract in the D1 run log. Current documentation research indica
 
 | Milestone | Status | Target date | Capability statement | Deliverables |
 | --- | --- | --- | --- | --- |
-| M1 | Planned | TBD | Users can open a project Gantt view, inspect a milestone/deliverable hierarchy, expand deliverables for task detail, and the team has a proven JSON contract for persistent implementation. | D1 SVAR Gantt UI and mocked contract; D2 Gantt API and database persistence |
+| M1 | Planned | TBD | Users can open a project Gantt view, inspect a milestone/deliverable hierarchy, see deliverable sequencing dependencies, and the team has a proven JSON contract for persistent implementation. | D1 SVAR Gantt UI and mocked contract; D2 Gantt API and database persistence |
 | M2 | Proposed | TBD | Users can manage milestones and deliverable assignment through production CRUD flows with realtime updates. | milestone editor hardening; drag/drop reassignment persistence; validation and UX polish |
 | M3 | Proposed | TBD | The Gantt view becomes a richer planning and dependency surface. | dependency editing; scheduling helpers; advanced filtering; owner workflow improvements |
 
 ## M1: Gantt MVP And Persistence Foundation (Target TBD)
 
 Capability statement: Users can open a project Gantt view, inspect a
-milestone/deliverable hierarchy, expand deliverables for task detail, and the team has a
-proven JSON contract for persistent implementation.
+milestone/deliverable hierarchy, see deliverable sequencing dependencies, and the team
+has a proven JSON contract for persistent implementation.
 
 ### Deliverables
 
@@ -422,15 +457,16 @@ proven JSON contract for persistent implementation.
 
 - `/projects/:code/gantt` exists and is the default destination after selecting a project.
 - The project view switcher includes `Gantt` directly before `Kanban`.
-- The client renders a milestone -> deliverable tree in SVAR React Gantt and lazy-loads
-  task rows when a deliverable expands.
+- The client renders a milestone -> deliverable tree in SVAR React Gantt.
 - M1 D1 implements a real Fastify `GET /projects/:code/gantt` route backed by fixed
   mock data under an API mock-data directory.
-- M1 D1 implements a real mock-backed task expansion route for deliverable task rows.
 - M1 D1 documents the JSON the UI needs, including rows, links, status/completion fields,
-  date fields, and lazy task expansion behavior.
-- M1 D2 implements the schema/API only after D1 confirms the widget contract.
+  date fields, and dependency line behavior.
+- M1 D2 implements the schema/API only after D1 confirms the widget contract and field
+  inventory.
 - Existing deliverables have a default milestone in seeded and reset data.
+- Deliverables have schedule timestamps for planned and actual start/completion.
+- Deliverable dependencies are persisted and returned as Gantt `links[]`.
 - Project-scoped URLs and access checks remain the access boundary.
 - Realtime task and deliverable status changes update the Gantt view the same way they
   update other project views.
@@ -463,13 +499,19 @@ D2 should add the persistence model:
 - deliverables need a milestone-scoped order field, such as
   `DELIVERABLES.milestone_position`, so the owner can control the order of deliverables
   within a milestone without changing milestone chronological ordering
+- deliverables need schedule timestamp fields for Gantt placement and execution
+  comparison:
+  - `planned_start_at`
+  - `planned_completion_at`
+  - `actual_start_at`
+  - `actual_completion_at`
 - no new task milestone FK in M1; tasks inherit milestone context through their
   deliverable
-- deliverable and task start/end timestamps may continue to use UTC timestamps where the
-  existing model requires time precision; the client adapter should normalize them for
-  the user's local timezone and SVAR's date expectations
-- no first-class deliverable dependency table in M1; use task relations and revisit if
-  users need owner-authored deliverable dependencies
+- no new task schedule fields in M1; tasks remain dynamic execution detail surfaced in
+  task-focused views
+- deliverable dependencies should be first-class planning records in M1, such as
+  `DELIVERABLE_RELATIONS`, so the Gantt projection can return `links[]` before task rows
+  exist. `TASK_RELATIONS` remain task execution/detail data.
 - project-level Gantt settings should persist separately from individual milestones. A
   dedicated `PROJECT_GANTT_SETTINGS` table or a validated project-owned JSON column are
   both acceptable in D2 if the API validates the same public contract. Preferred fields:
@@ -481,10 +523,8 @@ D2 should add the persistence model:
 
 Use project code in every URL:
 
-- `GET /projects/:code/gantt` returns all milestones, deliverables, and initial
-  deliverable-level links for the project in one response.
-- `GET /projects/:code/gantt/deliverables/:deliverableId/tasks` returns task rows and
-  task links for one expanded deliverable.
+- `GET /projects/:code/gantt` returns all milestones, deliverables, and deliverable
+  dependency links for the project in one response.
 - `GET /projects/:code/milestones` lists milestones.
 - `POST /projects/:code/milestones` creates a milestone.
 - `PUT /projects/:code/milestones/:milestoneId` updates milestone fields.
@@ -502,11 +542,11 @@ Use project code in every URL:
 - `PUT /projects/:code/gantt/settings` updates project Gantt display settings and causes
   future Gantt projections to return resolved timeline metadata.
 
-D1 implements `GET /projects/:code/gantt` and the deliverable task expansion endpoint as
-real Fastify routes backed by mock data. The mock data should live in a clearly named API
-mock-data directory and be selected by project code. The initial route returns one
-project-level payload, not one payload per milestone. The starter mock set should include
-fixed milestone IDs for the selected project:
+D1 implements `GET /projects/:code/gantt` as a real Fastify route backed by mock data.
+The mock data should live in a clearly named API mock-data directory and be selected by
+project code. The initial route returns one project-level payload, not one payload per
+milestone. The starter mock set should include fixed milestone IDs for the selected
+project:
 
 - `milestone:default` displayed as `Default`
 - `milestone:one` displayed as `Milestone 1`
@@ -516,10 +556,10 @@ fixed milestone IDs for the selected project:
   `milestone:six`, when the mock needs a more realistic roadmap range
 
 The mock hierarchy should include deliverables under both `Default` and named milestones,
-plus task payloads for at least two expanded deliverables, so the UI proves default
-grouping, planned milestone grouping, lazy task expansion, completion styling, real-date
-timeline scaling, and dependency lines before the database model exists. D2 keeps the
-same route contract and replaces the mock backing source with database-backed services.
+plus deliverable dependency links, so the UI proves default grouping, planned milestone
+grouping, completion styling, real-date timeline scaling, and dependency lines before the
+database model exists. D2 keeps the same route contract and replaces the mock backing
+source with database-backed services.
 
 ## M2: Milestone Management Hardening (Target TBD)
 
@@ -555,7 +595,7 @@ dependency interpretation, and milestone-level decision making.
 
 ### Deliverables
 
-- owner-facing dependency editing if first-class deliverable dependencies are approved
+- owner-facing dependency editing for first-class deliverable dependencies
 - schedule helpers for rolling dates from deliverables/tasks up to milestones
 - filters for status, assignee/agent, milestone, deliverable type, and blocked work
 - print/export or stakeholder presentation mode if needed
@@ -569,23 +609,28 @@ dependency interpretation, and milestone-level decision making.
 
 ## Planned Future Evolution
 
-After M1, the team should decide whether project milestones are purely operational
-project records or whether some milestone metadata should later sync to Git-authored
-feature documents. The MVP should avoid solving that synchronization problem until the
-project Gantt behavior is proven.
+After M1, feature integration should be treated as a separate future capability. Project
+milestones are dated project containers, and features are long-lived product context that
+can cross-cut those containers. A future feature-to-board integration may let users
+associate deliverables with feature records or feature documents, but one project
+milestone should still be able to contain deliverables from multiple features. The MVP
+should avoid solving feature sync until the project Gantt behavior is proven.
 
 ## Resolved M1 Questions And Follow-Ups
 
 - Milestone dates are date-only planning values. D1 should still confirm the exact value
   shape SVAR prefers before locking the JSON contract.
-- Deliverable and task start/end values may remain UTC timestamps when time precision is
-  needed; the UI adapter should normalize them for the active locale/timezone and SVAR.
-- Initial Gantt load returns milestones and deliverables. Task rows lazy-load when a
-  deliverable expands and receive project event updates while visible.
-- Confirm whether deliverable dependencies should remain inferred from task relations or
-  become first-class owner-managed records in a later milestone.
+- Deliverable schedule values live on `DELIVERABLES` as timestamp fields:
+  `planned_start_at`, `planned_completion_at`, `actual_start_at`, and
+  `actual_completion_at`.
+- Initial production Gantt load returns milestones, deliverables, and deliverable
+  dependency links. Task rows are not required in the production M1 Gantt chart.
+- Deliverable dependencies are first-class planning records for the Gantt projection.
+  Task relations remain execution-detail data for task-focused views.
 - Feature documents live in `.zazz/features/`; deliverable specifications live in
   `.zazz/specifications/`.
+- Feature documents can cross-cut project milestones. Database-backed feature integration
+  is deferred to a separate future capability.
 
 ## Deliverable Handoff Considerations
 
