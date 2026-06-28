@@ -125,6 +125,38 @@
     "dragToReorder": "Drag to reorder tasks",
     "dropToMove": "Drop to move task"
   },
+  "gantt": {
+    "title": "Gantt",
+    "milestone": "Milestone",
+    "milestones": "Milestones",
+    "defaultMilestone": "Default",
+    "numberedMilestone": "Milestone {{number}}",
+    "empty": "No milestone data available",
+    "errorTitle": "Unable to load Gantt view",
+    "createMilestone": "Create Milestone",
+    "editMilestone": "Edit Milestone",
+    "timelineLabel": "Measured by project timeline",
+    "addDeliverable": "Add deliverable",
+    "noAssignedDeliverables": "No deliverables assigned",
+    "noAvailableDeliverables": "No available deliverables",
+    "moveDeliverableUp": "Move {{name}} up",
+    "moveDeliverableDown": "Move {{name}} down",
+    "removeDeliverable": "Remove {{name}}",
+    "fields": {
+      "name": "Name",
+      "generatedName": "Auto-generated if blank",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "deliverables": "Deliverables",
+      "selectDeliverables": "Select deliverables",
+      "showDefaultMilestone": "Show default milestone"
+    },
+    "columns": {
+      "item": "Item",
+      "status": "Status",
+      "progress": "Progress"
+    }
+  },
   "deliverables": {
     "title": "Deliverables",
     "createDeliverable": "Create Deliverable",

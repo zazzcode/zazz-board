@@ -117,6 +117,38 @@
     "dragToReorder": "Arrastra para reordenar tareas",
     "dropToMove": "Suelta para mover tarea"
   },
+  "gantt": {
+    "title": "Gantt",
+    "milestone": "Hito",
+    "milestones": "Hitos",
+    "defaultMilestone": "Predeterminado",
+    "numberedMilestone": "Hito {{number}}",
+    "empty": "No hay datos de hitos disponibles",
+    "errorTitle": "No se pudo cargar la vista Gantt",
+    "createMilestone": "Crear Hito",
+    "editMilestone": "Editar Hito",
+    "timelineLabel": "Medido por la escala del proyecto",
+    "addDeliverable": "Agregar entregable",
+    "noAssignedDeliverables": "No hay entregables asignados",
+    "noAvailableDeliverables": "No hay entregables disponibles",
+    "moveDeliverableUp": "Subir {{name}}",
+    "moveDeliverableDown": "Bajar {{name}}",
+    "removeDeliverable": "Quitar {{name}}",
+    "fields": {
+      "name": "Nombre",
+      "generatedName": "Se genera automáticamente si está vacío",
+      "startDate": "Fecha de Inicio",
+      "endDate": "Fecha de Fin",
+      "deliverables": "Entregables",
+      "selectDeliverables": "Seleccionar entregables",
+      "showDefaultMilestone": "Mostrar hito predeterminado"
+    },
+    "columns": {
+      "item": "Elemento",
+      "status": "Estado",
+      "progress": "Progreso"
+    }
+  },
   "users": {
     "title": "Usuarios",
     "fullName": "Nombre Completo",

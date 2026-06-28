@@ -194,7 +194,6 @@ standards:
     applies_to:
       paths:
         - .zazz/specifications/
-        - .zazz/docs/specifications/
         - .zazz/deliverables/
       activities:
         - authoring or revising a deliverable specification

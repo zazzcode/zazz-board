@@ -24,3 +24,4 @@ export { coreSchemas } from './core.js';
 export { imageSchemas } from './images.js';
 export { fileLockSchemas } from './fileLocks.js';
 export { agentTokenSchemas } from './agentTokens.js';
+export { ganttSchemas } from './gantt.js';

@@ -27,8 +27,8 @@ signals, but they do not have a universal hard line cap. Prefer concise, pointed
 document covers multiple work contexts. If a longer standard remains cohesive because the governed area is complex, keep
 it together and make the section headings scannable rather than splitting solely to satisfy a line count.
 
-These thresholds do not apply to deliverable specifications, including `.zazz/specifications/`,
-`.zazz/docs/specifications/`, and legacy `.zazz/deliverables/*-SPEC.md` files. Specifications are executable contracts;
+These thresholds do not apply to deliverable specifications, including `.zazz/specifications/`
+and legacy `.zazz/deliverables/*-SPEC.md` files. Specifications are executable contracts;
 their quality bar is governed by [spec-hygiene.md](./spec-hygiene.md), where completeness, testable acceptance
 criteria, review shape, and implementation instructions matter more than line count. Split a specification only when it
 actually represents multiple deliverables or review units, not because it crosses a generic file-size threshold.

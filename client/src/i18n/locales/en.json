@@ -155,6 +155,53 @@
     "dragToReorder": "Drag to reorder tasks",
     "dropToMove": "Drop to move task"
   },
+  "gantt": {
+    "title": "Gantt",
+    "milestone": "Milestone",
+    "milestones": "Milestones",
+    "configuration": "Gantt Configuration",
+    "defaultMilestone": "Default",
+    "numberedMilestone": "Milestone {{number}}",
+    "empty": "No milestone data available",
+    "errorTitle": "Unable to load Gantt view",
+    "createMilestone": "Create Milestone",
+    "editMilestone": "Edit Milestone",
+    "timelineLabel": "Measured by project timeline",
+    "projectSettings": "Gantt settings",
+    "projectSettingsOwnerOnly": "Only the project leader can edit Gantt settings",
+    "addDeliverable": "Add deliverable",
+    "noAssignedDeliverables": "No deliverables assigned",
+    "noAvailableDeliverables": "No available deliverables",
+    "moveDeliverableUp": "Move {{name}} up",
+    "moveDeliverableDown": "Move {{name}} down",
+    "removeDeliverable": "Remove {{name}}",
+    "fields": {
+      "name": "Name",
+      "generatedName": "Auto-generated if blank",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "deliverables": "Deliverables",
+      "selectDeliverables": "Select deliverables",
+      "timelineMode": "Timeline Mode",
+      "periodStartDate": "Period Start Date",
+      "sprintLengthWeeks": "Sprint Length (weeks)",
+      "startingNumber": "Starting Number",
+      "sprintPrefix": "Sprint Prefix",
+      "weekPrefix": "Week Prefix",
+      "showDateLabels": "Show date labels",
+      "showDefaultMilestone": "Show default milestone"
+    },
+    "timelineModes": {
+      "dates": "Dates",
+      "weeks": "Weeks",
+      "sprints": "Sprints"
+    },
+    "columns": {
+      "item": "Item",
+      "status": "Status",
+      "progress": "Progress"
+    }
+  },
   "deliverables": {
     "title": "Deliverables",
     "createDeliverable": "Create Deliverable",

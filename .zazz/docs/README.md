@@ -10,6 +10,12 @@ directory: the standards live under `.zazz/standards/` (see
 [../standards/index.yaml](../standards/index.yaml)), and the full methodology
 progression lives upstream in `zazz-skills/docs/methodology/`.
 
+Feature documents, deliverable specifications, architecture documents, execution logs,
+and ephemeral working notes do not live under this directory. They live under the
+corresponding `.zazz/` methodology directories such as `.zazz/features/`,
+`.zazz/specifications/`, `.zazz/architecture/`, `.zazz/execution/`, and
+`.zazz/ephemeral/`.
+
 ## Guides
 
 - [zb-agent-orientation.md](zb-agent-orientation.md) — **first-read** Zazz Board agent orientation: repo layout, worktree policy, branch scope, database safety, verification (repo-specific)

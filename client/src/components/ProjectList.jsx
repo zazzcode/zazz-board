@@ -1,4 +1,4 @@
-import { Table, Text, Group, ActionIcon, Tooltip, Box } from '@mantine/core';
+import { Table, Text, Group, ActionIcon, Tooltip, Box, UnstyledButton } from '@mantine/core';
 import { IconCalendar, IconEdit, IconKey } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
 
@@ -42,9 +42,9 @@ export function ProjectList({
       </Table.Thead>
       <Table.Tbody>
         {projects.map((project) => (
-          <Table.Tr 
-            key={project.id} 
-            style={{ 
+          <Table.Tr
+            key={project.id}
+            style={{
               transition: 'background-color 0.2s ease'
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
@@ -53,22 +53,26 @@ export function ProjectList({
             <Table.Td>
               {currentUser && project.leaderId === currentUser.id && (
                 <Tooltip label="You are the project leader" withArrow>
-                  <Box 
-                    style={{ 
-                      width: 8, 
-                      height: 8, 
-                      borderRadius: '50%', 
+                  <Box
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
                       backgroundColor: 'var(--mantine-color-blue-5)',
                       margin: '0 auto'
-                    }} 
+                    }}
                   />
                 </Tooltip>
               )}
             </Table.Td>
             <Table.Td>
-              <div 
+              <UnstyledButton
+                type="button"
                 style={{ 
-                  cursor: 'pointer'
+                  display: 'block',
+                  width: '100%',
+                  cursor: 'pointer',
+                  textAlign: 'left'
                 }}
                 onClick={() => {
                   onProjectSelect(project);
@@ -76,7 +80,7 @@ export function ProjectList({
               >
                 <Text fw={500}>{project.title}</Text>
                 <Text size="sm" c="dimmed">{project.code}</Text>
-              </div>
+              </UnstyledButton>
             </Table.Td>
             <Table.Td>
               <Text>{project.leaderName}</Text>

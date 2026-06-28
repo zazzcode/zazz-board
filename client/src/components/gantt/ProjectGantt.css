@@ -1,0 +1,138 @@
+.zazz-gantt-shell {
+  height: 100%;
+  min-height: 520px;
+  overflow: hidden;
+  border-top: 1px solid var(--mantine-color-dark-4);
+  background: #1a1b1e;
+}
+
+.zazz-gantt-shell[data-theme="light"] {
+  border-top-color: var(--mantine-color-gray-3);
+  background: #f8f9fa;
+}
+
+.zazz-gantt-shell :where(.wx-willow-theme, .wx-willow-dark-theme) {
+  height: 100%;
+}
+
+.zazz-gantt-shell :where(.wx-willow-theme, .wx-willow-dark-theme) {
+  --wx-gantt-bar-border-radius: 8px;
+  --wx-gantt-progress-marker-height: 18px;
+  --wx-timescale-font: 600 11px var(--mantine-font-family);
+  --wx-grid-body-font: 400 13px var(--mantine-font-family);
+}
+
+.zazz-gantt-shell :where(.wx-willow-dark-theme) {
+  --wx-gantt-task-color: #339af0;
+  --wx-gantt-task-fill-color: #1c7ed6;
+  --wx-gantt-task-border-color: #4dabf7;
+  --wx-gantt-summary-color: #20c997;
+  --wx-gantt-summary-fill-color: #0ca678;
+  --wx-gantt-summary-border-color: #38d9a9;
+  --wx-gantt-bar-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+.zazz-gantt-shell :where(.wx-willow-theme) {
+  --wx-gantt-task-color: #1971c2;
+  --wx-gantt-task-fill-color: #228be6;
+  --wx-gantt-task-border-color: #1c7ed6;
+  --wx-gantt-summary-color: #099268;
+  --wx-gantt-summary-fill-color: #12b886;
+  --wx-gantt-summary-border-color: #087f5b;
+  --wx-gantt-bar-shadow: 0 2px 8px rgba(33, 37, 41, 0.16);
+}
+
+.zazz-gantt-shell :where(.wx-bar) {
+  overflow: hidden;
+}
+
+.zazz-gantt-task {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px;
+  overflow: hidden;
+}
+
+.zazz-gantt-task-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.zazz-gantt-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+}
+
+.zazz-gantt-row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--mantine-color-blue-5);
+  background: transparent;
+  cursor: pointer;
+}
+
+.zazz-gantt-row-action:hover {
+  background: rgba(77, 171, 247, 0.16);
+  color: #4dabf7;
+}
+
+.zazz-gantt-complete {
+  color: #d3f9d8;
+}
+
+.zazz-gantt-complete::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #40c057;
+  box-shadow: 0 0 0 3px rgba(64, 192, 87, 0.18);
+}
+
+.zazz-gantt-milestone {
+  color: #a5d8ff;
+}
+
+.zazz-gantt-deliverable,
+.zazz-gantt-task {
+  color: #dee2e6;
+}
+
+.zazz-gantt-shell[data-theme="light"] .zazz-gantt-complete {
+  color: #2b8a3e;
+}
+
+.zazz-gantt-shell[data-theme="light"] .zazz-gantt-milestone {
+  color: #0b7285;
+}
+
+.zazz-gantt-shell[data-theme="light"] .zazz-gantt-deliverable,
+.zazz-gantt-shell[data-theme="light"] .zazz-gantt-task {
+  color: #212529;
+}
+
+.zazz-gantt-shell[data-theme="light"] .zazz-gantt-row-action:hover {
+  background: rgba(25, 113, 194, 0.12);
+  color: #1971c2;
+}
+
+.zazz-gantt-shell[data-theme="light"] .zazz-gantt-row-action {
+  color: var(--mantine-color-blue-6);
+}

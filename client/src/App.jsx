@@ -37,8 +37,10 @@ import { KanbanPage } from './pages/KanbanPage.jsx';
 import { TaskGraphPage } from './pages/TaskGraphPage.jsx';
 import { DeliverableKanbanPage } from './pages/DeliverableKanbanPage.jsx';
 import { DeliverableListPage } from './pages/DeliverableListPage.jsx';
+import { GanttPage } from './pages/GanttPage.jsx';
 import { useTranslation } from './hooks/useTranslation.js';
 import { useDeliverables } from './hooks/useDeliverables.js';
+import { getDefaultProjectPath, getProjectViewPath, getProjectViewSegmentData } from './utils/projectRoutes.js';
 import logger from './utils/logger.js';
 import '@mantine/core/styles.css';
 
@@ -50,7 +52,8 @@ function AppContent() {
   // Extract projectCode from URL manually since useParams only works inside route components
   const projectCode = location.pathname.startsWith('/projects/') && 
     (location.pathname.includes('/kanban') || location.pathname.includes('/task-kanban') || 
-     location.pathname.includes('/task-graph') || location.pathname.includes('/deliverables'))
+     location.pathname.includes('/task-graph') || location.pathname.includes('/deliverables') ||
+     location.pathname.includes('/gantt'))
     ? location.pathname.split('/')[2] 
     : null;
   
@@ -312,7 +315,7 @@ function AppContent() {
 
   const handleProjectSelect = (project) => {
     setSelectedProject(project);
-    navigate(`/projects/${project.code}/kanban`);
+    navigate(getDefaultProjectPath(project.code));
   };
 
   const handleProjectCreate = () => {
@@ -377,6 +380,31 @@ function AppContent() {
         if (!workflowResponse.ok) {
           const errorText = await workflowResponse.text();
           throw new Error(`Failed to update workflow: ${errorText}`);
+        }
+
+        if (formData.ganttSettings) {
+          const ganttSettingsResponse = await fetch(`http://localhost:3030/projects/${editingProject.code}/gantt/settings`, {
+            method: 'PUT',
+            headers: {
+              'TB_TOKEN': token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              timelineMode: formData.ganttSettings.timelineMode,
+              showDateLabels: formData.ganttSettings.showDateLabels,
+              showDefaultMilestone: formData.ganttSettings.showDefaultMilestone,
+              periodStartDate: formData.ganttSettings.periodStartDate,
+              sprintLengthWeeks: formData.ganttSettings.sprintLengthWeeks,
+              periodNumberStart: formData.ganttSettings.periodNumberStart,
+              sprintLabelPrefix: formData.ganttSettings.sprintLabelPrefix,
+              weekLabelPrefix: formData.ganttSettings.weekLabelPrefix
+            })
+          });
+
+          if (!ganttSettingsResponse.ok) {
+            const errorText = await ganttSettingsResponse.text();
+            throw new Error(`Failed to update Gantt settings: ${errorText}`);
+          }
         }
       } else {
         // Create mode - create project with workflow
@@ -538,7 +566,8 @@ function AppContent() {
   const isTaskKanbanPage = location.pathname.includes('/task-kanban');
   const isTaskGraphPage = location.pathname.includes('/task-graph');
   const isDeliverablesPage = location.pathname.includes('/deliverables');
-  const isProjectPage = isKanbanPage || isTaskKanbanPage || isTaskGraphPage || isDeliverablesPage;
+  const isGanttPage = location.pathname.includes('/gantt');
+  const isProjectPage = isGanttPage || isKanbanPage || isTaskKanbanPage || isTaskGraphPage || isDeliverablesPage;
 
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark" forceColorScheme={colorScheme}>
@@ -669,24 +698,13 @@ function AppContent() {
               {isProjectPage && (
                 <SegmentedControl
                   size="sm"
-                  value={isTaskGraphPage ? 'task-graph' : isDeliverablesPage ? 'deliverables' : isTaskKanbanPage ? 'task-kanban' : 'kanban'}
+                  value={isGanttPage ? 'gantt' : isTaskGraphPage ? 'task-graph' : isDeliverablesPage ? 'deliverables' : isTaskKanbanPage ? 'task-kanban' : 'kanban'}
                   onChange={(value) => {
                     if (projectCode) {
-                      const routeMap = {
-                        'kanban': '/kanban',
-                        'task-kanban': '/task-kanban',
-                        'task-graph': '/task-graph',
-                        'deliverables': '/deliverables'
-                      };
-                      navigate(`/projects/${projectCode}${routeMap[value]}`);
+                      navigate(getProjectViewPath(projectCode, value));
                     }
                   }}
-                  data={[
-                    { value: 'kanban', label: 'Kanban' },
-                    { value: 'task-kanban', label: 'Task Kanban' },
-                    { value: 'task-graph', label: 'Graph' },
-                    { value: 'deliverables', label: 'Deliverables' },
-                  ]}
+                  data={getProjectViewSegmentData(t)}
                 />
               )}
               <ActionIcon 
@@ -721,6 +739,11 @@ function AppContent() {
             } />
             <Route path="/projects/:projectCode/kanban" element={
               <DeliverableKanbanPage 
+                selectedProject={selectedProject}
+              />
+            } />
+            <Route path="/projects/:projectCode/gantt" element={
+              <GanttPage
                 selectedProject={selectedProject}
               />
             } />

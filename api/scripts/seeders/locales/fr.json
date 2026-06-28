@@ -117,6 +117,38 @@
     "dragToReorder": "Glissez pour réorganiser les tâches",
     "dropToMove": "Déposez pour déplacer la tâche"
   },
+  "gantt": {
+    "title": "Gantt",
+    "milestone": "Jalon",
+    "milestones": "Jalons",
+    "defaultMilestone": "Par défaut",
+    "numberedMilestone": "Jalon {{number}}",
+    "empty": "Aucune donnée de jalon disponible",
+    "errorTitle": "Impossible de charger la vue Gantt",
+    "createMilestone": "Créer un Jalon",
+    "editMilestone": "Modifier le Jalon",
+    "timelineLabel": "Mesuré selon le calendrier du projet",
+    "addDeliverable": "Ajouter un livrable",
+    "noAssignedDeliverables": "Aucun livrable attribué",
+    "noAvailableDeliverables": "Aucun livrable disponible",
+    "moveDeliverableUp": "Déplacer {{name}} vers le haut",
+    "moveDeliverableDown": "Déplacer {{name}} vers le bas",
+    "removeDeliverable": "Retirer {{name}}",
+    "fields": {
+      "name": "Nom",
+      "generatedName": "Généré automatiquement si vide",
+      "startDate": "Date de Début",
+      "endDate": "Date de Fin",
+      "deliverables": "Livrables",
+      "selectDeliverables": "Sélectionner des livrables",
+      "showDefaultMilestone": "Afficher le jalon par défaut"
+    },
+    "columns": {
+      "item": "Élément",
+      "status": "Statut",
+      "progress": "Progression"
+    }
+  },
   "users": {
     "title": "Utilisateurs",
     "fullName": "Nom Complet",

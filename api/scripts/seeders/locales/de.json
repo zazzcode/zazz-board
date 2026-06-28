@@ -117,6 +117,38 @@
     "dragToReorder": "Ziehen Sie, um Aufgaben neu zu ordnen",
     "dropToMove": "Lassen Sie los, um Aufgabe zu verschieben"
   },
+  "gantt": {
+    "title": "Gantt",
+    "milestone": "Meilenstein",
+    "milestones": "Meilensteine",
+    "defaultMilestone": "Standard",
+    "numberedMilestone": "Meilenstein {{number}}",
+    "empty": "Keine Meilensteindaten verfügbar",
+    "errorTitle": "Gantt-Ansicht konnte nicht geladen werden",
+    "createMilestone": "Meilenstein erstellen",
+    "editMilestone": "Meilenstein bearbeiten",
+    "timelineLabel": "Nach Projektzeitplan gemessen",
+    "addDeliverable": "Lieferobjekt hinzufügen",
+    "noAssignedDeliverables": "Keine Lieferobjekte zugewiesen",
+    "noAvailableDeliverables": "Keine Lieferobjekte verfügbar",
+    "moveDeliverableUp": "{{name}} nach oben verschieben",
+    "moveDeliverableDown": "{{name}} nach unten verschieben",
+    "removeDeliverable": "{{name}} entfernen",
+    "fields": {
+      "name": "Name",
+      "generatedName": "Wird automatisch erzeugt, falls leer",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "deliverables": "Lieferobjekte",
+      "selectDeliverables": "Lieferobjekte auswählen",
+      "showDefaultMilestone": "Standard-Meilenstein anzeigen"
+    },
+    "columns": {
+      "item": "Eintrag",
+      "status": "Status",
+      "progress": "Fortschritt"
+    }
+  },
   "users": {
     "title": "Benutzer",
     "fullName": "Vollständiger Name",
