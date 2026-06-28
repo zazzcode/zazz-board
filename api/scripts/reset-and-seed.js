@@ -13,11 +13,14 @@ async function resetAndSeed() {
     console.log('📋 Step 1: Dropping and recreating tables...');
     await db.execute(sql`DROP TABLE IF EXISTS "IMAGE_DATA" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "IMAGE_METADATA" CASCADE`);
+    await db.execute(sql`DROP TABLE IF EXISTS "DELIVERABLE_RELATIONS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASK_RELATIONS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "FILE_LOCKS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASK_TAGS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TASKS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "DELIVERABLES" CASCADE`);
+    await db.execute(sql`DROP TABLE IF EXISTS "PROJECT_GANTT_SETTINGS" CASCADE`);
+    await db.execute(sql`DROP TABLE IF EXISTS "MILESTONES" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "AGENT_TOKENS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "PROJECTS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "TAGS" CASCADE`);
@@ -26,6 +29,8 @@ async function resetAndSeed() {
     await db.execute(sql`DROP TABLE IF EXISTS "STATUS_DEFINITIONS" CASCADE`);
     await db.execute(sql`DROP TABLE IF EXISTS "USERS" CASCADE`);
     await db.execute(sql`DROP TYPE IF EXISTS task_relation_type CASCADE`);
+    await db.execute(sql`DROP TYPE IF EXISTS deliverable_relation_type CASCADE`);
+    await db.execute(sql`DROP TYPE IF EXISTS milestone_status CASCADE`);
     await db.execute(sql`DROP TYPE IF EXISTS graph_layout_direction CASCADE`);
     await db.execute(sql`DROP TYPE IF EXISTS deliverable_type CASCADE`);
 

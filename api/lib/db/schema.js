@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index, unique, check } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, integer, boolean, jsonb, primaryKey, index, unique, uniqueIndex, check, date } from 'drizzle-orm/pg-core';
 import { pgEnum } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
@@ -8,6 +8,12 @@ import { relations } from 'drizzle-orm';
 
 // Enum for task relation types
 export const taskRelationTypeEnum = pgEnum('task_relation_type', ['DEPENDS_ON', 'COORDINATES_WITH']);
+
+// Enum for deliverable-level planning dependencies
+export const deliverableRelationTypeEnum = pgEnum('deliverable_relation_type', ['DEPENDS_ON']);
+
+// Enum for milestone planning lifecycle
+export const milestoneStatusEnum = pgEnum('milestone_status', ['PLANNING', 'PENDING', 'IN_PROGRESS', 'DONE']);
 
 // Enum for graph layout direction
 export const graphLayoutDirectionEnum = pgEnum('graph_layout_direction', ['LR', 'TB']);
@@ -94,10 +100,52 @@ export const AGENT_TOKENS = pgTable('AGENT_TOKENS', {
   index('idx_agent_tokens_user_project').on(table.user_id, table.project_id),
 ]);
 
+// Project milestones table - project-scoped planning containers for the Gantt view
+export const MILESTONES = pgTable('MILESTONES', {
+  id: serial('id').primaryKey(),
+  project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
+  start_date: date('start_date').notNull(),
+  end_date: date('end_date').notNull(),
+  is_default: boolean('is_default').notNull().default(false),
+  status: milestoneStatusEnum('status').notNull().default('PLANNING'),
+  created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (/** @type {any} */ table) => [
+  uniqueIndex('uq_milestones_default_per_project').on(table.project_id).where(sql`${table.is_default} = true`),
+  index('idx_milestones_project_dates').on(table.project_id, table.start_date, table.end_date),
+  check('milestones_date_range_chk', sql`${table.start_date} <= ${table.end_date}`),
+]);
+
+// Project-owned Gantt display settings
+export const PROJECT_GANTT_SETTINGS = pgTable('PROJECT_GANTT_SETTINGS', {
+  id: serial('id').primaryKey(),
+  project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
+  timeline_mode: varchar('timeline_mode', { length: 20 }).notNull().default('sprint'),
+  show_date_labels: boolean('show_date_labels').notNull().default(false),
+  show_default_milestone: boolean('show_default_milestone').notNull().default(false),
+  period_start_date: date('period_start_date').notNull(),
+  sprint_length_weeks: integer('sprint_length_weeks').notNull().default(2),
+  period_number_start: integer('period_number_start').notNull().default(1),
+  sprint_label_prefix: varchar('sprint_label_prefix', { length: 32 }).notNull().default('Sprint'),
+  week_label_prefix: varchar('week_label_prefix', { length: 16 }).notNull().default('W'),
+  created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (/** @type {any} */ table) => [
+  unique('uq_project_gantt_settings_project').on(table.project_id),
+  check('project_gantt_settings_timeline_mode_chk', sql`${table.timeline_mode} IN ('dates', 'weeks', 'sprint')`),
+  check('project_gantt_settings_sprint_length_chk', sql`${table.sprint_length_weeks} BETWEEN 1 AND 12`),
+  check('project_gantt_settings_period_number_chk', sql`${table.period_number_start} >= 0`),
+]);
+
 // Deliverables table
 export const DELIVERABLES = pgTable('DELIVERABLES', {
   id: serial('id').primaryKey(),
   project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
+  milestone_id: integer('milestone_id').references(() => MILESTONES.id, { onDelete: 'set null' }),
   project_code: varchar('project_code', { length: 10 }).notNull(),
   code: varchar('code', { length: 25 }).notNull().unique(),
   name: varchar('name', { length: 30 }).notNull(),
@@ -113,11 +161,18 @@ export const DELIVERABLES = pgTable('DELIVERABLES', {
   git_branch: varchar('git_branch', { length: 255 }),
   pull_request_url: varchar('pull_request_url', { length: 500 }),
   position: integer('position').notNull().default(10),
+  milestone_position: integer('milestone_position').notNull().default(10),
+  planned_start_at: timestamp('planned_start_at', { withTimezone: true }),
+  planned_completion_at: timestamp('planned_completion_at', { withTimezone: true }),
+  actual_start_at: timestamp('actual_start_at', { withTimezone: true }),
+  actual_completion_at: timestamp('actual_completion_at', { withTimezone: true }),
   created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (/** @type {any} */ table) => [
+  index('idx_deliverables_milestone_order').on(table.milestone_id, table.milestone_position, table.id),
+]);
 
 // Tasks table
 export const TASKS = pgTable('TASKS', {
@@ -191,6 +246,21 @@ export const TASK_RELATIONS = pgTable('TASK_RELATIONS', {
   index('idx_task_relations_related_task_id').on(table.related_task_id),
 ]);
 
+// Deliverable Relations junction table - first-class planning dependencies for Gantt links
+export const DELIVERABLE_RELATIONS = pgTable('DELIVERABLE_RELATIONS', {
+  deliverable_id: integer('deliverable_id').notNull().references(() => DELIVERABLES.id, { onDelete: 'cascade' }),
+  related_deliverable_id: integer('related_deliverable_id').notNull().references(() => DELIVERABLES.id, { onDelete: 'cascade' }),
+  relation_type: deliverableRelationTypeEnum('relation_type').notNull(),
+  created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (/** @type {any} */ table) => [
+  primaryKey({ columns: [table.deliverable_id, table.related_deliverable_id, table.relation_type] }),
+  index('idx_deliverable_relations_deliverable').on(table.deliverable_id),
+  index('idx_deliverable_relations_related').on(table.related_deliverable_id),
+]);
+
 // File locks table - lease-based file ownership for worker/sub-agent coordination
 export const FILE_LOCKS = pgTable('FILE_LOCKS', {
   id: serial('id').primaryKey(),
@@ -248,6 +318,8 @@ export const projectsRelations = relations(PROJECTS, (/** @type {any} */ { one, 
     references: [USERS.id],
   }),
   agentTokens: many(AGENT_TOKENS),
+  milestones: many(MILESTONES),
+  ganttSettings: many(PROJECT_GANTT_SETTINGS),
   deliverables: many(DELIVERABLES),
   tasks: many(TASKS),
 }));
@@ -263,10 +335,29 @@ export const agentTokensRelations = relations(AGENT_TOKENS, (/** @type {any} */ 
   }),
 }));
 
+export const milestonesRelations = relations(MILESTONES, (/** @type {any} */ { one, many }) => ({
+  project: one(PROJECTS, {
+    fields: [MILESTONES.project_id],
+    references: [PROJECTS.id],
+  }),
+  deliverables: many(DELIVERABLES),
+}));
+
+export const projectGanttSettingsRelations = relations(PROJECT_GANTT_SETTINGS, (/** @type {any} */ { one }) => ({
+  project: one(PROJECTS, {
+    fields: [PROJECT_GANTT_SETTINGS.project_id],
+    references: [PROJECTS.id],
+  }),
+}));
+
 export const deliverablesRelations = relations(DELIVERABLES, (/** @type {any} */ { one, many }) => ({
   project: one(PROJECTS, {
     fields: [DELIVERABLES.project_id],
     references: [PROJECTS.id],
+  }),
+  milestone: one(MILESTONES, {
+    fields: [DELIVERABLES.milestone_id],
+    references: [MILESTONES.id],
   }),
   approvedByUser: one(USERS, {
     fields: [DELIVERABLES.approved_by],
@@ -277,6 +368,8 @@ export const deliverablesRelations = relations(DELIVERABLES, (/** @type {any} */
     references: [USERS.id],
   }),
   tasks: many(TASKS),
+  relations: many(DELIVERABLE_RELATIONS, { relationName: 'deliverableRelations' }),
+  relatedRelations: many(DELIVERABLE_RELATIONS, { relationName: 'relatedDeliverableRelations' }),
   fileLocks: many(FILE_LOCKS),
   images: many(IMAGE_METADATA),
 }));
@@ -330,6 +423,19 @@ export const taskRelationsRelations = relations(TASK_RELATIONS, (/** @type {any}
     fields: [TASK_RELATIONS.related_task_id],
     references: [TASKS.id],
     relationName: 'relatedTaskRelations',
+  }),
+}));
+
+export const deliverableRelationsRelations = relations(DELIVERABLE_RELATIONS, (/** @type {any} */ { one }) => ({
+  deliverable: one(DELIVERABLES, {
+    fields: [DELIVERABLE_RELATIONS.deliverable_id],
+    references: [DELIVERABLES.id],
+    relationName: 'deliverableRelations',
+  }),
+  relatedDeliverable: one(DELIVERABLES, {
+    fields: [DELIVERABLE_RELATIONS.related_deliverable_id],
+    references: [DELIVERABLES.id],
+    relationName: 'relatedDeliverableRelations',
   }),
 }));
 

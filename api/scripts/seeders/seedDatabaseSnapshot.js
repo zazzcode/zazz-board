@@ -7,7 +7,10 @@ import {
   TAGS,
   PROJECTS,
   AGENT_TOKENS,
+  MILESTONES,
+  PROJECT_GANTT_SETTINGS,
   DELIVERABLES,
+  DELIVERABLE_RELATIONS,
   TASKS,
   TASK_TAGS,
   TASK_RELATIONS,
@@ -16,6 +19,7 @@ import {
 } from '../../lib/db/schema.js';
 import { sql } from 'drizzle-orm';
 import { loadDatabaseSnapshot } from './databaseSnapshot.js';
+import { seedProjectMilestones } from './seedProjectMilestones.js';
 
 const dateFieldsByKey = {
   users: ['created_at', 'updated_at'],
@@ -25,7 +29,10 @@ const dateFieldsByKey = {
   tags: ['created_at'],
   projects: ['created_at', 'updated_at'],
   agent_tokens: ['created_at'],
+  milestones: ['start_date', 'end_date', 'created_at', 'updated_at'],
+  project_gantt_settings: ['period_start_date', 'created_at', 'updated_at'],
   deliverables: ['approved_at', 'created_at', 'updated_at'],
+  deliverable_relations: ['created_at', 'updated_at'],
   tasks: ['started_at', 'completed_at', 'created_at', 'updated_at'],
   task_relations: ['updated_at'],
   image_metadata: ['created_at'],
@@ -39,7 +46,10 @@ const insertOrder = [
   { key: 'tags', label: 'tags', table: TAGS },
   { key: 'projects', label: 'projects', table: PROJECTS },
   { key: 'agent_tokens', label: 'agent tokens', table: AGENT_TOKENS },
+  { key: 'milestones', label: 'milestones', table: MILESTONES },
+  { key: 'project_gantt_settings', label: 'project gantt settings', table: PROJECT_GANTT_SETTINGS },
   { key: 'deliverables', label: 'deliverables', table: DELIVERABLES },
+  { key: 'deliverable_relations', label: 'deliverable relations', table: DELIVERABLE_RELATIONS },
   { key: 'tasks', label: 'tasks', table: TASKS },
   { key: 'task_tags', label: 'task tags', table: TASK_TAGS },
   { key: 'task_relations', label: 'task relations', table: TASK_RELATIONS },
@@ -52,6 +62,8 @@ const sequenceTables = [
   'TRANSLATIONS',
   'PROJECTS',
   'AGENT_TOKENS',
+  'MILESTONES',
+  'PROJECT_GANTT_SETTINGS',
   'DELIVERABLES',
   'TASKS',
   'IMAGE_METADATA',
@@ -103,9 +115,12 @@ export async function seedDatabaseSnapshot() {
       entry.key,
       entry.label,
       entry.table,
-      snapshot[entry.key]
+      snapshot[entry.key] || []
     );
   }
+
+  const milestoneCounts = await seedProjectMilestones();
+  Object.assign(counts, milestoneCounts);
 
   for (const tableName of sequenceTables) {
     await resetSequence(tableName);
