@@ -34,6 +34,7 @@
 | **Project list** | Create/edit projects; configure task and deliverable workflows. |
 | **Deliverable list** | Sortable table of deliverables per project; SPEC/PLAN/PRD paths with copy-to-clipboard; PR links. |
 | **Deliverable Kanban** | Columns from project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done). Drag-and-drop deliverable cards; task progress and PR URL on cards. |
+| **Project Gantt** | Milestone and deliverable timeline for a project, with month/sprint/week headers, a current-date marker, configurable sprint length/header rows, milestone editing, deliverable dependencies, and lazy-loaded task rows under deliverables. |
 | **Task Kanban** | Columns from project’s task workflow (To Do, Ready, In Progress, QA, Completed). Tasks show deliverable name in card footer. Drag-and-drop. |
 | **Task graph** | **Task Graph** — one deliverable’s task graph at a time; select deliverable via dropdown. Readiness and coordination types (e.g. TEST_TOGETHER, DEPLOY_TOGETHER) supported. |
 
@@ -53,7 +54,7 @@
 
 ### Sample project (seed data)
 
-Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See the canonical [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for the full structure.
+Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, milestones, the project Gantt, task Kanban, deliverable Kanban, and the task graph with realistic data. The sample Gantt data includes historical milestones, dated deliverables, lazy-loaded agent tasks, sprint/week labels, and milestone 4 demo data for the Gantt milestone MVP. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See the canonical [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for the full structure.
 
 ---
 
