@@ -23,14 +23,12 @@ When creating a new feature worktree, always do all of the following:
    - `cmp -s ../main/.env ./.env`
    - `cmp -s ../main/api/.env ./api/.env`
 
-Optional: if the developer/contributor uses Worktrunk, copy the local Worktrunk config from main after creating the
-worktree:
-
-- `mkdir -p .config`
-- `cp ../main/.config/wt.toml ./.config/wt.toml`
-- `cmp -s ../main/.config/wt.toml ./.config/wt.toml`
-
+Optional: if the developer/contributor uses Worktrunk, create the worktree with `wt` instead of plain `git worktree`.
 Worktrunk is optional, not mandatory. Assume most contributors use plain `git worktree` unless they say otherwise.
+
+- Worktrunk local hook config lives in the base worktree at `.config/wt.toml` and is ignored by Git.
+- The Worktrunk `copy-ignored` hook copies `.env`, `api/.env`, and `.config/wt.toml` into new `wt`-created worktrees.
+- Do not require non-Worktrunk contributors to copy `.config/wt.toml`.
 
 ### Env changes made in a feature worktree (MANDATORY)
 
