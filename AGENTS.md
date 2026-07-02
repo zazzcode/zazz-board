@@ -23,6 +23,15 @@ When creating a new feature worktree, always do all of the following:
    - `cmp -s ../main/.env ./.env`
    - `cmp -s ../main/api/.env ./api/.env`
 
+Optional: if the developer/contributor uses Worktrunk, copy the local Worktrunk config from main after creating the
+worktree:
+
+- `mkdir -p .config`
+- `cp ../main/.config/wt.toml ./.config/wt.toml`
+- `cmp -s ../main/.config/wt.toml ./.config/wt.toml`
+
+Worktrunk is optional, not mandatory. Assume most contributors use plain `git worktree` unless they say otherwise.
+
 ### Env changes made in a feature worktree (MANDATORY)
 
 If any branch/worktree adds or changes settings in `.env` or `api/.env`:
