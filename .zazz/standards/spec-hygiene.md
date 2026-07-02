@@ -1,5 +1,5 @@
 ---
-last_updated_at: 2026-06-15
+last_updated_at: 2026-07-02
 ---
 
 # Spec hygiene
@@ -115,23 +115,23 @@ Follow the iterated standards at
 
 Specification documents are not subject to the generic file-size thresholds in
 [code-structure.md](./code-structure.md#file-size-thresholds). A specification is an executable contract, and it MUST be
-long enough to carry the deliverable boundary, decisions, acceptance criteria, test plan, implementation sequence, halt
+long enough to carry the deliverable boundary, decisions, acceptance criteria, test strategy, implementation sequence, halt
 conditions, and agent prompt needed for autonomous execution.
 
 Length is not a license for sprawl. A specification MUST stay well organized: each concept has one canonical home,
 constraints are not repeated with slightly different wording across sections, and the document flows from capability
-and scope to decisions, acceptance criteria, test plan, execution sequence, and handoff. When a later section needs a
+and scope to decisions, acceptance criteria, test strategy, execution sequence, and handoff. When a later section needs a
 prior constraint, it should reference the earlier section instead of restating it.
 
 Do not compress, split, or omit required specification sections solely to satisfy a line-count target. Do compress
 repeated prose, merge duplicate concepts, and improve headings when the document becomes muddy. Split a specification
-only when the work is actually multiple deliverables, multiple review units, or a stacked/sibling branch plan that needs
+only when the work is actually multiple deliverables, multiple review units, or a stacked/sibling branch topology that needs
 separate contracts.
 
 ### Desired ✅
 
 ```markdown
-One backend soft-typing specification includes scope, ACs, test plan,
+One backend soft-typing specification includes scope, ACs, test strategy,
 execution sequence, standards updates, and an agent prompt in one file.
 Each constraint appears once and later sections reference it by section number.
 ```
@@ -144,7 +144,7 @@ only because the file crossed 600 lines.
 <!-- line-count threshold misapplied to a deliverable specification -->
 
 The same "no generated artifacts" constraint appears in Scope, Invariants,
-Acceptance Criteria, Test Plan, and the Agent Prompt with slightly different
+Acceptance Criteria, Test Strategy, and the Agent Prompt with slightly different
 wording.
 <!-- repeated concepts make the spec muddy and create conflicting contracts -->
 ```
@@ -172,12 +172,12 @@ The report endpoint works correctly for both report modes.
      be written from and nothing a reviewer can check -->
 ```
 
-## Test plan is high-signal and proportional
+## Test strategy is high-signal and proportional
 
-The test plan proves the acceptance criteria and the realistic edge cases with the smallest meaningful set of tests —
+The test strategy proves the acceptance criteria and the realistic edge cases with the smallest meaningful set of tests —
 not a coverage quota. Prefer table-driven matrices when several realistic cases share one behavior boundary; prefer one
 integrated behavior test over several that only confirm a collaborator was called. When a case is intentionally omitted
-because nearby coverage already proves it, the test plan says so in one line, so the omission reads as a decision
+because nearby coverage already proves it, the test strategy says so in one line, so the omission reads as a decision
 rather than a gap.
 
 ### Desired ✅
@@ -231,6 +231,71 @@ A specification names the files it changes (path + new/modified + reason), the d
 and an explicit out-of-scope list. Speculative future work is either in scope or out of scope — never a "we might want
 to" aside. Status fields (Draft/Approved) and verbatim copies of standards text do not belong in the document; workflow
 state lives in the tracker and standards are cited, not restated.
+
+## Implementation feedback iterations are append-only
+
+After a specification is greenlit for implementation, its original contract sections stay
+intact. Accepted owner steering during implementation or feedback from the human review
+and testing phase that changes feature behavior, UX, API contract, validation behavior,
+or bug-fix behavior within the same deliverable context belongs in an append-only
+`Implementation Feedback Iterations` section rather than being silently rewritten into
+the original body.
+
+This section is a curated product-contract changelog for owner steering and human
+review/testing iterations, not a run log. The run log records detailed execution
+history, attempts, QA notes, and evidence. A run-log entry may reveal that an
+`Implementation Feedback Iterations` item is needed, but routine execution notes do not
+belong in the specification.
+
+The normal lifecycle is:
+
+0. create and refine the specification until the Owner greenlights it
+1. implement through an AC/TDD loop until the greenlit acceptance criteria have evidence
+2. capture accepted Owner steering during implementation when it changes the product
+   contract
+3. capture accepted Owner feedback from hands-on review and testing
+4. capture accepted automated agentic review findings when they change the product
+   contract
+5. rework and reverify accepted feedback
+6. complete final human review/sign-off
+
+### Desired ✅
+
+```markdown
+## Implementation Feedback Iterations
+
+### I-2 — Shared Deliverable Editor Exposes Schedule Dates
+
+**Source.** User feedback during draft PR review on 2026-07-02.
+
+**Context.** The original implementation opened the deliverable editor from Gantt, but
+did not expose planned or actual schedule fields.
+
+**Improvement.** Planned dates are editable typed date pickers; actual dates are
+read-only execution facts.
+
+**Boundary.** The Gantt chart remains read-only for direct bar drag/resize scheduling.
+
+**Verification.** Client route/editor tests and live OpenAPI schema check.
+```
+
+### Not desired ❌
+
+```markdown
+## Scope
+
+The deliverable editor includes planned and actual schedule fields.
+<!-- silently rewrites the greenlit scope after implementation feedback instead
+     of preserving the original contract and recording the accepted change -->
+
+## Implementation Feedback Iterations
+
+### I-3 — Ran lint
+
+**Improvement.** Ran markdown lint and fixed formatting.
+<!-- routine execution evidence belongs in the run log, PR body, or commit
+     history; it is not a product-contract change -->
+```
 
 ## What this standard does not contain
 

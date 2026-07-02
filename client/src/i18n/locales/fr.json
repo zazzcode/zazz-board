@@ -162,6 +162,7 @@
     "errorTitle": "Impossible de charger la vue Gantt",
     "createMilestone": "Créer un Jalon",
     "editMilestone": "Modifier le Jalon",
+    "editDeliverable": "Modifier le Livrable",
     "timelineLabel": "Mesuré selon le calendrier du projet",
     "projectSettings": "Paramètres Gantt",
     "projectSettingsOwnerOnly": "Seul le responsable du projet peut modifier les paramètres Gantt",
@@ -185,12 +186,20 @@
       "sprintPrefix": "Préfixe de Sprint",
       "weekPrefix": "Préfixe de Semaine",
       "showDateLabels": "Afficher les libellés de date",
-      "showDefaultMilestone": "Afficher le jalon par défaut"
+      "showDefaultMilestone": "Afficher le jalon par défaut",
+      "showMonthHeader": "Mois",
+      "showSprintHeader": "Sprint",
+      "showWeekHeader": "Semaine"
     },
     "timelineModes": {
       "dates": "Dates",
       "weeks": "Semaines",
       "sprints": "Sprints"
+    },
+    "sprintLengthOptions": {
+      "one": "1 semaine",
+      "two": "2 semaines",
+      "three": "3 semaines"
     },
     "columns": {
       "item": "Élément",

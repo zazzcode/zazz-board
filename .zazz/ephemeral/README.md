@@ -29,3 +29,22 @@ If a file from this directory should become part of the durable repository recor
 ```bash
 git add -f .zazz/ephemeral/<file>
 ```
+
+## Handoff Documents
+
+Handoff documents are cross-agent working notes. They must be usable by any agent platform or developer that opens this
+repo, so do not make them Codex-specific.
+
+Name every handoff document with a local timestamp down to seconds:
+
+```text
+<topic>-handoff-YYYY-MM-DD-HHMMSS.md
+```
+
+Example:
+
+```text
+gantt-ui-handoff-2026-07-02-132600.md
+```
+
+This timestamp is required so multiple handoffs from the same day sort chronologically and the newest handoff is obvious.

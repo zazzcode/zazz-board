@@ -8,26 +8,52 @@ import {
   Group,
   Loader,
   Modal,
+  SegmentedControl,
   Select,
   SimpleGrid,
   Stack,
+  Switch,
   Text,
   TextInput,
   useMantineColorScheme,
 } from '@mantine/core';
-import { IconArrowDown, IconArrowUp, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconArrowDown, IconArrowUp, IconPlus, IconSettings, IconTrash } from '@tabler/icons-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useProjectEvents } from '../hooks/useProjectEvents.js';
 import { useProjectGantt } from '../hooks/useProjectGantt.js';
 import { ProjectGantt } from '../components/gantt/ProjectGantt.jsx';
 
-const REFRESH_EVENT_TYPES = new Set(['deliverable', 'task', 'relation']);
+const REFRESH_EVENT_TYPES = new Set(['deliverable', 'task', 'relation', 'milestone', 'gantt']);
 const EMPTY_MILESTONE_FORM = {
   name: '',
   startDate: '',
   endDate: '',
   deliverableIds: [],
 };
+const DEFAULT_GANTT_SETTINGS_FORM = {
+  timelineMode: 'sprint',
+  showDateLabels: false,
+  showDefaultMilestone: false,
+  showMonthHeader: true,
+  showSprintHeader: true,
+  showWeekHeader: true,
+  periodStartDate: '2026-01-04',
+  sprintLengthWeeks: 2,
+  periodNumberStart: 1,
+  sprintLabelPrefix: 'Sprint',
+  weekLabelPrefix: 'W',
+};
+
+function getTokenHeaders() {
+  const token = localStorage.getItem('TB_TOKEN');
+  if (!token) throw new Error('No access token found');
+
+  return {
+    'TB_TOKEN': token,
+    'Content-Type': 'application/json',
+  };
+}
 
 function getDeliverableFormId(row) {
   return String(row.deliverableId || row.id);
@@ -41,42 +67,41 @@ function normalizeGanttEntityId(id) {
   return String(id || '').replace(/^:/, '');
 }
 
-function reorderGanttRows(rows) {
-  const milestones = rows.filter((row) => row.entityType === 'milestone');
-  const deliverables = rows.filter((row) => row.entityType === 'deliverable');
-  const otherRows = rows.filter((row) => row.entityType !== 'milestone' && row.entityType !== 'deliverable');
-  const deliverablesByParent = new Map();
-
-  deliverables.forEach((deliverable, index) => {
-    const parentId = normalizeGanttEntityId(deliverable.parentId);
-    const existing = deliverablesByParent.get(parentId) || [];
-    existing.push({ ...deliverable, originalIndex: index });
-    deliverablesByParent.set(parentId, existing);
-  });
-
-  return [
-    ...milestones.flatMap((milestone) => {
-      const milestoneId = normalizeGanttEntityId(milestone.id);
-      const children = (deliverablesByParent.get(milestoneId) || [])
-        .sort((left, right) => {
-          const leftPosition = Number.isFinite(left.milestonePosition) ? left.milestonePosition : left.originalIndex;
-          const rightPosition = Number.isFinite(right.milestonePosition) ? right.milestonePosition : right.originalIndex;
-          return leftPosition - rightPosition;
-        })
-        .map((deliverable) => {
-          const row = { ...deliverable };
-          delete row.originalIndex;
-          return row;
-        });
-
-      return [milestone, ...children];
-    }),
-    ...otherRows,
-  ];
+function getMilestoneApiId(row) {
+  return String(row?.milestoneId || normalizeGanttEntityId(row?.id).replace(/^milestone:/, ''));
 }
 
 function getDefaultMilestoneId(rows) {
   return normalizeGanttEntityId(rows.find((row) => row.entityType === 'milestone' && row.isDefault)?.id);
+}
+
+function getSourceGanttRow(row, rows) {
+  const rowId = normalizeGanttEntityId(row?.id);
+  if (!rowId) return row;
+  return rows.find((candidate) => normalizeGanttEntityId(candidate.id) === rowId) || row;
+}
+
+function getSettingsFormFromTimeline(timeline = {}) {
+  const unitModeMap = {
+    date: 'dates',
+    week: 'weeks',
+    sprint: 'sprint',
+  };
+
+  return {
+    ...DEFAULT_GANTT_SETTINGS_FORM,
+    timelineMode: unitModeMap[timeline.unit] || DEFAULT_GANTT_SETTINGS_FORM.timelineMode,
+    showDateLabels: Boolean(timeline.showDateLabels),
+    showDefaultMilestone: Boolean(timeline.showDefaultMilestone),
+    showMonthHeader: timeline.showMonthHeader !== false,
+    showSprintHeader: timeline.showSprintHeader !== false,
+    showWeekHeader: timeline.showWeekHeader !== false,
+    periodStartDate: timeline.periodStartDate || timeline.sprintStartDate || DEFAULT_GANTT_SETTINGS_FORM.periodStartDate,
+    sprintLengthWeeks: Number(timeline.sprintLengthWeeks || DEFAULT_GANTT_SETTINGS_FORM.sprintLengthWeeks),
+    periodNumberStart: Number(timeline.periodNumberStart || DEFAULT_GANTT_SETTINGS_FORM.periodNumberStart),
+    sprintLabelPrefix: timeline.sprintLabelPrefix || DEFAULT_GANTT_SETTINGS_FORM.sprintLabelPrefix,
+    weekLabelPrefix: timeline.weekLabelPrefix || DEFAULT_GANTT_SETTINGS_FORM.weekLabelPrefix,
+  };
 }
 
 function getVisibleGanttData(ganttData, rows) {
@@ -108,6 +133,8 @@ function getVisibleGanttData(ganttData, rows) {
 export function GanttPage({ selectedProject }) {
   const { t } = useTranslation();
   const { colorScheme } = useMantineColorScheme();
+  const navigate = useNavigate();
+  const location = useLocation();
   const isDarkTheme = colorScheme === 'dark';
   const toolbarBorderColor = isDarkTheme ? 'var(--mantine-color-dark-4)' : 'var(--mantine-color-gray-3)';
   const toolbarBackground = isDarkTheme ? 'var(--mantine-color-dark-8)' : 'var(--mantine-color-gray-0)';
@@ -118,8 +145,14 @@ export function GanttPage({ selectedProject }) {
   const [milestoneModalOpened, setMilestoneModalOpened] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState(null);
   const [milestoneForm, setMilestoneForm] = useState(EMPTY_MILESTONE_FORM);
+  const [milestoneSaving, setMilestoneSaving] = useState(false);
+  const [milestoneMutationError, setMilestoneMutationError] = useState(null);
   const [deliverableToAddId, setDeliverableToAddId] = useState(null);
   const [draftRows, setDraftRows] = useState([]);
+  const [settingsModalOpened, setSettingsModalOpened] = useState(false);
+  const [settingsForm, setSettingsForm] = useState(DEFAULT_GANTT_SETTINGS_FORM);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsMutationError, setSettingsMutationError] = useState(null);
   const workingRows = useMemo(() => (
     draftRows.length > 0 ? draftRows : (ganttData?.rows || [])
   ), [draftRows, ganttData?.rows]);
@@ -142,7 +175,14 @@ export function GanttPage({ selectedProject }) {
   ), [workingRows]);
 
   const editingMilestoneId = normalizeGanttEntityId(editingMilestone?.id);
+  const editingMilestoneApiId = getMilestoneApiId(editingMilestone);
   const editingDefaultMilestone = Boolean(editingMilestoneId && editingMilestoneId === defaultMilestoneId);
+  const headerRowVisible = settingsForm.showMonthHeader || settingsForm.showSprintHeader || settingsForm.showWeekHeader;
+  const sprintLengthOptions = useMemo(() => ([
+    { value: '1', label: t('gantt.sprintLengthOptions.one') },
+    { value: '2', label: t('gantt.sprintLengthOptions.two') },
+    { value: '3', label: t('gantt.sprintLengthOptions.three') },
+  ]), [t]);
 
   const selectedDeliverables = useMemo(() => milestoneForm.deliverableIds.map((deliverableId) => {
     const deliverable = allDeliverables.find((item) => item.id === deliverableId);
@@ -174,31 +214,46 @@ export function GanttPage({ selectedProject }) {
   const openCreateMilestone = useCallback(() => {
     setEditingMilestone(null);
     setMilestoneForm(EMPTY_MILESTONE_FORM);
+    setMilestoneMutationError(null);
     setDeliverableToAddId(null);
     setMilestoneModalOpened(true);
   }, []);
 
   const openEditMilestone = useCallback((milestone) => {
-    const milestoneId = normalizeGanttEntityId(milestone.id);
+    const sourceMilestone = getSourceGanttRow(milestone, workingRows);
+    const milestoneId = normalizeGanttEntityId(sourceMilestone.id);
     const deliverableIds = workingRows
       .filter((row) => row.entityType === 'deliverable' && normalizeGanttEntityId(row.parentId) === milestoneId)
       .map((row) => String(row.deliverableId || row.id));
 
-    setEditingMilestone({ ...milestone, id: milestoneId });
+    setEditingMilestone({ ...sourceMilestone, id: milestoneId });
     setMilestoneForm({
-      name: getMilestoneName(milestone),
-      startDate: milestone.startDate || '',
-      endDate: milestone.endDate || '',
+      name: getMilestoneName(sourceMilestone),
+      startDate: sourceMilestone.startDate || '',
+      endDate: sourceMilestone.endDate || '',
       deliverableIds,
     });
     setDeliverableToAddId(null);
+    setMilestoneMutationError(null);
     setMilestoneModalOpened(true);
   }, [getMilestoneName, workingRows]);
+
+  const openEditDeliverable = useCallback((deliverableRow) => {
+    const sourceDeliverable = getSourceGanttRow(deliverableRow, workingRows);
+    const deliverableId = String(sourceDeliverable?.deliverableId || normalizeGanttEntityId(sourceDeliverable?.id).replace(/^deliverable:/, ''));
+    if (!deliverableId || !projectCode) return;
+
+    const returnTo = `${location.pathname}${location.search}`;
+    navigate(`/projects/${encodeURIComponent(projectCode)}/deliverables/${encodeURIComponent(deliverableId)}`, {
+      state: { returnTo },
+    });
+  }, [location.pathname, location.search, navigate, projectCode, workingRows]);
 
   const closeMilestoneModal = useCallback(() => {
     setMilestoneModalOpened(false);
     setEditingMilestone(null);
     setMilestoneForm(EMPTY_MILESTONE_FORM);
+    setMilestoneMutationError(null);
     setDeliverableToAddId(null);
   }, []);
 
@@ -234,62 +289,172 @@ export function GanttPage({ selectedProject }) {
     });
   }, []);
 
-  const saveMilestoneForm = useCallback(() => {
-    if (!editingMilestone) return;
+  const requestJson = useCallback(async (url, options = {}) => {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...getTokenHeaders(),
+        ...(options.headers || {}),
+      },
+    });
 
-    const selectedIds = new Set(milestoneForm.deliverableIds);
-    const selectedPositions = new Map(milestoneForm.deliverableIds.map((deliverableId, index) => [deliverableId, index]));
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error || `Gantt request failed: ${response.status}`);
+    }
+    return payload;
+  }, []);
 
-    setDraftRows((currentRows) => {
-      const sourceRows = currentRows.length > 0 ? currentRows : (ganttData?.rows || []);
-      const updatedRows = sourceRows.map((row) => {
-        if (row.entityType === 'milestone' && normalizeGanttEntityId(row.id) === editingMilestoneId) {
-          return {
-            ...row,
-            displayName: milestoneForm.name || row.displayName,
-            startDate: milestoneForm.startDate || row.startDate,
-            endDate: milestoneForm.endDate || row.endDate,
-          };
-        }
+  const openSettingsModal = useCallback(() => {
+    setSettingsForm(getSettingsFormFromTimeline(ganttData?.timeline));
+    setSettingsMutationError(null);
+    setSettingsModalOpened(true);
+  }, [ganttData?.timeline]);
 
-        if (row.entityType !== 'deliverable') return row;
+  const closeSettingsModal = useCallback(() => {
+    setSettingsModalOpened(false);
+    setSettingsMutationError(null);
+  }, []);
 
-        const deliverableId = getDeliverableFormId(row);
-        const rowParentId = normalizeGanttEntityId(row.parentId);
+  const setHeaderRowVisible = useCallback((field, checked) => {
+    setSettingsForm((prev) => {
+      const next = { ...prev, [field]: checked };
+      if (!next.showMonthHeader && !next.showSprintHeader && !next.showWeekHeader) return prev;
+      return next;
+    });
+  }, []);
 
-        if (selectedIds.has(deliverableId)) {
-          return {
-            ...row,
-            parentId: editingMilestoneId,
-            milestonePosition: selectedPositions.get(deliverableId),
-          };
-        }
+  const replaceMilestoneDeliverables = useCallback(async (milestoneId, deliverableIds) => {
+    return requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones/${encodeURIComponent(milestoneId)}/deliverables`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        deliverableIds: deliverableIds.map((id) => Number(id)),
+        expectedVersion: ganttData?.version,
+      }),
+    });
+  }, [ganttData?.version, projectCode, requestJson]);
 
-        if (!editingDefaultMilestone && rowParentId === editingMilestoneId) {
-          return {
-            ...row,
-            parentId: defaultMilestoneId,
-            milestonePosition: Number.MAX_SAFE_INTEGER,
-          };
-        }
+  const applySavedProjection = useCallback(async (projection) => {
+    const latestProjection = projection || await refreshGantt();
+    if (latestProjection?.rows) {
+      loadedDraftProjectRef.current = latestProjection.projectCode;
+      setDraftRows(latestProjection.rows);
+    }
+  }, [refreshGantt]);
 
-        return row;
+  const saveSettingsForm = useCallback(async () => {
+    if (!projectCode || settingsSaving || !headerRowVisible) return;
+
+    setSettingsSaving(true);
+    setSettingsMutationError(null);
+
+    try {
+      await requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/gantt/settings`, {
+        method: 'PUT',
+        body: JSON.stringify(settingsForm),
+      });
+      await applySavedProjection(await refreshGantt());
+      closeSettingsModal();
+    } catch (error) {
+      setSettingsMutationError(error.message);
+    } finally {
+      setSettingsSaving(false);
+    }
+  }, [
+    applySavedProjection,
+    closeSettingsModal,
+    headerRowVisible,
+    projectCode,
+    refreshGantt,
+    requestJson,
+    settingsForm,
+    settingsSaving,
+  ]);
+
+  const saveMilestoneForm = useCallback(async () => {
+    if (!projectCode || milestoneSaving) return;
+
+    setMilestoneSaving(true);
+    setMilestoneMutationError(null);
+
+    try {
+      const body = {
+        startDate: milestoneForm.startDate,
+        endDate: milestoneForm.endDate,
+        status: editingMilestone?.status || 'PLANNING',
+      };
+
+      if (!editingMilestone) {
+        const milestone = await requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        const projection = milestoneForm.deliverableIds.length > 0
+          ? await replaceMilestoneDeliverables(milestone.id, milestoneForm.deliverableIds)
+          : await refreshGantt();
+        await applySavedProjection(projection);
+        closeMilestoneModal();
+        return;
+      }
+
+      await requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones/${encodeURIComponent(editingMilestoneApiId)}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
       });
 
-      return reorderGanttRows(updatedRows);
-    });
-    closeMilestoneModal();
+      const projection = editingDefaultMilestone
+        ? await refreshGantt()
+        : await replaceMilestoneDeliverables(editingMilestoneApiId, milestoneForm.deliverableIds);
+      await applySavedProjection(projection);
+      closeMilestoneModal();
+    } catch (error) {
+      setMilestoneMutationError(error.message);
+    } finally {
+      setMilestoneSaving(false);
+    }
   }, [
+    applySavedProjection,
     closeMilestoneModal,
-    defaultMilestoneId,
     editingDefaultMilestone,
     editingMilestone,
-    editingMilestoneId,
-    ganttData?.rows,
+    editingMilestoneApiId,
     milestoneForm.deliverableIds,
     milestoneForm.endDate,
-    milestoneForm.name,
     milestoneForm.startDate,
+    milestoneSaving,
+    projectCode,
+    refreshGantt,
+    replaceMilestoneDeliverables,
+    requestJson,
+  ]);
+
+  const deleteMilestone = useCallback(async () => {
+    if (!projectCode || !editingMilestone || editingDefaultMilestone || milestoneSaving) return;
+
+    setMilestoneSaving(true);
+    setMilestoneMutationError(null);
+
+    try {
+      await requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones/${encodeURIComponent(editingMilestoneApiId)}`, {
+        method: 'DELETE',
+      });
+      await applySavedProjection(await refreshGantt());
+      closeMilestoneModal();
+    } catch (error) {
+      setMilestoneMutationError(error.message);
+    } finally {
+      setMilestoneSaving(false);
+    }
+  }, [
+    applySavedProjection,
+    closeMilestoneModal,
+    editingDefaultMilestone,
+    editingMilestone,
+    editingMilestoneApiId,
+    milestoneSaving,
+    projectCode,
+    refreshGantt,
+    requestJson,
   ]);
 
   const scheduleRefresh = useCallback(() => {
@@ -373,6 +538,14 @@ export function GanttPage({ selectedProject }) {
           >
             {t('gantt.createMilestone')}
           </Button>
+          <Button
+            size="xs"
+            variant="default"
+            leftSection={<IconSettings size={15} />}
+            onClick={openSettingsModal}
+          >
+            {t('gantt.projectSettings')}
+          </Button>
         </Group>
         <Text size="xs" c="dimmed">
           {t('gantt.timelineLabel')}
@@ -383,7 +556,82 @@ export function GanttPage({ selectedProject }) {
         loadDeliverableTasks={loadDeliverableTasks}
         t={t}
         onEditMilestone={openEditMilestone}
+        onEditDeliverable={openEditDeliverable}
       />
+
+      <Modal
+        opened={settingsModalOpened}
+        onClose={closeSettingsModal}
+        title={t('gantt.projectSettings')}
+        size="md"
+      >
+        <Stack gap="md">
+          {settingsMutationError && (
+            <Alert color="red" title={t('gantt.errorTitle')}>
+              {settingsMutationError}
+            </Alert>
+          )}
+          <Select
+            label={t('gantt.fields.timelineMode')}
+            data={[
+              { value: 'sprint', label: t('gantt.timelineModes.sprints') },
+              { value: 'weeks', label: t('gantt.timelineModes.weeks') },
+              { value: 'dates', label: t('gantt.timelineModes.dates') },
+            ]}
+            value={settingsForm.timelineMode}
+            onChange={(value) => setSettingsForm((prev) => ({ ...prev, timelineMode: value || 'sprint' }))}
+          />
+          <Stack gap={4}>
+            <Text fw={500} size="sm">{t('gantt.fields.sprintLengthWeeks')}</Text>
+            <SegmentedControl
+              fullWidth
+              data={sprintLengthOptions}
+              value={String(settingsForm.sprintLengthWeeks)}
+              onChange={(value) => setSettingsForm((prev) => ({ ...prev, sprintLengthWeeks: Number(value) }))}
+            />
+          </Stack>
+          <TextInput
+            type="date"
+            label={t('gantt.fields.periodStartDate')}
+            value={settingsForm.periodStartDate}
+            onChange={(event) => setSettingsForm((prev) => ({ ...prev, periodStartDate: event.target.value }))}
+          />
+          <SimpleGrid cols={{ base: 1, sm: 3 }}>
+            <Switch
+              label={t('gantt.fields.showMonthHeader')}
+              checked={settingsForm.showMonthHeader}
+              onChange={(event) => setHeaderRowVisible('showMonthHeader', event.currentTarget.checked)}
+            />
+            <Switch
+              label={t('gantt.fields.showSprintHeader')}
+              checked={settingsForm.showSprintHeader}
+              onChange={(event) => setHeaderRowVisible('showSprintHeader', event.currentTarget.checked)}
+            />
+            <Switch
+              label={t('gantt.fields.showWeekHeader')}
+              checked={settingsForm.showWeekHeader}
+              onChange={(event) => setHeaderRowVisible('showWeekHeader', event.currentTarget.checked)}
+            />
+          </SimpleGrid>
+          <Switch
+            label={t('gantt.fields.showDefaultMilestone')}
+            checked={settingsForm.showDefaultMilestone}
+            onChange={(event) => setSettingsForm((prev) => ({ ...prev, showDefaultMilestone: event.currentTarget.checked }))}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={closeSettingsModal}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={saveSettingsForm}
+              loading={settingsSaving}
+              disabled={!settingsForm.periodStartDate || !headerRowVisible}
+            >
+              {t('common.save')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Modal
         opened={milestoneModalOpened}
@@ -392,11 +640,17 @@ export function GanttPage({ selectedProject }) {
         size="lg"
       >
         <Stack gap="md">
+          {milestoneMutationError && (
+            <Alert color="red" title={t('gantt.errorTitle')}>
+              {milestoneMutationError}
+            </Alert>
+          )}
           <TextInput
             label={t('gantt.fields.name')}
             placeholder={t('gantt.fields.generatedName')}
             value={milestoneForm.name}
             onChange={(event) => setMilestoneForm((prev) => ({ ...prev, name: event.target.value }))}
+            disabled
           />
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
@@ -496,11 +750,27 @@ export function GanttPage({ selectedProject }) {
               </Group>
             )}
           </Stack>
-          <Group justify="flex-end">
+          <Group justify="space-between">
+            <Button
+              variant="subtle"
+              color="red"
+              onClick={deleteMilestone}
+              disabled={!editingMilestone || editingDefaultMilestone || selectedDeliverables.length > 0 || milestoneSaving}
+            >
+              {t('common.delete')}
+            </Button>
+            <Group justify="flex-end">
             <Button variant="default" onClick={closeMilestoneModal}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={saveMilestoneForm} disabled={!editingMilestone}>{t('common.save')}</Button>
+              <Button
+                onClick={saveMilestoneForm}
+                loading={milestoneSaving}
+                disabled={!milestoneForm.startDate || !milestoneForm.endDate}
+              >
+                {t('common.save')}
+              </Button>
+            </Group>
           </Group>
         </Stack>
       </Modal>

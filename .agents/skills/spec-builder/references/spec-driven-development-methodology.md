@@ -59,7 +59,7 @@ A deliverable specification is the executable contract for one deliverable. It c
 - invariants
 - decisions and rationale
 - acceptance criteria
-- test plan
+- test strategy
 - execution sequence
 - halt conditions
 - definition of done

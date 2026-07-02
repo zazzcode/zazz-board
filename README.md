@@ -1,18 +1,19 @@
 # Zazz Board
 
-**Zazz Board** is a Kanban-style orchestration app for coordinating **AI agents** and **owners** — the people who define what to build, approve PLANs, and review results. Work is organized by **project**; each project contains **deliverables** (features, bug fixes, refactors) that group **tasks**. Owners manage SPECs and deliverable flow; agents execute implementation work and board updates. Only deliverables are PR’d — never individual tasks.
+**Zazz Board** is a Kanban-style orchestration app for coordinating **AI agents** and **owners** — the people who define what to build, approve deliverable specifications, and review results. Work is organized by **project**; each project contains **deliverables** (features, bug fixes, refactors) that group **tasks**. Owners manage SPECs and deliverable flow; agents execute implementation work and board updates. Only deliverables are PR’d — never individual tasks.
 
-**Current initiative focus:** `spec-builder`, `planner`, and `worker` agent flows. Coordinator/QA agent flows are not the current release focus.
+**Current initiative focus:** `spec-builder`, `worker`, and built-in agent/subagent execution flows. A worker is the implementation unit: it may be one lead agent, delegated subagents, or both working together.
 
-**Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
+**Stack**: Fastify API (JavaScript, ESM on Node.js 24 LTS) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
 
-**Framework:** Zazz Board is the tool that enables teams to practice the [Zazz Framework](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners (Project Owners and Deliverable Owners) and agents collaborate.
+**Framework:** Zazz Board is the tool that enables teams to practice the [Zazz Framework](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, deliverables, tasks), workflow stages, agent roles, and how owners (Project Owners and Deliverable Owners) and agents collaborate.
 
 ---
 
 ## Table of contents
 
-- [Main views and features](#main-views-and-features)
+- [Board views](#board-views)
+- [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
 - [Contributor setup](#contributor-setup)
 - [Running in the cloud](#running-in-the-cloud)
@@ -23,25 +24,30 @@
 - [Reference](#reference)
 - [About this repository](#about-this-repository)
 - [Documentation](#documentation)
-- [Updating skills from zazz-skills](#updating-skills-from-zazz-skills)
+- [Curating skills from zazz-skills](#curating-skills-from-zazz-skills)
 
 ---
 
-## Main views and features
+## Board views
+
+Zazz Board gives owners and agents several project-level views over the same deliverables and tasks:
 
 | View | Purpose |
 |------|--------|
-| **Project list** | Create/edit projects; configure task and deliverable workflows. |
-| **Deliverable list** | Sortable table of deliverables per project; SPEC/PLAN/PRD paths with copy-to-clipboard; PR links. |
-| **Deliverable Kanban** | Columns from project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done). Drag-and-drop deliverable cards; task progress and PR URL on cards. |
-| **Task Kanban** | Columns from project’s task workflow (To Do, Ready, In Progress, QA, Completed). Tasks show deliverable name in card footer. Drag-and-drop. |
-| **Task graph** | **Task Graph** — one deliverable’s task graph at a time; select deliverable via dropdown. Readiness and coordination types (e.g. TEST_TOGETHER, DEPLOY_TOGETHER) supported. |
+| **Project** | Create and edit projects, choose the active project, and configure project-level task, deliverable, and Gantt settings. |
+| **Gantt chart** | Schedule and inspect project milestones, dated deliverables, dependencies, month/sprint/week headers, the current-date marker, and lazy-loaded task rows under deliverables. |
+| **Deliverables Kanban** | Track deliverables through the project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done), with drag-and-drop cards, task progress, and PR URLs. |
+| **Task Kanban** | Track agent tasks through the project’s task workflow (To Do, Ready, In Progress, QA, Completed), with deliverable context on each task card. |
+| **Task Graph** | Inspect one deliverable’s task dependency graph at a time, including readiness and coordination relationships such as `TEST_TOGETHER` and `DEPLOY_TOGETHER`. |
+
+The deliverables table gives an additional sortable list view with SPEC/PRD paths, copy-to-clipboard actions, PR
+links, and task counts.
 
 ### Deliverable lifecycle (high level)
 
 1. **Deliverable creation**: Owner works with the **spec builder agent** to create the deliverable specification (SPEC). During that dialogue, the agent drafts the SPEC document and creates the deliverable card on the Kanban board via the API — both with sufficient clarity and correct metadata (SPEC path, worktree, branch).
-2. **Planning**: The **Planner agent** decomposes the SPEC into the PLAN — phased sequence of tasks with per-task acceptance criteria, test requirements, and file assignments. Owner approves PLAN (sets `approved_by` / `approved_at`), sets PLAN path. Owner or system moves deliverable to **In Progress** (guard: PLAN approved + PLAN path set).
-3. **Execution**: The **Worker agent** realizes plan tasks just-in-time on the board, creates required relations, and implements with TDD while keeping statuses and block flags current via API. Owner-managed orchestration can run this flow directly without coordinator/QA agent personas in the current release.
+2. **Readiness**: Owner approves the SPEC, confirms the branch/worktree and review shape, and moves the deliverable to **In Progress** when the deliverable is ready for implementation.
+3. **Execution**: The **worker** realizes SPEC-derived tasks just-in-time on the board, creates required relations, and implements with TDD while keeping statuses and block flags current via API. The worker may operate as a lead agent, delegated subagents, or both, depending on the active model and harness.
 4. **Review & release**: Owner reviews PR, merges to staging (**Staged**) then to main (**Done** or **Prod** for projects with a release-pipeline workflow). Status history is stored for lead-time and reporting.
 
 ### Tech notes
@@ -53,12 +59,20 @@
 
 ### Sample project (seed data)
 
-Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, task Kanban, deliverable Kanban, and the task graph with realistic data. SPECs and PLANs live in **`.zazz/deliverables/`** per the Zazz Framework; project standards live in **`.zazz/standards/`**. See the canonical [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for the full structure.
+Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliverables, milestones, the project Gantt, task Kanban, deliverable Kanban, and the task graph with realistic data. The sample Gantt data includes historical milestones, dated deliverables, lazy-loaded agent tasks, sprint/week labels, and milestone 4 demo data for the Gantt milestone MVP. Committed deliverable specifications live in **`.zazz/specifications/`**; project standards live in **`.zazz/standards/`**. See the canonical [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for the full structure.
 
 ---
 
+## Prerequisites
+
+- Docker Desktop installed and running.
+- The Zazz Board repo cloned locally.
+- Ports `5433`, `3030`, and `3001` available for Postgres, the API, and the client.
+
 ## Quick start
-Production/self-hosted Docker setup with two flows.
+Local Docker setup has two flows: first install and upgrade.
+
+Docker images for the API and client build use Node.js `v24.18.0`, matching `.nvmrc`.
 
 ### Flow A — Initial install (first time)
 
@@ -78,9 +92,9 @@ Expected result:
 - Client on `localhost:3001`
 - First-run schema + seed happens automatically
 
-### Verify readiness before running DB queries
+### Verify readiness
 
-Wait for the API to be ready (schema created and seed applied) before running `psql` queries:
+Wait for API logs to settle and for schema/seed startup to finish before running `psql` queries:
 
 ```bash
 # Health check (wait until this returns OK)
@@ -95,16 +109,6 @@ Once healthy, you can safely query the database. Example:
 set -a && source .env && set +a
 docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT COUNT(*) AS task_count FROM \"TASKS\";"
 ```
-
-### If first-run seed fails or sample data is missing
-
-Run this as a second step from terminal (with containers running):
-
-```bash
-npm run docker:reset:seed
-```
-
-Then re-run the health check above before running DB queries.
 
 ### Flow B — Upgrade existing install (preserve data)
 
@@ -146,8 +150,8 @@ ZAZZ_API_TOKEN=550e8400-e29b-41d4-a716-446655440000
 | api      | zazz_board_api       | 3030      | 3030          | Fastify API              |
 | client   | zazz_board_client    | 3001      | 80            | React app (Nginx)        |
 
-- **API**: http://localhost:3030
-- **Client**: http://localhost:3001
+- **API**: [http://localhost:3030](http://localhost:3030)
+- **Client**: [http://localhost:3001](http://localhost:3001)
 - **Postgres** (from host): `localhost:5433`, database `zazz_board_db`
 
 ## Contributor setup
@@ -156,7 +160,7 @@ Contributor/committer instructions are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_S
 
 ### Log in from the browser with an access token
 
-1. Open `http://localhost:3001`
+1. Open [http://localhost:3001](http://localhost:3001)
 2. Click the **Zazz Board** menu in the header
 3. Click **Set Access Token**
 4. Paste this token and submit:
@@ -174,12 +178,14 @@ docker compose --env-file .env exec postgres psql -U "$POSTGRES_USER" -d "$POSTG
 
 ### Local URLs (from `docker-compose.yml`)
 
-- API: http://localhost:3030
-- Client: http://localhost:3001
+- API: [http://localhost:3030](http://localhost:3030)
+- Client: [http://localhost:3001](http://localhost:3001)
 
 ---
 
 ## Running in the cloud
+
+Zazz Board can run beyond local Docker with the same API/client split. The current deployment options are Docker Compose for a single host, AWS with RDS/ECS/S3, or GCP with Cloud SQL/Cloud Run/Cloud Storage.
 
 ### Option 1: Docker Compose (self-hosted)
 
@@ -191,8 +197,8 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 - **Postgres**: port 5432 (internal)
-- **API**: http://localhost:3030
-- **Client**: http://localhost:80 (Nginx)
+- **API**: [http://localhost:3030](http://localhost:3030)
+- **Client**: [http://localhost:80](http://localhost:80) (Nginx)
 
 Set `API_BASE_URL` in the API container if the client needs to reach the API at a different host (e.g. a public URL).
 
@@ -285,13 +291,37 @@ Then run tests (from `api/`):
 set -a && source .env && set +a && NODE_ENV=test npm run test
 ```
 
+### Using nvm in non-interactive shells
+
+Developers who use `nvm` usually get `node` and `npm` automatically in interactive terminals because their shell startup files load `nvm`. Non-interactive shells, editor tasks, agent shells, and some CI steps may not load that setup, which can make `npm` appear to be missing even though it works in a normal terminal.
+
+The repo includes `.nvmrc` pinned to Node.js `v24.18.0`, so `nvm use` selects the project runtime. With the current project runtime, npm reports `11.16.0`.
+
+If a non-interactive command reports `npm: command not found`, initialize `nvm` explicitly before running repo commands:
+
+```bash
+export NVM_DIR="$HOME/.nvm"
+source "$NVM_DIR/nvm.sh"
+nvm use
+```
+
+For example:
+
+```bash
+export NVM_DIR="$HOME/.nvm"
+source "$NVM_DIR/nvm.sh"
+nvm use
+cd api
+set -a && source .env && set +a && NODE_ENV=test npm run test
+```
+
 See [api/__tests__/README.md](./api/__tests__/README.md) for details.
 
 ---
 
 ## API docs (Swagger)
 
-The API serves **OpenAPI 3.1** interactive docs (Swagger UI) at **http://localhost:3030/docs** when the API is running. The spec is **generated from Fastify route schemas** (single source of truth; no separate YAML to maintain). It includes all routes, request/response shapes, and security: **TB_TOKEN** (header) and **Bearer** (Authorization header). Access to `/docs` is **token-protected** so only authenticated users and agents can view it in production.
+The API serves **OpenAPI 3.1** interactive docs (Swagger UI) at [http://localhost:3030/docs](http://localhost:3030/docs) when the API is running. The spec is **generated from Fastify route schemas** (single source of truth; no separate YAML to maintain). It includes all routes, request/response shapes, and security: **TB_TOKEN** (header) and **Bearer** (Authorization header). Access to `/docs` is **token-protected** so only authenticated users and agents can view it in production.
 
 ### Spec and docs URLs
 
@@ -312,7 +342,7 @@ You need a valid **access token** (UUID from `USERS.access_token`; seed example:
 
 **Option A — Browser (easiest)**  
 1. Start the API (`npm run dev` or `npm run dev:api`).  
-2. Open **http://localhost:3030/docs** (the `?token=` query string does not work; use Authorize instead)
+2. Open [http://localhost:3030/docs](http://localhost:3030/docs) (the `?token=` query string does not work; use Authorize instead)
 3. Click **Authorize**, enter `550e8400-e29b-41d4-a716-446655440000` in the **TB_TOKEN** field, then **Authorize** → **Close**  
 4. Use “Try it out” on any route; the token is sent on every request.
 
@@ -350,7 +380,9 @@ For **Swagger UI**, see [How to access the docs with your access token](#how-to-
 ## Common issues
 
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test server).
-- **drizzle-kit** “please install drizzle-orm”: From repo root, `ln -sf ./api/node_modules/drizzle-orm ./node_modules/drizzle-orm`.
+- **Sample data missing or first-run seed failed**: with containers running, run `npm run docker:reset:seed`, then re-run the health check.
+- **drizzle-kit** “please install drizzle-orm”: From repo root, run `npm install` and `npm install --workspace=api`. Do not create manual `node_modules` symlinks in worktrees.
+- **`npm: command not found` when using nvm**: initialize `nvm` explicitly in non-interactive shells; see [Using nvm in non-interactive shells](#using-nvm-in-non-interactive-shells).
 - **Tests**: Always source `api/.env` and set `NODE_ENV=test`; see [AGENTS.md](./AGENTS.md) and [api/__tests__/README.md](./api/__tests__/README.md).
 
 ---
@@ -373,39 +405,37 @@ Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433
 
 ## About this repository
 
-This repository is developed using the Zazz framework (dogfooding). Zazz Board is built with Zazz Board — we use our own deliverables, SPECs, PLANs, and workflow to evolve the product.
+This repository is developed using the Zazz framework (dogfooding). Zazz Board is built with Zazz Board — we use our own deliverables, SPECs, and workflow to evolve the product.
 
 ---
 
 ## Documentation
 
-- **[zazz-framework.md (canonical)](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md)** — Full framework overview: terminology (SPEC, PLAN), workflow stages, agent roles, two kanban boards, TDD, and how to follow the methodology.
+- **[zazz-framework.md (canonical)](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md)** — Full framework overview: terminology (SPEC), workflow stages, agent roles, two kanban boards, TDD, and how to follow the methodology.
 - **[AGENTS.md](./AGENTS.md)** — Primary reference for agents and developers: repo layout, full API route list, DB setup, test strategy (Vitest + PactumJS + test DB), troubleshooting.
 - **API docs (Swagger UI)**: **http://localhost:3030/docs** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
-- **`.zazz/`** — Zazz Framework structure (this repo's DOCS_ROOT is `.zazz/`): `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs), `features/`, `proposals/`, `specifications/`, `architecture/`, `docs/` (vendored methodology guides), and `execution/` (gitignored runtime records). See [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for repository structure guidance and `.zazz/standards/index.yaml` for the standards index.
-- **`.agents/skills/`** — Agent skills. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the vendored copy plus local-only skills (`worker`, `database-baseline-refresh`).
+- **`.zazz/`** — Zazz Framework structure (this repo's DOCS_ROOT is `.zazz/`): `project.md`, `standards/` (atomic project standards), `features/`, `proposals/`, `specifications/`, `architecture/`, `docs/` (vendored methodology guides), and `execution/` (gitignored runtime records). See [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for repository structure guidance and `.zazz/standards/index.yaml` for the standards index.
+- **`.agents/skills/`** — Agent skills. `zazz-skills` provides seed/reference skills, but this repo's checked-in skill files are curated locally and may diverge when project behavior requires it.
 - **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
 
-## Updating skills from zazz-skills
+## Curating skills from zazz-skills
 
-`zazz-skills` is the canonical source for framework skill names and markdown content. This repo treats its `.agents/skills/` copy as a downstream mirror of that source, except for local-only skills.
+`zazz-skills` is an initial seed and upstream reference for reusable framework skills. After a project has local skill files, updates are curated selectively: compare upstream intent, keep local project behavior, and only copy changes that still fit this repo.
 
-Typical update flow:
+Typical curation flow:
 
-1. Review the upstream changes in `zazz-skills` first so any renames or new skills are understood before syncing.
-2. Run `./scripts/sync-skills-from-zazz-skills.sh /absolute/path/to/zazz-skills` (or set `ZAZZ_SKILLS_REPO=...`). Add `DRY_RUN=1` to preview.
-3. Review the diff in this repo, especially `README.md`, `AGENTS.md`, and `.zazz/`, because renamed skills often leave stale references outside the skill folders.
-4. Run `rg -n 'proposal-builder|feature-doc-builder|pr-builder|spec-builder-agent|planner-agent|coordinator-agent|worker-agent|qa-agent|qa-backend|qa-frontend|\bqa\b' README.md AGENTS.md .zazz .agents/skills` to catch old names or missing follow-up edits.
+1. Review upstream changes in `zazz-skills` and decide whether they apply to this repo.
+2. Compare the relevant upstream skill files against the local `.agents/skills/` files.
+3. Apply selected changes manually, preserving local edits such as repo-specific workflow, skill names, ignored upstream skills, and local-only skills.
+4. Review related docs (`README.md`, `AGENTS.md`, `.zazz/`) because skill renames or policy changes often leave stale references outside skill folders.
 
 Notes:
 
-- The sync script discovers every skill under the upstream `.agents/skills/` and mirrors it here, so new upstream skills are picked up automatically.
-- `IGNORE_SKILLS` in the script lists upstream skills this project intentionally does NOT vendor (currently `sqlcmd` and `jira-api`). Edit that list as the project's needs change.
-- `LOCAL_ONLY_SKILLS` lists repo-owned skills the sync never touches: `worker` (core to zazz-board's dogfooded workflow) and `database-baseline-refresh`.
-- The script removes previously-synced skills that upstream no longer ships and that are not local-only, so obsolete skills do not linger (e.g. `qa`/`qa-backend`/`qa-frontend`, which upstream consolidated into `qa-testing`).
-- A rename-heavy update still needs a manual documentation sweep after the file sync.
+- Upstream skills this project does not use, such as SQL Server or external-tracker integrations, should stay out unless the project need changes.
+- Repo-owned skills and local skill edits must not be overwritten by upstream reference material.
+- Do not treat upstream as automatically authoritative for this repo.
 
 ## Updating standards from zazz-skills
 
-The repo-specific standards under `.zazz/standards/` (`system-architecture.md`, `data-architecture.md`, `testing.md`, `coding-styles.md`) are owned by this repo and take precedence; they must not be clobbered by an upstream sync. The generic methodology standards (`code-structure.md`, `docs-hygiene.md`, `docs-hygiene-reference-structure.md`, `spec-hygiene.md`, `pr-process.md`) are vendored from upstream `zazz-skills` and should be refreshed periodically by copying them back over. The placeholder stack standards (`http-layer.md`, `data-layer.md`, `frontend.md`) and `contextual-split.md` are repo-owned and intended to be expanded into real baselines via the `standard-builder` skill. See `.zazz/standards/contextual-split.md` for the full sync discipline.
+Use `.zazz/standards/index.yaml` as the routing source of truth for standard selection. See `.zazz/standards/contextual-split.md` for ownership and sync discipline before refreshing vendored standards from `zazz-skills`.

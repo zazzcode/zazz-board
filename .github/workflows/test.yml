@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24.18.0'
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
@@ -38,7 +38,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24.18.0'
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
 
@@ -75,7 +75,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24.18.0'
           cache: 'npm'
 
       - name: Install PostgreSQL client
@@ -109,7 +109,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24.18.0'
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
 

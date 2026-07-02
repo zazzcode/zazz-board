@@ -149,7 +149,23 @@
       "endDate": "End Date",
       "deliverables": "Deliverables",
       "selectDeliverables": "Select deliverables",
-      "showDefaultMilestone": "Show default milestone"
+      "timelineMode": "Timeline Mode",
+      "periodStartDate": "Period Start Date",
+      "sprintLengthWeeks": "Sprint Length (weeks)",
+      "showDefaultMilestone": "Show default milestone",
+      "showMonthHeader": "Month",
+      "showSprintHeader": "Sprint",
+      "showWeekHeader": "Week"
+    },
+    "timelineModes": {
+      "dates": "Dates",
+      "weeks": "Weeks",
+      "sprints": "Sprints"
+    },
+    "sprintLengthOptions": {
+      "one": "1 week",
+      "two": "2 weeks",
+      "three": "3 weeks"
     },
     "columns": {
       "item": "Item",

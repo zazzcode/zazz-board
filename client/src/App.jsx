@@ -43,6 +43,7 @@ import { useDeliverables } from './hooks/useDeliverables.js';
 import { getDefaultProjectPath, getProjectViewPath, getProjectViewSegmentData } from './utils/projectRoutes.js';
 import logger from './utils/logger.js';
 import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
 
 function AppContent() {
   const { t, i18n } = useTranslation();
@@ -762,6 +763,11 @@ function AppContent() {
             } />
             <Route path="/projects/:projectCode/deliverables" element={
               <DeliverableListPage 
+                selectedProject={selectedProject}
+              />
+            } />
+            <Route path="/projects/:projectCode/deliverables/:deliverableId" element={
+              <DeliverableListPage
                 selectedProject={selectedProject}
               />
             } />

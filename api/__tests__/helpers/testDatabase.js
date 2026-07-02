@@ -1,5 +1,20 @@
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, TASK_RELATIONS, FILE_LOCKS, IMAGE_METADATA, IMAGE_DATA, AGENT_TOKENS } from '../../lib/db/schema.js';
+import {
+  USERS,
+  PROJECTS,
+  DELIVERABLES,
+  DELIVERABLE_RELATIONS,
+  MILESTONES,
+  PROJECT_GANTT_SETTINGS,
+  TASKS,
+  TAGS,
+  TASK_TAGS,
+  TASK_RELATIONS,
+  FILE_LOCKS,
+  IMAGE_METADATA,
+  IMAGE_DATA,
+  AGENT_TOKENS,
+} from '../../lib/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 import { tokenService } from '../../src/services/tokenService.js';
 
@@ -108,6 +123,7 @@ export async function clearTaskData() {
   await db.delete(IMAGE_DATA);
   await db.delete(IMAGE_METADATA);
   await db.delete(FILE_LOCKS);
+  await db.delete(DELIVERABLE_RELATIONS);
   await db.delete(TASK_RELATIONS);
   await db.delete(TASK_TAGS);
   await db.delete(TASKS);
@@ -130,6 +146,42 @@ export async function resetProjectDefaults() {
       task_graph_layout_direction: 'LR'
     })
     .where(eq(PROJECTS.id, 1));
+
+  await db.update(PROJECT_GANTT_SETTINGS)
+    .set({
+      timeline_mode: 'sprint',
+      show_date_labels: false,
+      show_default_milestone: false,
+      show_month_header: true,
+      show_sprint_header: true,
+      show_week_header: true,
+      period_start_date: '2026-01-04',
+      sprint_length_weeks: 2,
+      period_number_start: 1,
+      sprint_label_prefix: 'Sprint',
+      week_label_prefix: 'W',
+      updated_at: new Date(),
+    })
+    .where(eq(PROJECT_GANTT_SETTINGS.project_id, 1));
+}
+
+async function getOrCreateDefaultMilestone(project) {
+  const [existing] = await db.select()
+    .from(MILESTONES)
+    .where(and(eq(MILESTONES.project_id, project.id), eq(MILESTONES.is_default, true)))
+    .limit(1);
+  if (existing) return existing;
+
+  const [created] = await db.insert(MILESTONES).values({
+    project_id: project.id,
+    start_date: '2026-02-02',
+    end_date: '2026-08-15',
+    is_default: true,
+    status: 'IN_PROGRESS',
+    created_by: project.created_by,
+    updated_by: project.updated_by,
+  }).returning();
+  return created;
 }
 
 export async function createTestDeliverable(projectId, overrides = {}) {
@@ -142,9 +194,13 @@ export async function createTestDeliverable(projectId, overrides = {}) {
     .from(DELIVERABLES)
     .where(eq(DELIVERABLES.project_id, projectId));
   const sequence = parseInt(count.count) + 1;
+  const defaultMilestone = await getOrCreateDefaultMilestone(project);
+  const plannedStart = overrides.plannedStartAt || new Date('2026-06-03T00:00:00.000Z');
+  const plannedCompletion = overrides.plannedCompletionAt || new Date('2026-06-14T00:00:00.000Z');
 
   const [deliverable] = await db.insert(DELIVERABLES).values({
     project_id: projectId,
+    milestone_id: overrides.milestoneId || defaultMilestone.id,
     project_code: overrides.projectCode || project.code,
     code: overrides.code || `${project.code}-T${sequence}`,
     name: overrides.name || `Test Deliverable ${sequence}`,
@@ -157,6 +213,11 @@ export async function createTestDeliverable(projectId, overrides = {}) {
     approved_by: overrides.approvedBy || null,
     approved_at: overrides.approvedAt || null,
     position: overrides.position ?? sequence * 10,
+    milestone_position: overrides.milestonePosition ?? sequence * 10,
+    planned_start_at: plannedStart,
+    planned_completion_at: plannedCompletion,
+    actual_start_at: overrides.actualStartAt || null,
+    actual_completion_at: overrides.actualCompletionAt || null,
     created_by: overrides.createdBy || 1,
     updated_by: overrides.updatedBy || 1
   }).returning();

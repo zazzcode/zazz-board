@@ -16,6 +16,11 @@ import {
 } from '../../lib/db/schema.js';
 import { sql } from 'drizzle-orm';
 import { loadDatabaseSnapshot } from './databaseSnapshot.js';
+import {
+  prepareDeliverablesForProjectMilestones,
+  seedProjectMilestoneAssignments,
+  seedProjectMilestoneContainers,
+} from './seedProjectMilestones.js';
 
 const dateFieldsByKey = {
   users: ['created_at', 'updated_at'],
@@ -25,7 +30,18 @@ const dateFieldsByKey = {
   tags: ['created_at'],
   projects: ['created_at', 'updated_at'],
   agent_tokens: ['created_at'],
-  deliverables: ['approved_at', 'created_at', 'updated_at'],
+  milestones: ['start_date', 'end_date', 'created_at', 'updated_at'],
+  project_gantt_settings: ['period_start_date', 'created_at', 'updated_at'],
+  deliverables: [
+    'approved_at',
+    'planned_start_at',
+    'planned_completion_at',
+    'actual_start_at',
+    'actual_completion_at',
+    'created_at',
+    'updated_at',
+  ],
+  deliverable_relations: ['created_at', 'updated_at'],
   tasks: ['started_at', 'completed_at', 'created_at', 'updated_at'],
   task_relations: ['updated_at'],
   image_metadata: ['created_at'],
@@ -52,6 +68,8 @@ const sequenceTables = [
   'TRANSLATIONS',
   'PROJECTS',
   'AGENT_TOKENS',
+  'MILESTONES',
+  'PROJECT_GANTT_SETTINGS',
   'DELIVERABLES',
   'TASKS',
   'IMAGE_METADATA',
@@ -75,7 +93,10 @@ async function insertSnapshotRows(key, label, table, rows) {
     return 0;
   }
 
-  const preparedRows = rows.map((row) => convertDateFields(row, dateFieldsByKey[key]));
+  let preparedRows = rows.map((row) => convertDateFields(row, dateFieldsByKey[key]));
+  if (key === 'deliverables') {
+    preparedRows = await prepareDeliverablesForProjectMilestones(preparedRows);
+  }
   await db.insert(table).values(preparedRows);
   console.log(`  ✅ Seeded ${preparedRows.length} ${label}`);
   return preparedRows.length;
@@ -103,9 +124,15 @@ export async function seedDatabaseSnapshot() {
       entry.key,
       entry.label,
       entry.table,
-      snapshot[entry.key]
+      snapshot[entry.key] || []
     );
+
+    if (entry.key === 'agent_tokens') {
+      Object.assign(counts, await seedProjectMilestoneContainers());
+    }
   }
+
+  Object.assign(counts, await seedProjectMilestoneAssignments());
 
   for (const tableName of sequenceTables) {
     await resetSequence(tableName);

@@ -1,6 +1,24 @@
 import { eq, and, sql, asc, like, or, inArray } from 'drizzle-orm';
 import { db } from '../../lib/db/index.js';
-import { USERS, PROJECTS, DELIVERABLES, TASKS, TAGS, TASK_TAGS, IMAGE_METADATA, IMAGE_DATA, STATUS_DEFINITIONS, TRANSLATIONS, TASK_RELATIONS, COORDINATION_TYPES, FILE_LOCKS, AGENT_TOKENS } from '../../lib/db/schema.js';
+import {
+  USERS,
+  PROJECTS,
+  DELIVERABLES,
+  DELIVERABLE_RELATIONS,
+  MILESTONES,
+  PROJECT_GANTT_SETTINGS,
+  TASKS,
+  TAGS,
+  TASK_TAGS,
+  IMAGE_METADATA,
+  IMAGE_DATA,
+  STATUS_DEFINITIONS,
+  TRANSLATIONS,
+  TASK_RELATIONS,
+  COORDINATION_TYPES,
+  FILE_LOCKS,
+  AGENT_TOKENS,
+} from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
 import { randomUUID } from 'crypto';
 
@@ -15,6 +33,62 @@ import { randomUUID } from 'crypto';
  * @typedef {import('../types.js').ImageMetadata} ImageMetadata
  * @typedef {import('../types.js').TaskRelationType} TaskRelationType
  */
+
+const DEFAULT_GANTT_START_DATE = '2026-06-01';
+const DEFAULT_GANTT_END_DATE = '2026-08-14';
+const DEFAULT_GANTT_PERIOD_START_DATE = '2026-01-04';
+
+function toDateOnly(/** @type {string|Date|null|undefined} */ value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 10);
+  return value.toISOString().slice(0, 10);
+}
+
+function addDays(/** @type {string|Date|null|undefined} */ value, /** @type {number} */ days) {
+  const date = value ? new Date(value) : new Date(`${DEFAULT_GANTT_START_DATE}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date;
+}
+
+function getTimelineFromSettings(/** @type {any} */ settings) {
+  /** @type {Record<string, string>} */
+  const unitMap = {
+    dates: 'date',
+    weeks: 'week',
+    sprint: 'sprint',
+  };
+
+  return {
+    unit: unitMap[settings.timelineMode] || 'sprint',
+    showDateLabels: settings.showDateLabels,
+    showDefaultMilestone: settings.showDefaultMilestone,
+    showMonthHeader: settings.showMonthHeader,
+    showSprintHeader: settings.showSprintHeader,
+    showWeekHeader: settings.showWeekHeader,
+    periodStartDate: settings.periodStartDate,
+    periodNumberStart: settings.periodNumberStart,
+    sprintStartDate: settings.periodStartDate,
+    sprintLengthWeeks: settings.sprintLengthWeeks,
+    sprintLabelPrefix: settings.sprintLabelPrefix,
+    weekLabelPrefix: settings.weekLabelPrefix,
+  };
+}
+
+function getStatusCategory(/** @type {string} */ status, /** @type {boolean} */ blocked = false) {
+  if (blocked) return 'BLOCKED';
+  if (['DONE', 'COMPLETED'].includes(status)) return 'COMPLETED';
+  if (['IN_PROGRESS', 'IN_REVIEW', 'QA', 'STAGED'].includes(status)) return 'IN_PROGRESS';
+  return 'NOT_STARTED';
+}
+
+function isCompletedStatus(/** @type {string} */ status) {
+  return ['DONE', 'COMPLETED'].includes(status);
+}
+
+function getProgress(/** @type {number} */ completedCount, /** @type {number} */ totalCount, /** @type {number} */ fallback = 0) {
+  if (!totalCount) return fallback;
+  return Math.round((completedCount / totalCount) * 100);
+}
 
 /**
  * Database Service
@@ -222,16 +296,45 @@ class DatabaseService {
    * Create new project
    */
   async createProject(/** @type {any} */ projectData) {
-    const [project] = await db.insert(PROJECTS)
-      .values({
+    const project = await db.transaction(async (/** @type {any} */ tx) => {
+      const [created] = await tx.insert(PROJECTS).values({
         title: projectData.title,
         code: projectData.code,
         description: projectData.description,
         leader_id: projectData.leaderId,
         status_workflow: projectData.statusWorkflow || ['READY', 'IN_PROGRESS', 'QA', 'COMPLETED'],
         deliverable_status_workflow: projectData.deliverableStatusWorkflow || ['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']
-      })
-      .returning();
+      }).returning();
+
+      await tx.insert(MILESTONES).values({
+        project_id: created.id,
+        start_date: DEFAULT_GANTT_START_DATE,
+        end_date: DEFAULT_GANTT_END_DATE,
+        is_default: true,
+        status: 'PLANNING',
+        created_by: projectData.leaderId,
+        updated_by: projectData.leaderId,
+      });
+
+      await tx.insert(PROJECT_GANTT_SETTINGS).values({
+        project_id: created.id,
+        timeline_mode: 'sprint',
+        show_date_labels: false,
+        show_default_milestone: false,
+        show_month_header: true,
+        show_sprint_header: true,
+        show_week_header: true,
+        period_start_date: DEFAULT_GANTT_PERIOD_START_DATE,
+        sprint_length_weeks: 2,
+        period_number_start: 1,
+        sprint_label_prefix: 'Sprint',
+        week_label_prefix: 'W',
+        created_by: projectData.leaderId,
+        updated_by: projectData.leaderId,
+      });
+
+      return created;
+    });
     
     return project;
   }
@@ -514,6 +617,7 @@ class DatabaseService {
     const rows = await db.select({
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
+      milestoneId: DELIVERABLES.milestone_id,
       projectCode: DELIVERABLES.project_code,
       deliverableCode: DELIVERABLES.code,
       name: DELIVERABLES.name,
@@ -530,6 +634,11 @@ class DatabaseService {
       gitBranch: DELIVERABLES.git_branch,
       pullRequestUrl: DELIVERABLES.pull_request_url,
       position: DELIVERABLES.position,
+      milestonePosition: DELIVERABLES.milestone_position,
+      plannedStartAt: DELIVERABLES.planned_start_at,
+      plannedCompletionAt: DELIVERABLES.planned_completion_at,
+      actualStartAt: DELIVERABLES.actual_start_at,
+      actualCompletionAt: DELIVERABLES.actual_completion_at,
       createdBy: DELIVERABLES.created_by,
       createdAt: DELIVERABLES.created_at,
       updatedBy: DELIVERABLES.updated_by,
@@ -544,6 +653,7 @@ class DatabaseService {
     .groupBy(
       DELIVERABLES.id,
       DELIVERABLES.project_id,
+      DELIVERABLES.milestone_id,
       DELIVERABLES.project_code,
       DELIVERABLES.code,
       DELIVERABLES.name,
@@ -560,6 +670,11 @@ class DatabaseService {
       DELIVERABLES.git_branch,
       DELIVERABLES.pull_request_url,
       DELIVERABLES.position,
+      DELIVERABLES.milestone_position,
+      DELIVERABLES.planned_start_at,
+      DELIVERABLES.planned_completion_at,
+      DELIVERABLES.actual_start_at,
+      DELIVERABLES.actual_completion_at,
       DELIVERABLES.created_by,
       DELIVERABLES.created_at,
       DELIVERABLES.updated_by,
@@ -578,6 +693,7 @@ class DatabaseService {
     const [deliverable] = await db.select({
       id: DELIVERABLES.id,
       projectId: DELIVERABLES.project_id,
+      milestoneId: DELIVERABLES.milestone_id,
       projectCode: DELIVERABLES.project_code,
       deliverableCode: DELIVERABLES.code,
       name: DELIVERABLES.name,
@@ -594,6 +710,11 @@ class DatabaseService {
       gitBranch: DELIVERABLES.git_branch,
       pullRequestUrl: DELIVERABLES.pull_request_url,
       position: DELIVERABLES.position,
+      milestonePosition: DELIVERABLES.milestone_position,
+      plannedStartAt: DELIVERABLES.planned_start_at,
+      plannedCompletionAt: DELIVERABLES.planned_completion_at,
+      actualStartAt: DELIVERABLES.actual_start_at,
+      actualCompletionAt: DELIVERABLES.actual_completion_at,
       createdBy: DELIVERABLES.created_by,
       createdAt: DELIVERABLES.created_at,
       updatedBy: DELIVERABLES.updated_by,
@@ -626,9 +747,21 @@ class DatabaseService {
       const [maxPosition] = await tx.select({ max: sql`COALESCE(MAX(${DELIVERABLES.position}),0)`.as('max') })
         .from(DELIVERABLES).where(eq(DELIVERABLES.project_id, projectId));
       const nextPosition = Math.floor(maxPosition.max / 10) * 10 + 10;
+      const [defaultMilestone] = await tx.select()
+        .from(MILESTONES)
+        .where(and(eq(MILESTONES.project_id, projectId), eq(MILESTONES.is_default, true)))
+        .limit(1);
+      if (!defaultMilestone) throw new Error('Default milestone not found');
+
+      const [maxMilestonePosition] = await tx.select({ max: sql`COALESCE(MAX(${DELIVERABLES.milestone_position}),0)`.as('max') })
+        .from(DELIVERABLES)
+        .where(eq(DELIVERABLES.milestone_id, defaultMilestone.id));
+      const nextMilestonePosition = Math.floor(maxMilestonePosition.max / 10) * 10 + 10;
+      const plannedStartAt = data.plannedStartAt ? new Date(data.plannedStartAt) : new Date(`${DEFAULT_GANTT_START_DATE}T00:00:00.000Z`);
 
       const [row] = await tx.insert(DELIVERABLES).values({
         project_id: projectId,
+        milestone_id: defaultMilestone.id,
         project_code: project.code,
         code: generatedCode,
         name: data.name,
@@ -642,6 +775,11 @@ class DatabaseService {
         git_branch: data.gitBranch,
         pull_request_url: data.pullRequestUrl,
         position: nextPosition,
+        milestone_position: nextMilestonePosition,
+        planned_start_at: plannedStartAt,
+        planned_completion_at: data.plannedCompletionAt ? new Date(data.plannedCompletionAt) : addDays(plannedStartAt, 14),
+        actual_start_at: data.actualStartAt ? new Date(data.actualStartAt) : null,
+        actual_completion_at: data.actualCompletionAt ? new Date(data.actualCompletionAt) : null,
         created_by: userId,
         updated_by: userId
       }).returning();
@@ -664,6 +802,11 @@ class DatabaseService {
     if (data.gitBranch !== undefined) updateData.git_branch = data.gitBranch;
     if (data.pullRequestUrl !== undefined) updateData.pull_request_url = data.pullRequestUrl;
     if (data.position !== undefined) updateData.position = data.position;
+    if (data.milestonePosition !== undefined) updateData.milestone_position = data.milestonePosition;
+    if (data.plannedStartAt !== undefined) updateData.planned_start_at = data.plannedStartAt ? new Date(data.plannedStartAt) : null;
+    if (data.plannedCompletionAt !== undefined) updateData.planned_completion_at = data.plannedCompletionAt ? new Date(data.plannedCompletionAt) : null;
+    if (data.actualStartAt !== undefined) updateData.actual_start_at = data.actualStartAt ? new Date(data.actualStartAt) : null;
+    if (data.actualCompletionAt !== undefined) updateData.actual_completion_at = data.actualCompletionAt ? new Date(data.actualCompletionAt) : null;
     updateData.updated_by = userId;
     updateData.updated_at = new Date();
 
@@ -733,6 +876,508 @@ class DatabaseService {
    */
   async getTasksForDeliverable(/** @type {number} */ deliverableId) {
     return await this.getTasks({ deliverableId });
+  }
+
+  // ==================== GANTT / MILESTONE OPERATIONS ====================
+
+  mapMilestoneResponse(/** @type {any} */ milestone, /** @type {number|null} */ ordinal = null) {
+    return {
+      id: milestone.id,
+      projectId: milestone.project_id ?? milestone.projectId,
+      startDate: toDateOnly(milestone.start_date ?? milestone.startDate),
+      endDate: toDateOnly(milestone.end_date ?? milestone.endDate),
+      isDefault: Boolean(milestone.is_default ?? milestone.isDefault),
+      status: milestone.status,
+      labelKey: (milestone.is_default ?? milestone.isDefault) ? 'gantt.defaultMilestone' : 'gantt.numberedMilestone',
+      labelParams: (milestone.is_default ?? milestone.isDefault) ? {} : { number: ordinal },
+      createdAt: milestone.created_at ?? milestone.createdAt,
+      updatedAt: milestone.updated_at ?? milestone.updatedAt,
+    };
+  }
+
+  mapGanttSettingsResponse(/** @type {any} */ settings, /** @type {string} */ projectCode) {
+    return {
+      projectCode,
+      timelineMode: settings.timeline_mode ?? settings.timelineMode,
+      showDateLabels: settings.show_date_labels ?? settings.showDateLabels,
+      showDefaultMilestone: settings.show_default_milestone ?? settings.showDefaultMilestone,
+      showMonthHeader: settings.show_month_header ?? settings.showMonthHeader,
+      showSprintHeader: settings.show_sprint_header ?? settings.showSprintHeader,
+      showWeekHeader: settings.show_week_header ?? settings.showWeekHeader,
+      periodStartDate: toDateOnly(settings.period_start_date ?? settings.periodStartDate),
+      sprintLengthWeeks: settings.sprint_length_weeks ?? settings.sprintLengthWeeks,
+      periodNumberStart: settings.period_number_start ?? settings.periodNumberStart,
+      sprintLabelPrefix: settings.sprint_label_prefix ?? settings.sprintLabelPrefix,
+      weekLabelPrefix: settings.week_label_prefix ?? settings.weekLabelPrefix,
+      updatedAt: settings.updated_at ?? settings.updatedAt,
+    };
+  }
+
+  async ensureDefaultMilestone(/** @type {number} */ projectId, /** @type {number|null} */ userId = null) {
+    const [existing] = await db.select()
+      .from(MILESTONES)
+      .where(and(eq(MILESTONES.project_id, projectId), eq(MILESTONES.is_default, true)))
+      .limit(1);
+    if (existing) return existing;
+
+    const [created] = await db.insert(MILESTONES).values({
+      project_id: projectId,
+      start_date: DEFAULT_GANTT_START_DATE,
+      end_date: DEFAULT_GANTT_END_DATE,
+      is_default: true,
+      status: 'PLANNING',
+      created_by: userId,
+      updated_by: userId,
+    }).returning();
+    return created;
+  }
+
+  async ensureProjectGanttSettings(/** @type {number} */ projectId, /** @type {number|null} */ userId = null) {
+    const [existing] = await db.select()
+      .from(PROJECT_GANTT_SETTINGS)
+      .where(eq(PROJECT_GANTT_SETTINGS.project_id, projectId))
+      .limit(1);
+    if (existing) return existing;
+
+    const [created] = await db.insert(PROJECT_GANTT_SETTINGS).values({
+      project_id: projectId,
+      timeline_mode: 'sprint',
+      show_date_labels: false,
+      show_default_milestone: false,
+      show_month_header: true,
+      show_sprint_header: true,
+      show_week_header: true,
+      period_start_date: DEFAULT_GANTT_PERIOD_START_DATE,
+      sprint_length_weeks: 2,
+      period_number_start: 1,
+      sprint_label_prefix: 'Sprint',
+      week_label_prefix: 'W',
+      created_by: userId,
+      updated_by: userId,
+    }).returning();
+    return created;
+  }
+
+  async getProjectGanttSettings(/** @type {number} */ projectId) {
+    const project = await this.getProjectById(projectId);
+    if (!project) return null;
+    const settings = await this.ensureProjectGanttSettings(projectId, project.leaderId);
+    return this.mapGanttSettingsResponse(settings, project.code);
+  }
+
+  validateGanttSettings(/** @type {any} */ settings) {
+    if (!['dates', 'weeks', 'sprint'].includes(settings.timelineMode)) {
+      throw new Error('Invalid timelineMode');
+    }
+    if (![1, 2, 3].includes(settings.sprintLengthWeeks)) {
+      throw new Error('sprintLengthWeeks must be 1, 2, or 3');
+    }
+    if (!settings.showMonthHeader && !settings.showSprintHeader && !settings.showWeekHeader) {
+      throw new Error('At least one Gantt header row must be visible');
+    }
+    if (settings.periodNumberStart < 0) {
+      throw new Error('periodNumberStart must be 0 or greater');
+    }
+  }
+
+  async updateProjectGanttSettings(/** @type {number} */ projectId, /** @type {any} */ settings, /** @type {number|null} */ userId = null) {
+    const project = await this.getProjectById(projectId);
+    if (!project) return null;
+    this.validateGanttSettings(settings);
+    await this.ensureProjectGanttSettings(projectId, userId);
+
+    const [updated] = await db.update(PROJECT_GANTT_SETTINGS)
+      .set({
+        timeline_mode: settings.timelineMode,
+        show_date_labels: settings.showDateLabels,
+        show_default_milestone: settings.showDefaultMilestone,
+        show_month_header: settings.showMonthHeader,
+        show_sprint_header: settings.showSprintHeader,
+        show_week_header: settings.showWeekHeader,
+        period_start_date: settings.periodStartDate,
+        sprint_length_weeks: settings.sprintLengthWeeks,
+        period_number_start: settings.periodNumberStart,
+        sprint_label_prefix: settings.sprintLabelPrefix,
+        week_label_prefix: settings.weekLabelPrefix,
+        updated_by: userId,
+        updated_at: new Date(),
+      })
+      .where(eq(PROJECT_GANTT_SETTINGS.project_id, projectId))
+      .returning();
+
+    return this.mapGanttSettingsResponse(updated, project.code);
+  }
+
+  async getMilestonesForProject(/** @type {number} */ projectId) {
+    await this.ensureDefaultMilestone(projectId);
+    const rows = await db.select()
+      .from(MILESTONES)
+      .where(eq(MILESTONES.project_id, projectId))
+      .orderBy(sql`CASE WHEN ${MILESTONES.is_default} THEN 0 ELSE 1 END`, asc(MILESTONES.start_date), asc(MILESTONES.end_date), asc(MILESTONES.id));
+    let ordinal = 0;
+    return rows.map((row) => {
+      if (!row.is_default) ordinal += 1;
+      return this.mapMilestoneResponse(row, row.is_default ? null : ordinal);
+    });
+  }
+
+  async createMilestone(/** @type {number} */ projectId, /** @type {any} */ data, /** @type {number|null} */ userId = null) {
+    if (data.startDate > data.endDate) throw new Error('startDate must be before or equal to endDate');
+
+    const [created] = await db.insert(MILESTONES).values({
+      project_id: projectId,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      is_default: false,
+      status: data.status || 'PLANNING',
+      created_by: userId,
+      updated_by: userId,
+    }).returning();
+
+    const milestones = await this.getMilestonesForProject(projectId);
+    return milestones.find((milestone) => milestone.id === created.id) || this.mapMilestoneResponse(created);
+  }
+
+  async updateMilestone(/** @type {number} */ projectId, /** @type {number} */ milestoneId, /** @type {any} */ data, /** @type {number|null} */ userId = null) {
+    const milestone = await this.getMilestoneById(milestoneId);
+    if (!milestone || milestone.projectId !== projectId) return null;
+    const startDate = data.startDate || milestone.startDate;
+    const endDate = data.endDate || milestone.endDate;
+    if (startDate > endDate) throw new Error('startDate must be before or equal to endDate');
+
+    const [updated] = await db.update(MILESTONES)
+      .set({
+        start_date: startDate,
+        end_date: endDate,
+        status: data.status || milestone.status,
+        updated_by: userId,
+        updated_at: new Date(),
+      })
+      .where(eq(MILESTONES.id, milestoneId))
+      .returning();
+    return updated ? (await this.getMilestonesForProject(projectId)).find((row) => row.id === milestoneId) : null;
+  }
+
+  async getMilestoneById(/** @type {number} */ milestoneId) {
+    const [row] = await db.select().from(MILESTONES).where(eq(MILESTONES.id, milestoneId)).limit(1);
+    return row ? this.mapMilestoneResponse(row) : null;
+  }
+
+  async deleteMilestone(/** @type {number} */ projectId, /** @type {number} */ milestoneId) {
+    const milestone = await this.getMilestoneById(milestoneId);
+    if (!milestone || milestone.projectId !== projectId) return null;
+    if (milestone.isDefault) throw new Error('Default milestone cannot be deleted');
+
+    const [count] = await db.select({ count: sql`COUNT(*)`.as('count') })
+      .from(DELIVERABLES)
+      .where(eq(DELIVERABLES.milestone_id, milestoneId));
+    if (Number(count.count) > 0) throw new Error('Only empty planned milestones can be deleted');
+
+    const [deleted] = await db.delete(MILESTONES).where(eq(MILESTONES.id, milestoneId)).returning();
+    return deleted ? this.mapMilestoneResponse(deleted) : null;
+  }
+
+  async getProjectGantt(/** @type {number} */ projectId) {
+    const project = await this.getProjectById(projectId);
+    if (!project) return null;
+
+    const settings = await this.getProjectGanttSettings(projectId);
+    const milestones = await this.getMilestonesForProject(projectId);
+    const milestoneRowsById = new Map();
+    const deliverableRows = await this.getGanttDeliverableRows(projectId);
+    const taskAggregates = await this.getGanttTaskAggregates(projectId);
+    const rows = [];
+    const rowDates = [];
+    let latestUpdatedAt = project.updatedAt;
+
+    for (const milestone of milestones) {
+      const children = deliverableRows.filter((deliverable) => deliverable.milestoneId === milestone.id);
+      const completedChildren = children.filter((deliverable) => isCompletedStatus(deliverable.status)).length;
+      const completed = children.length > 0 && completedChildren === children.length;
+      const progress = completed ? 100 : getProgress(completedChildren, children.length, milestone.isDefault ? 0 : 0);
+      const rowId = `milestone:${milestone.id}`;
+      milestoneRowsById.set(milestone.id, rowId);
+      rowDates.push(milestone.startDate, milestone.endDate);
+      latestUpdatedAt = [latestUpdatedAt, milestone.updatedAt].filter(Boolean).sort().at(-1);
+      rows.push({
+        id: rowId,
+        entityType: 'milestone',
+        milestoneId: milestone.id,
+        labelKey: milestone.labelKey,
+        labelParams: milestone.labelParams,
+        displayName: milestone.isDefault ? 'Default' : `Milestone ${milestone.labelParams.number}`,
+        startDate: milestone.startDate,
+        endDate: milestone.endDate,
+        status: completed ? 'DONE' : milestone.status,
+        statusCategory: getStatusCategory(completed ? 'DONE' : milestone.status),
+        progress,
+        completed,
+        blocked: children.some((deliverable) => taskAggregates.get(deliverable.id)?.blockedTaskCount > 0),
+        isDefault: milestone.isDefault,
+        milestoneOrder: milestone.labelParams.number || 0,
+      });
+
+      for (const deliverable of children) {
+        const aggregate = taskAggregates.get(deliverable.id) || {
+          taskCount: 0,
+          completedTaskCount: 0,
+          blockedTaskCount: 0,
+          taskStatusCounts: {},
+        };
+        const isCompleted = isCompletedStatus(deliverable.status);
+        const blocked = aggregate.blockedTaskCount > 0;
+        const startDate = toDateOnly(deliverable.plannedStartAt || deliverable.createdAt);
+        const endDate = toDateOnly(deliverable.plannedCompletionAt || addDays(deliverable.createdAt, 14));
+        rowDates.push(startDate, endDate);
+        latestUpdatedAt = [latestUpdatedAt, deliverable.updatedAt].filter(Boolean).sort().at(-1);
+        rows.push({
+          id: `deliverable:${deliverable.id}`,
+          entityType: 'deliverable',
+          parentId: rowId,
+          milestoneId: deliverable.milestoneId,
+          deliverableId: String(deliverable.id),
+          deliverableCode: deliverable.deliverableCode,
+          displayName: deliverable.name,
+          startDate,
+          endDate,
+          plannedStartAt: deliverable.plannedStartAt?.toISOString?.() || deliverable.plannedStartAt || null,
+          plannedCompletionAt: deliverable.plannedCompletionAt?.toISOString?.() || deliverable.plannedCompletionAt || null,
+          actualStartAt: deliverable.actualStartAt?.toISOString?.() || deliverable.actualStartAt || null,
+          actualCompletionAt: deliverable.actualCompletionAt?.toISOString?.() || deliverable.actualCompletionAt || null,
+          status: deliverable.status,
+          statusCategory: getStatusCategory(deliverable.status, blocked),
+          progress: isCompleted ? 100 : getProgress(aggregate.completedTaskCount, aggregate.taskCount, 0),
+          completed: isCompleted,
+          blocked,
+          taskCount: aggregate.taskCount,
+          completedTaskCount: aggregate.completedTaskCount,
+          blockedTaskCount: aggregate.blockedTaskCount,
+          taskStatusCounts: aggregate.taskStatusCounts,
+          lazyTasks: aggregate.taskCount > 0,
+          deliverableOrder: deliverable.milestonePosition,
+        });
+      }
+    }
+
+    const links = await this.getGanttDeliverableLinks(projectId);
+    const rangeDates = rowDates.filter(Boolean).sort();
+    const updatedAt = latestUpdatedAt ? new Date(latestUpdatedAt).toISOString() : new Date().toISOString();
+
+    return {
+      projectCode: project.code,
+      projectName: project.title,
+      version: updatedAt,
+      updatedAt,
+      range: {
+        startDate: rangeDates[0] || DEFAULT_GANTT_START_DATE,
+        endDate: rangeDates.at(-1) || DEFAULT_GANTT_END_DATE,
+      },
+      timeline: getTimelineFromSettings(settings),
+      rows,
+      links,
+    };
+  }
+
+  async getGanttDeliverableRows(/** @type {number} */ projectId) {
+    return await db.select({
+      id: DELIVERABLES.id,
+      projectId: DELIVERABLES.project_id,
+      milestoneId: DELIVERABLES.milestone_id,
+      deliverableCode: DELIVERABLES.code,
+      name: DELIVERABLES.name,
+      status: DELIVERABLES.status,
+      milestonePosition: DELIVERABLES.milestone_position,
+      plannedStartAt: DELIVERABLES.planned_start_at,
+      plannedCompletionAt: DELIVERABLES.planned_completion_at,
+      actualStartAt: DELIVERABLES.actual_start_at,
+      actualCompletionAt: DELIVERABLES.actual_completion_at,
+      createdAt: DELIVERABLES.created_at,
+      updatedAt: DELIVERABLES.updated_at,
+    })
+      .from(DELIVERABLES)
+      .where(eq(DELIVERABLES.project_id, projectId))
+      .orderBy(asc(DELIVERABLES.milestone_id), asc(DELIVERABLES.milestone_position), asc(DELIVERABLES.id));
+  }
+
+  async getGanttTaskAggregates(/** @type {number} */ projectId) {
+    const tasks = await db.select({
+      deliverableId: TASKS.deliverable_id,
+      status: TASKS.status,
+      isBlocked: TASKS.is_blocked,
+    })
+      .from(TASKS)
+      .where(eq(TASKS.project_id, projectId));
+
+    const aggregates = new Map();
+    for (const task of tasks) {
+      const current = aggregates.get(task.deliverableId) || {
+        taskCount: 0,
+        completedTaskCount: 0,
+        blockedTaskCount: 0,
+        taskStatusCounts: {},
+      };
+      current.taskCount += 1;
+      if (isCompletedStatus(task.status)) current.completedTaskCount += 1;
+      if (task.isBlocked) current.blockedTaskCount += 1;
+      current.taskStatusCounts[task.status] = (current.taskStatusCounts[task.status] || 0) + 1;
+      aggregates.set(task.deliverableId, current);
+    }
+    return aggregates;
+  }
+
+  async getGanttDeliverableLinks(/** @type {number} */ projectId) {
+    const deliverables = await db.select({
+      id: DELIVERABLES.id,
+    })
+      .from(DELIVERABLES)
+      .where(eq(DELIVERABLES.project_id, projectId));
+    const projectDeliverableIds = new Set(deliverables.map((deliverable) => deliverable.id));
+    const relations = await db.select().from(DELIVERABLE_RELATIONS);
+
+    return relations
+      .filter((relation) => (
+        projectDeliverableIds.has(relation.deliverable_id)
+        && projectDeliverableIds.has(relation.related_deliverable_id)
+      ))
+      .map((relation) => ({
+        id: `link:${relation.related_deliverable_id}-to-${relation.deliverable_id}`,
+        sourceId: `deliverable:${relation.related_deliverable_id}`,
+        targetId: `deliverable:${relation.deliverable_id}`,
+        type: 'e2s',
+        relationType: relation.relation_type,
+      }));
+  }
+
+  async updateDeliverableMilestone(/** @type {number} */ projectId, /** @type {number} */ deliverableId, /** @type {number} */ milestoneId, /** @type {number|null} */ userId = null) {
+    const deliverable = await this.getDeliverableById(deliverableId);
+    if (!deliverable || deliverable.projectId !== projectId) return null;
+    const milestone = await this.getMilestoneById(milestoneId);
+    if (!milestone || milestone.projectId !== projectId) throw new Error('Milestone not found in this project');
+
+    const [maxPosition] = await db.select({ max: sql`COALESCE(MAX(${DELIVERABLES.milestone_position}),0)`.as('max') })
+      .from(DELIVERABLES)
+      .where(eq(DELIVERABLES.milestone_id, milestoneId));
+    const nextPosition = Math.floor(Number(maxPosition.max) / 10) * 10 + 10;
+
+    await db.update(DELIVERABLES)
+      .set({
+        milestone_id: milestoneId,
+        milestone_position: nextPosition,
+        updated_by: userId,
+        updated_at: new Date(),
+      })
+      .where(eq(DELIVERABLES.id, deliverableId));
+
+    return await this.getDeliverableById(deliverableId);
+  }
+
+  async replaceMilestoneDeliverables(
+    /** @type {number} */ projectId,
+    /** @type {number} */ milestoneId,
+    /** @type {number[]} */ deliverableIds,
+    /** @type {string|null} */ expectedVersion = null,
+    /** @type {number|null} */ userId = null
+  ) {
+    const milestone = await this.getMilestoneById(milestoneId);
+    if (!milestone || milestone.projectId !== projectId) return null;
+    if (milestone.isDefault) throw new Error('Default milestone deliverable list cannot remove deliverables from the hierarchy');
+    if (new Set(deliverableIds).size !== deliverableIds.length) throw new Error('Duplicate deliverable IDs are not allowed');
+
+    if (expectedVersion) {
+      const current = await this.getProjectGantt(projectId);
+      if (current?.version && current.version !== expectedVersion) {
+        /** @type {Error & { statusCode?: number, latestProjection?: any }} */
+        const error = new Error('Project Gantt projection is stale');
+        error.statusCode = 409;
+        error.latestProjection = current;
+        throw error;
+      }
+    }
+
+    await db.transaction(async (/** @type {any} */ tx) => {
+      const [defaultMilestone] = await tx.select()
+        .from(MILESTONES)
+        .where(and(eq(MILESTONES.project_id, projectId), eq(MILESTONES.is_default, true)))
+        .limit(1);
+      if (!defaultMilestone) throw new Error('Default milestone not found');
+
+      const currentRows = await tx.select()
+        .from(DELIVERABLES)
+        .where(eq(DELIVERABLES.milestone_id, milestoneId));
+      const currentIds = new Set(currentRows.map((/** @type {any} */ row) => row.id));
+      const requestedRows = deliverableIds.length
+        ? await tx.select().from(DELIVERABLES).where(inArray(DELIVERABLES.id, deliverableIds))
+        : [];
+      const requestedById = new Map(requestedRows.map((/** @type {any} */ row) => [row.id, row]));
+
+      for (const deliverableId of deliverableIds) {
+        const deliverable = requestedById.get(deliverableId);
+        if (!deliverable || deliverable.project_id !== projectId) throw new Error('Deliverable not found in this project');
+        const allowedSource = deliverable.milestone_id === milestoneId || deliverable.milestone_id === defaultMilestone.id;
+        if (!allowedSource) throw new Error('Cannot pull deliverables directly from another planned milestone');
+      }
+
+      let position = 10;
+      for (const deliverableId of deliverableIds) {
+        await tx.update(DELIVERABLES)
+          .set({
+            milestone_id: milestoneId,
+            milestone_position: position,
+            updated_by: userId,
+            updated_at: new Date(),
+          })
+          .where(eq(DELIVERABLES.id, deliverableId));
+        position += 10;
+      }
+
+      const removedIds = [...currentIds].filter((id) => !deliverableIds.includes(id));
+      if (removedIds.length) {
+        const [maxDefaultPosition] = await tx.select({ max: sql`COALESCE(MAX(${DELIVERABLES.milestone_position}),0)`.as('max') })
+          .from(DELIVERABLES)
+          .where(eq(DELIVERABLES.milestone_id, defaultMilestone.id));
+        let defaultPosition = Math.floor(Number(maxDefaultPosition.max) / 10) * 10 + 10;
+        for (const deliverableId of removedIds) {
+          await tx.update(DELIVERABLES)
+            .set({
+              milestone_id: defaultMilestone.id,
+              milestone_position: defaultPosition,
+              updated_by: userId,
+              updated_at: new Date(),
+            })
+            .where(eq(DELIVERABLES.id, deliverableId));
+          defaultPosition += 10;
+        }
+      }
+
+    });
+
+    return await this.getProjectGantt(projectId);
+  }
+
+  async createDeliverableRelation(
+    /** @type {number} */ projectId,
+    /** @type {number} */ deliverableId,
+    /** @type {number} */ relatedDeliverableId,
+    /** @type {'DEPENDS_ON'} */ relationType = 'DEPENDS_ON',
+    /** @type {number|null} */ userId = null
+  ) {
+    if (deliverableId === relatedDeliverableId) throw new Error('Deliverable cannot depend on itself');
+    const deliverables = await db.select()
+      .from(DELIVERABLES)
+      .where(inArray(DELIVERABLES.id, [deliverableId, relatedDeliverableId]));
+    const byId = new Map(deliverables.map((deliverable) => [deliverable.id, deliverable]));
+    if (byId.size !== 2 || [...byId.values()].some((deliverable) => deliverable.project_id !== projectId)) {
+      throw new Error('Deliverables must belong to the same project');
+    }
+
+    const [created] = await db.insert(DELIVERABLE_RELATIONS).values({
+      deliverable_id: deliverableId,
+      related_deliverable_id: relatedDeliverableId,
+      relation_type: relationType,
+      created_by: userId,
+      updated_by: userId,
+    }).returning();
+    return created;
   }
 
   // ==================== TASK OPERATIONS ====================

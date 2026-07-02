@@ -40,7 +40,7 @@ Inside any worktree the tracked layout is:
 │                       #   execution/ (gitignored runtime records)
 ├── api/                # Fastify, routes/, services/, lib/db/schema.js, __tests__/
 ├── client/             # React, Vite, Mantine
-├── scripts/            # zazzctl, sync-skills-from-zazz-skills.sh, deploy-docker.sh
+├── scripts/            # zazzctl, deploy-docker.sh, lint/test helpers
 ├── docker-compose.yml   # Postgres on host 5433
 └── package.json
 ```
@@ -94,7 +94,7 @@ Favor verification over assumption.
 - expect the developer to edit files while the agent is working; this is normal
 - if a file changes unexpectedly, first ask whether the developer changed it
 - do not treat concurrent developer edits as corruption, agent failure, or a
-  reason to improvise a recovery plan
+  reason to improvise a recovery path
 - do not invent project conventions, branch intent, or file purpose
 - distinguish clearly between confirmed facts and working assumptions
 - do not create ad-hoc `rules` files; standards and guardrails belong in
@@ -235,7 +235,7 @@ file paths before choosing a resolution. Do not assume the remote side is
 another developer's change, and do not silently pick "ours" or "theirs" for
 conflicted files.
 
-### Agent-created worktrees (Cursor / Claude)
+### Tool-created worktrees
 
 `git worktree list` may show checkouts under `<feature-worktree>/.claude/worktrees/`.
 These are tool-created, not the developer's feature worktrees. The developer's real
@@ -312,25 +312,23 @@ Before editing any file, ask:
 ## Standards, Skills and Guardrails
 
 - `.agents/skills/` in the active worktree is the authoritative local agent
-  skill set. Framework skills are vendored from `zazz-skills`; local-only
-  skills (`worker`, `database-baseline-refresh`) are owned by this repo.
+  skill set. Many skills started from `zazz-skills`, but local checked-in skill
+  files are curated for this repo and may diverge when project behavior requires it.
 - Load only the skills needed for the current task. If the user asks for
   `pr-builder`, `qa-testing`, `worker`, `psql`, or any other named skill, check
   `<worktree>/.agents/skills/<name>/SKILL.md` before deciding the skill is
   unavailable.
-- Skills are refreshed via `./scripts/sync-skills-from-zazz-skills.sh`. The
-  script's `IGNORE_SKILLS` list marks upstream skills this repo does not vendor
-  (currently `sqlcmd`, `jira-api`); `LOCAL_ONLY_SKILLS` marks repo-owned skills
-  the sync never touches (`worker`, `database-baseline-refresh`). Do not locally
-  edit vendored skills — update upstream and re-sync.
+- Compare upstream `zazz-skills` files manually when a reusable skill update looks
+  useful. Local skill edits are allowed when they capture project-specific behavior;
+  review any upstream import like a normal code change.
 - Project standards are tracked under `.zazz/standards/`. Read
   `.zazz/standards/index.yaml` and load only the standard documents relevant to
   the current session. Repo-specific standards (`system-architecture`,
   `data-architecture`, `testing`, `coding-styles`) take precedence over the
   generic methodology standards and the placeholder stack standards. See
   `.zazz/standards/contextual-split.md` for the tier model.
-- `.cursor/rules/` carries always-applied rules for Cursor (e.g. worktree
-  workflow). AGENTS.md is the primary reference for agents and developers.
+- `AGENTS.md` is the primary reference for agents and developers across agentic
+  environments.
 
 ## Database Safety
 
@@ -448,7 +446,7 @@ the current task. Do not pull every document into context by default.
 | Agent execution discipline | `.zazz/docs/agent-execution-discipline.md` |
 | Project rules (stack, layers, DB, testing, coding) | `.zazz/standards/` via `.zazz/standards/index.yaml` |
 | Full API route list, DB setup, troubleshooting | `AGENTS.md` |
-| Syncing skills from upstream | `scripts/sync-skills-from-zazz-skills.sh` + README §Updating skills |
+| Curating skills from upstream | README §Curating skills |
 
 ## Pre-commit and Local Verification
 

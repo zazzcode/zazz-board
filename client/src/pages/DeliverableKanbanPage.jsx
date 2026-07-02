@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Container, Text, Button, Group, Modal, Stack } from '@mantine/core';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useDeliverables } from '../hooks/useDeliverables.js';
 import { useProjectEvents } from '../hooks/useProjectEvents.js';
@@ -8,10 +9,11 @@ import { DeliverableModal } from '../components/DeliverableModal.jsx';
 
 export function DeliverableKanbanPage({ selectedProject }) {
   const { t } = useTranslation();
-  const { deliverables, loading, createDeliverable, updateDeliverable, updateDeliverableStatus, deleteDeliverable, refreshDeliverables } = useDeliverables(selectedProject);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { deliverables, loading, createDeliverable, updateDeliverableStatus, deleteDeliverable, refreshDeliverables } = useDeliverables(selectedProject);
 
   const [modalOpened, setModalOpened] = useState(false);
-  const [editingDeliverable, setEditingDeliverable] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const refreshTimerRef = useRef(null);
 
@@ -49,24 +51,23 @@ export function DeliverableKanbanPage({ selectedProject }) {
   }
 
   const handleCreateClick = () => {
-    setEditingDeliverable(null);
     setModalOpened(true);
   };
 
   const handleEditClick = (deliverable) => {
-    setEditingDeliverable(deliverable);
-    setModalOpened(true);
+    if (!selectedProject?.code) return;
+
+    const returnTo = `${location.pathname}${location.search}`;
+    navigate(`/projects/${encodeURIComponent(selectedProject.code)}/deliverables/${encodeURIComponent(deliverable.id)}`, {
+      state: { returnTo },
+    });
   };
 
   const handleModalClose = () => {
     setModalOpened(false);
-    setEditingDeliverable(null);
   };
 
   const handleModalSubmit = async (data) => {
-    if (editingDeliverable) {
-      return await updateDeliverable(editingDeliverable.id, data);
-    }
     return await createDeliverable(data);
   };
 
@@ -108,7 +109,7 @@ export function DeliverableKanbanPage({ selectedProject }) {
           opened={modalOpened}
           onClose={handleModalClose}
           onSubmit={handleModalSubmit}
-          deliverable={editingDeliverable}
+          deliverable={null}
         />
       )}
 

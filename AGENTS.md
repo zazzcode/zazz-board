@@ -23,6 +23,13 @@ When creating a new feature worktree, always do all of the following:
    - `cmp -s ../main/.env ./.env`
    - `cmp -s ../main/api/.env ./api/.env`
 
+Optional: if the developer/contributor uses Worktrunk, create the worktree with `wt` instead of plain `git worktree`.
+Worktrunk is optional, not mandatory. Assume most contributors use plain `git worktree` unless they say otherwise.
+
+- Worktrunk local hook config lives in the base worktree at `.config/wt.toml` and is ignored by Git.
+- The Worktrunk `copy-ignored` hook copies `.env`, `api/.env`, and `.config/wt.toml` into new `wt`-created worktrees.
+- Do not require non-Worktrunk contributors to copy `.config/wt.toml`.
+
 ### Env changes made in a feature worktree (MANDATORY)
 
 If any branch/worktree adds or changes settings in `.env` or `api/.env`:
@@ -36,6 +43,8 @@ If any branch/worktree adds or changes settings in `.env` or `api/.env`:
 ## Standards
 
 Consult `.zazz/standards/` for authoritative project rules. Index: [.zazz/standards/index.yaml](.zazz/standards/index.yaml). See [.zazz/standards/contextual-split.md](.zazz/standards/contextual-split.md) for how the standards are tiered and synced.
+
+This project's `DOCS_ROOT` is `.zazz`.
 
 Three tiers: **repo-specific** (take precedence), **generic methodology** (vendored from zazz-skills), and **placeholder stack standards** (to be expanded via the `standard-builder` skill).
 
@@ -62,36 +71,33 @@ Placeholder stack standards (to be expanded): [http-layer.md](.zazz/standards/ht
 
 ### Dogfooding context
 
-This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. Framework agents (planner, coordinator, worker, qa) create deliverables and tasks via the API—tracking work on this repo. The recursion is intentional.
+This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. For implementation methodology, load the repo-local `worker` and `spec-driven-development` skills; `AGENTS.md` only points agents to the right operating surface. The recursion is intentional.
 
 ---
 
-## Zazz agent skills
+## Zazz Board Agent Skills
 
-**Skills** (`.agents/skills/`): Role-specific capabilities for framework agents. Framework skills are vendored from [zazz-skills](https://github.com/zazzcode/zazz-skills); refresh via `./scripts/sync-skills-from-zazz-skills.sh` (see [README §Updating skills](./README.md#updating-skills-from-zazz-skills)).
+Repo-local agent skills live in `.agents/skills/`. Each skill declares its own `name` and `description` in `SKILL.md`;
+use that metadata as the source of truth for when the skill applies.
 
-| Skill                    | When it applies                                        |
-| ------------------------ | ------------------------------------------------------ |
-| **zazz-board-api**       | Required by all framework agents — API auth, endpoints |
-| proposal-builder         | Owner/stakeholder proposal discovery and recommendations |
-| feature-doc-builder      | Product/Project Owner feature requirements authoring  |
-| architecture-doc-builder | Project/feature-level architecture documents           |
-| spec-builder             | Owner + agent creating deliverable specification       |
-| standard-builder         | Inspects the codebase and drafts repo-specific standards |
-| qa-testing               | Verifies AC, frontend/backend behavior, evidence quality (replaces the former qa/qa-backend/qa-frontend skills) |
-| pr-builder               | Packages reviewer-ready PR titles and bodies           |
-| pr-review                | Automated self-review of PRs/local diffs              |
-| conformance              | One focused standards-alignment change + verified PR evidence |
-| doc-check                | Repo-local formatting/linting checks for doc changes   |
-| gh-stack                 | Manages stacked branches and dependent PRs             |
-| worktree                 | Sets up/manages the Zazz worktree model via Worktrunk  |
-| psql                     | Safe PostgreSQL diagnostic/profiling command guidance  |
-| worker *(local-only)*    | Implements tasks — core to zazz-board's dogfooded workflow; not in upstream |
-| database-baseline-refresh *(local-only)* | Preserves live dev DB data while upgrading schema and refreshing the canonical seed baseline |
+Many skills started from [zazz-skills](https://github.com/zazzcode/zazz-skills), but this repo's checked-in skill files
+are curated locally and may diverge for project-specific behavior. Compare upstream files manually when useful; do not
+blindly refresh local skills from upstream. See [README §Curating skills](./README.md#curating-skills-from-zazz-skills).
 
-Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use PostgreSQL), `jira-api` (we use Zazz Board). See `IGNORE_SKILLS` in `scripts/sync-skills-from-zazz-skills.sh`.
+Ignored upstream skills include `sqlcmd` (SQL Server; we use PostgreSQL) and `jira-api` (we use Zazz Board).
 
-**Rules** (`.cursor/rules/`): Always-applied for Cursor (e.g. worktree workflow).
+---
+
+## Handoff Documents
+
+Handoff documents are platform-neutral working notes for any agent or developer, not Codex-specific artifacts.
+
+- Store temporary handoff documents under `.zazz/ephemeral/` unless the user explicitly asks for a tracked project document.
+- Name every handoff document with a timestamp down to seconds so ordering is obvious: `<topic>-handoff-YYYY-MM-DD-HHMMSS.md`.
+- Use local time for the timestamp unless the user requests another timezone.
+- Do not commit handoff documents from `.zazz/ephemeral/`; the directory is intentionally ignored except for its README.
+
+Example: `.zazz/ephemeral/gantt-ui-handoff-2026-07-02-132600.md`.
 
 ---
 
@@ -100,7 +106,6 @@ Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use Postgr
 ```
 ├── .agents/skills/     # Zazz agent skills
 ├── .zazz/              # project.md, standards/, deliverables/, docs/ (guides), execution/ (gitignored)
-├── .cursor/rules/      # Cursor always-apply (worktree)
 ├── api/                # Fastify, routes/, services/, lib/db/schema.js, __tests__/
 ├── client/             # React, Vite, Mantine
 ├── docker-compose.yml   # Postgres 5433
@@ -121,7 +126,7 @@ Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use Postgr
 
 ## Setup & run
 
-**Setup**: See [CONTRIBUTOR_SETUP.md](CONTRIBUTOR_SETUP.md). TL;DR: Node 22+, Docker (Postgres only), `npm run docker:up:db`, run API and client in separate terminals.
+**Setup**: See [CONTRIBUTOR_SETUP.md](CONTRIBUTOR_SETUP.md). TL;DR: Node.js 24 LTS (`v24.18.0`), Docker (Postgres only), `npm run docker:up:db`, run API and client in separate terminals.
 
 **Run**: `npm run dev:api` + `npm run dev:client` (or `npm run dev`). API :3030, client :3001.
 

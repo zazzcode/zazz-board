@@ -162,6 +162,7 @@
     "errorTitle": "Gantt-Ansicht konnte nicht geladen werden",
     "createMilestone": "Meilenstein erstellen",
     "editMilestone": "Meilenstein bearbeiten",
+    "editDeliverable": "Lieferobjekt bearbeiten",
     "timelineLabel": "Nach Projektzeitplan gemessen",
     "projectSettings": "Gantt-Einstellungen",
     "projectSettingsOwnerOnly": "Nur die Projektleitung kann Gantt-Einstellungen bearbeiten",
@@ -185,12 +186,20 @@
       "sprintPrefix": "Sprint-Präfix",
       "weekPrefix": "Wochen-Präfix",
       "showDateLabels": "Datumslabels anzeigen",
-      "showDefaultMilestone": "Standard-Meilenstein anzeigen"
+      "showDefaultMilestone": "Standard-Meilenstein anzeigen",
+      "showMonthHeader": "Monat",
+      "showSprintHeader": "Sprint",
+      "showWeekHeader": "Woche"
     },
     "timelineModes": {
       "dates": "Datumsangaben",
       "weeks": "Wochen",
       "sprints": "Sprints"
+    },
+    "sprintLengthOptions": {
+      "one": "1 Woche",
+      "two": "2 Wochen",
+      "three": "3 Wochen"
     },
     "columns": {
       "item": "Eintrag",

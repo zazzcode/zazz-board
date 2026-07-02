@@ -23,9 +23,9 @@ single-lane stack of branches
 ```
 
 The deliverable specification is the complete contract for its deliverable — intent, decisions, scope,
-approved review shape, acceptance criteria, test plan, execution sequence, code skeletons, halt conditions,
+approved review shape, acceptance criteria, test strategy, execution sequence, code skeletons, halt conditions,
 definition of done, and the agent-implementation prompt all live in the specification itself.
-**There is no separate plan document.**
+**There is no separate execution document.**
 
 Progress tracking, OQ resolutions, deviations, QA findings, and manual evidence
 locations are recorded in a run log when the effort needs one. The run log is
@@ -42,11 +42,9 @@ multiple deliverable specifications uses one shared run log with sections per
 specification. A stacked lane uses one shared run log when lower-branch
 decisions, QA findings, or deviations can affect upper branches.
 
-This is a deliberate departure from earlier convention. The earlier convention split
-specification intent from a separate execution plan; experience showed that split adds
-friction for walk-away execution and that the run log handles progress
-tracking more cleanly. The branch or stack PR is the reviewable artifact; the deliverable
-specifications are the executable contracts inside that artifact.
+The branch or stack PR is the reviewable artifact; the deliverable specifications are
+the executable contracts inside that artifact, and the run log carries mutable execution
+history.
 The current operating model is still being refined. If it surfaces problems, revise it.
 Until then, this is the default.
 
@@ -69,6 +67,11 @@ a value; always ask.
 
 This skill is intended to be portable. Its required methodology lives in this skill
 bundle, not in a repo-local document that may be absent elsewhere.
+
+For end-to-end lifecycle questions after a specification is greenlit — AC/TDD
+implementation loops, Owner steering, run logs, implementation feedback iterations,
+review feedback, and final sign-off — use the `spec-driven-development` skill when it is
+available. Keep this skill focused on creating and revising deliverable specifications.
 
 Before changing this skill's philosophy, read
 `references/spec-driven-development-methodology.md` in this skill directory. If the
@@ -93,7 +96,7 @@ template):
 3. **Invariants** — load-bearing constraints stated verbatim, restated in PR bodies.
 4. **Scope and review shape** — file list (path + new/modified + reason), strict scope
    constraint naming the allowed directory, explicit out-of-scope list, and the
-   human-approved decomposition/review plan: one PR, one milestone PR, sibling PRs,
+   human-approved decomposition/review shape: one PR, one milestone PR, sibling PRs,
    stacked PRs, or a large exception.
 5. **Decisions** — each with "why this over the alternative" rationale. 3-8 typical.
 6. **Agent implementation rules** — shared behavior for implementation: branch/PR
@@ -102,13 +105,13 @@ template):
    conditions.
 7. **Acceptance criteria** — numbered, testable, each citing the verifying test or
    command.
-8. **Test plan** — concrete, high-signal test names, what each asserts, reference data
-   sources named (existing fixtures, locked baselines, etc.). The test plan implements
+8. **Test strategy** — concrete, high-signal test names, what each asserts, reference data
+   sources named (existing fixtures, locked baselines, etc.). The test strategy implements
    the ACs with the smallest meaningful set of tests; it must be defined before the
    execution sequence.
 9. **TDD entry point + Prescriptive Execution Sequence** — a first failing test, then
    phase-by-phase implementation order with code skeletons for non-test files. The
-   sequence is derived from the ACs and test plan.
+   sequence is derived from the ACs and test strategy.
 10. **Definition of Done** — binary checklist; unchecked boxes go to the user, not
     self-marked by the agent.
 11. **Open Questions** — must be resolved by the user before code is written; logged
@@ -117,6 +120,10 @@ template):
     including storage policy, append rules, sections, and session-start protocol.
 13. **Appendix — Agent Implementation Prompt** — paste-ready bootstrap for the
     implementing agent session.
+14. **Implementation Feedback Iterations** — optional append-only section used after the
+    original specification is greenlit, when owner steering during implementation or
+    human review/testing feedback adds feature/functionality, UX, API contract, or
+    bug-fix refinements within this deliverable's original context.
 
 The numbering is not load-bearing; the *presence* of each section is. If a section is
 genuinely N/A for a deliverable (rare), state so explicitly rather than omitting.
@@ -146,10 +153,24 @@ The run log is the recovery surface for walk-away execution. A fresh agent
 loaded with specification + run log + `git log` can pick up cleanly from any
 phase.
 
+### Implementation Feedback Iterations in specifications
+
+The regular and stacked templates include an optional `Implementation Feedback
+Iterations` section. For an initial specification, leave the section absent or keep only
+the template comment unless the Owner explicitly wants the future changelog scaffold
+visible.
+
+This skill may add or edit that section when the user is revising an existing
+specification after accepted owner steering, testing, QA/UAT, or PR-review feedback. For
+the broader lifecycle rules — including the AC/TDD implementation loop, run log
+boundary, trigger rules, entry shape, final review, and when to create a new spec — use
+the `spec-driven-development` skill when it is available and follow
+`spec-hygiene.md`.
+
 ## Role
 
 You produce a deliverable specification through interactive dialogue with the deliverable Owner. The specification is
-the complete contract; you do **not** also produce a separate plan document.
+the complete contract; you do **not** also produce a separate execution document.
 
 You do **not** implement product code in this skill.
 
@@ -261,7 +282,7 @@ Before presenting a near-final specification, the spec-builder agent must be abl
   permissions, migrations, compatibility guarantees.
 - **Acceptance criteria** — testable outcomes, each with verifying evidence.
 - **Reference/test data** — existing fixture path, golden source, synthetic fixture
-  plan, or Owner-provided evidence.
+  approach, or Owner-provided evidence.
 - **Standards** — applicable `<DOCS_ROOT>/standards/` entries based on expected file paths and
   activity.
 - **Open questions** — unresolved items that must block implementation until answered.
@@ -355,11 +376,11 @@ Tests need concrete reference data. The specification must name where it comes f
 - **Locked fixtures already present in the repo** → cite the path; reuse don't
   re-create when prior locked fixtures exist for the area you're touching.
 
-### Test plan value bar — fewer tests, stronger signals
+### Test strategy value bar — fewer tests, stronger signals
 
 The specification should prevent test sprawl. Do not reward agents for adding many
 shallow tests that mostly exercise mocks, implementation details, or duplicated
-branches. The test plan is a review contract, not a quota.
+branches. The test strategy is a review contract, not a quota.
 
 Tests are part of the deliverable contract. The specification defines the required test
 intent, reference data, realistic edge cases, and verifying commands before
@@ -411,15 +432,15 @@ Avoid specifying:
 - broad "coverage padding" tests added only to make a PR look safer
 
 When a test is intentionally omitted because nearby coverage is already sufficient,
-say so briefly in the Test Plan. That gives implementers permission to keep the PR
+say so briefly in the Test Strategy. That gives implementers permission to keep the PR
 clean and gives reviewers a concrete rationale.
 
 If QA later finds that the specified tests are low-signal, missing realistic edge cases,
 or testing the wrong boundary, that is a specification quality issue. QA should route the
-finding back through the owner or governing workflow for test-plan clarification or specification
+finding back through the owner or governing workflow for test-strategy clarification or specification
 revision before the implementer proceeds.
 
-### Acceptance criteria and test plan come before execution
+### Acceptance criteria and test strategy come before execution
 
 The specification is test/AC-driven. Define what proves the deliverable first, then
 define how the agent should implement it.
@@ -563,15 +584,15 @@ A deliverable specification is complete when:
 - Bounded **scope** + explicit **non-goals** + strict scope constraint naming the
   allowed directory.
 - Numbered, TDD-grade **ACs** with reference-data sources named.
-- **Test plan** is high-signal and proportional: every test maps to an AC, invariant,
+- **Test strategy** is high-signal and proportional: every test maps to an AC, invariant,
   public contract, realistic edge case, regression, or named risk, and duplicate/low-value
   tests are explicitly avoided.
 - **Decisions** with "why this over the alternative" rationale.
 - **Prescriptive Execution Sequence** with phase order and code skeletons.
-- **ACs before execution** — acceptance criteria and test plan are defined before the
+- **ACs before execution** — acceptance criteria and test strategy are defined before the
   execution sequence.
 - **Review shape before execution** — the specification records the approved
-  decomposition/review plan and rationale before implementation starts.
+  decomposition/review shape and rationale before implementation starts.
 - **Agent Implementation Rules** centralized in one section and referenced by the
   appendix prompt.
 - **Halt Conditions** explicit and non-negotiable.

@@ -166,6 +166,7 @@
     "errorTitle": "Unable to load Gantt view",
     "createMilestone": "Create Milestone",
     "editMilestone": "Edit Milestone",
+    "editDeliverable": "Edit Deliverable",
     "timelineLabel": "Measured by project timeline",
     "projectSettings": "Gantt settings",
     "projectSettingsOwnerOnly": "Only the project leader can edit Gantt settings",
@@ -189,12 +190,20 @@
       "sprintPrefix": "Sprint Prefix",
       "weekPrefix": "Week Prefix",
       "showDateLabels": "Show date labels",
-      "showDefaultMilestone": "Show default milestone"
+      "showDefaultMilestone": "Show default milestone",
+      "showMonthHeader": "Month",
+      "showSprintHeader": "Sprint",
+      "showWeekHeader": "Week"
     },
     "timelineModes": {
       "dates": "Dates",
       "weeks": "Weeks",
       "sprints": "Sprints"
+    },
+    "sprintLengthOptions": {
+      "one": "1 week",
+      "two": "2 weeks",
+      "three": "3 weeks"
     },
     "columns": {
       "item": "Item",
@@ -222,6 +231,11 @@
     "gitWorktree": "Git Worktree",
     "gitBranch": "Git Branch",
     "pullRequestUrl": "Pull Request URL",
+    "schedule": "Schedule",
+    "plannedStartAt": "Planned Start",
+    "plannedCompletionAt": "Planned End",
+    "actualStartAt": "Actual Start",
+    "actualCompletionAt": "Actual End",
     "approvedBy": "Approved By",
     "updated": "Updated",
     "tasks": "Tasks",

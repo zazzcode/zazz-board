@@ -24,7 +24,7 @@ The skill conducts an interactive dialogue, captures decisions and acceptance cr
 and produces a self-contained specification. The specification includes the approved
 review shape and decomposition rationale, execution sequence, definition of done, halt
 conditions, run-log protocol, and paste-ready implementation prompt. There is no
-separate plan document.
+separate execution document.
 
 The skill writes deliverable specifications. It does **not** implement product code.
 

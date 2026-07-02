@@ -45,7 +45,7 @@ concerns" section. This file is workflow only.
 - **Run log**: follow the repo's declared storage policy; use sections per branch or per
   deliverable when useful.
 
-No separate plan files are created. Branch-specific execution phases, ACs, halt conditions, and
+No separate execution files are created. Branch-specific execution phases, ACs, halt conditions, and
 implementation prompts live in the stacked specification and run log.
 
 ## Required specification contents beyond the standard quality bar
