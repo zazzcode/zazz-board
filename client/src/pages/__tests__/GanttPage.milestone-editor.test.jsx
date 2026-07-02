@@ -137,6 +137,13 @@ describe('GanttPage milestone editor', () => {
     mockRefreshGantt.mockResolvedValue(createGanttData(initialRows));
     localStorage.setItem('TB_TOKEN', 'test-token');
     window.fetch = vi.fn(async (url, options = {}) => {
+      if (String(url).endsWith('/gantt/settings') && options.method === 'PUT') {
+        return Response.json({
+          projectCode: 'ZAZZ',
+          ...JSON.parse(options.body),
+          updatedAt: '2026-07-02T12:00:00.000Z',
+        });
+      }
       if (String(url).endsWith('/milestones/11') && options.method === 'PUT') {
         return Response.json({ id: 11, startDate: '2026-06-15', endDate: '2026-06-28' });
       }
@@ -239,5 +246,39 @@ describe('GanttPage milestone editor', () => {
     expect(screen.getByTestId('visible-row-ids')).toHaveTextContent('milestone:11');
     expect(screen.getByTestId('visible-row-ids')).not.toHaveTextContent('milestone:10');
     expect(screen.getByTestId('visible-row-ids')).not.toHaveTextContent('deliverable:100');
+  });
+
+  it('saves Gantt display settings for sprint length and header rows', async () => {
+    const user = userEvent.setup();
+    renderGanttPage();
+
+    await user.click(screen.getByRole('button', { name: 'Gantt settings' }));
+    await user.click(await screen.findByRole('radio', { name: '3 weeks' }));
+    await user.click(screen.getByLabelText('Month'));
+    await user.click(screen.getByLabelText('Sprint'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(window.fetch).toHaveBeenCalledWith(
+        'http://localhost:3030/projects/ZAZZ/gantt/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            timelineMode: 'sprint',
+            showDateLabels: false,
+            showDefaultMilestone: true,
+            showMonthHeader: false,
+            showSprintHeader: false,
+            showWeekHeader: true,
+            periodStartDate: '2026-06-01',
+            sprintLengthWeeks: 3,
+            periodNumberStart: 1,
+            sprintLabelPrefix: 'Sprint',
+            weekLabelPrefix: 'W',
+          }),
+        })
+      );
+      expect(mockRefreshGantt).toHaveBeenCalled();
+    });
   });
 });

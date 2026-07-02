@@ -189,12 +189,20 @@
       "sprintPrefix": "Sprint Prefix",
       "weekPrefix": "Week Prefix",
       "showDateLabels": "Show date labels",
-      "showDefaultMilestone": "Show default milestone"
+      "showDefaultMilestone": "Show default milestone",
+      "showMonthHeader": "Month",
+      "showSprintHeader": "Sprint",
+      "showWeekHeader": "Week"
     },
     "timelineModes": {
       "dates": "Dates",
       "weeks": "Weeks",
       "sprints": "Sprints"
+    },
+    "sprintLengthOptions": {
+      "one": "1 week",
+      "two": "2 weeks",
+      "three": "3 weeks"
     },
     "columns": {
       "item": "Item",

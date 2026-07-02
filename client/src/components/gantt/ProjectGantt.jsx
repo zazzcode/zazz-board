@@ -1,10 +1,19 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMantineColorScheme } from '@mantine/core';
 import { IconEdit } from '@tabler/icons-react';
 import { Gantt, Willow, WillowDark } from '@svar-ui/react-gantt';
 import '@svar-ui/react-gantt/all.css';
-import { toSvarGantt, toSvarGanttExpansion } from '../../utils/ganttAdapter.js';
+import {
+  createCurrentDateHighlighter,
+  getDateChartOffset,
+  getCenteredDateScrollLeft,
+  toSvarGantt,
+  toSvarGanttExpansion,
+} from '../../utils/ganttAdapter.js';
 import './ProjectGantt.css';
+
+const GANTT_GRID_WIDTH = 500;
+const TODAY_SCROLL_LISTENER_TAG = 'zazz-gantt-today-scroll-listener';
 
 function getDeliverableIdFromSvarRow(row) {
   const deliverableId = row?.data?.deliverableId || row?.id?.replace(/^deliverable:/, '');
@@ -62,16 +71,80 @@ function buildColumnsWithMilestoneActions(columns, t, onEditMilestone) {
 export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMilestone }) {
   const { colorScheme } = useMantineColorScheme();
   const apiRef = useRef(null);
+  const chartWidthRef = useRef(0);
+  const centeredProjectionRef = useRef(null);
   const loadedDeliverablesRef = useRef(new Set());
+  const [todayMarkerLeft, setTodayMarkerLeft] = useState(null);
+  const currentDate = useMemo(() => new Date(), []);
+  const highlightTime = useMemo(() => createCurrentDateHighlighter(currentDate), [currentDate]);
   const svarData = useMemo(() => toSvarGantt(projectGantt, t), [projectGantt, t]);
   const columns = useMemo(
     () => buildColumnsWithMilestoneActions(svarData.columns, t, onEditMilestone),
     [onEditMilestone, svarData.columns, t]
   );
   const Theme = colorScheme === 'dark' ? WillowDark : Willow;
+  const projectionKey = `${projectGantt?.projectCode || ''}:${projectGantt?.version || projectGantt?.updatedAt || ''}`;
+
+  const updateTodayMarker = useCallback(() => {
+    const api = apiRef.current;
+    if (!api) return;
+
+    const state = api.getState?.();
+    const dateOffset = getDateChartOffset(state, currentDate);
+    if (dateOffset === null) {
+      setTodayMarkerLeft(null);
+      return;
+    }
+
+    const scrollLeft = Number(state?.scrollLeft || 0);
+    const gridWidth = Number(state?.gridWidth || GANTT_GRID_WIDTH);
+    const markerLeft = gridWidth + dateOffset - scrollLeft;
+    const chartWidth = Number(chartWidthRef.current || state?._chartWidth || 0);
+
+    setTodayMarkerLeft(
+      markerLeft >= gridWidth && (!chartWidth || markerLeft <= gridWidth + chartWidth)
+        ? markerLeft
+        : null
+    );
+  }, [currentDate]);
+
+  const centerOnCurrentDate = useCallback(() => {
+    const api = apiRef.current;
+    if (!api || centeredProjectionRef.current === projectionKey) return;
+
+    const state = api.getState?.();
+    const centeredLeft = getCenteredDateScrollLeft(state, currentDate, chartWidthRef.current);
+
+    if (centeredLeft === null) return;
+
+    centeredProjectionRef.current = projectionKey;
+    api.exec('scroll-chart', { left: centeredLeft });
+    requestAnimationFrame(updateTodayMarker);
+  }, [currentDate, projectionKey, updateTodayMarker]);
 
   const handleInit = useCallback((api) => {
+    apiRef.current?.detach?.(TODAY_SCROLL_LISTENER_TAG);
     apiRef.current = api;
+    api.on?.('scroll-chart', () => requestAnimationFrame(updateTodayMarker), {
+      tag: TODAY_SCROLL_LISTENER_TAG,
+    });
+    requestAnimationFrame(centerOnCurrentDate);
+  }, [centerOnCurrentDate, updateTodayMarker]);
+
+  const handleGanttWidthChange = useCallback((width) => {
+    chartWidthRef.current = Number(width || 0);
+    requestAnimationFrame(centerOnCurrentDate);
+    requestAnimationFrame(updateTodayMarker);
+  }, [centerOnCurrentDate, updateTodayMarker]);
+
+  useEffect(() => {
+    centeredProjectionRef.current = null;
+    setTodayMarkerLeft(null);
+    requestAnimationFrame(centerOnCurrentDate);
+  }, [centerOnCurrentDate, svarData.projectStart, svarData.projectEnd]);
+
+  useEffect(() => () => {
+    apiRef.current?.detach?.(TODAY_SCROLL_LISTENER_TAG);
   }, []);
 
   const handleRequestData = useCallback(async (event) => {
@@ -102,14 +175,21 @@ export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMile
           links={svarData.links}
           columns={columns}
           scales={svarData.scales}
+          start={svarData.projectStart}
+          end={svarData.projectEnd}
           projectStart={svarData.projectStart}
           projectEnd={svarData.projectEnd}
+          autoScale={false}
+          lengthUnit="day"
+          durationUnit="day"
           readonly
           cellHeight={38}
           cellWidth={72}
           scaleHeight={52}
-          gridWidth={500}
+          gridWidth={GANTT_GRID_WIDTH}
+          highlightTime={highlightTime}
           init={handleInit}
+          onGanttWidthChange={handleGanttWidthChange}
           onRequestData={handleRequestData}
           taskTemplate={({ data }) => (
             <div
@@ -121,6 +201,13 @@ export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMile
           )}
         />
       </Theme>
+      {todayMarkerLeft !== null ? (
+        <div
+          aria-hidden="true"
+          className="zazz-gantt-today-marker"
+          style={{ left: `${todayMarkerLeft}px` }}
+        />
+      ) : null}
     </div>
   );
 }

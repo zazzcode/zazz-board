@@ -125,6 +125,9 @@ export const PROJECT_GANTT_SETTINGS = pgTable('PROJECT_GANTT_SETTINGS', {
   timeline_mode: varchar('timeline_mode', { length: 20 }).notNull().default('sprint'),
   show_date_labels: boolean('show_date_labels').notNull().default(false),
   show_default_milestone: boolean('show_default_milestone').notNull().default(false),
+  show_month_header: boolean('show_month_header').notNull().default(true),
+  show_sprint_header: boolean('show_sprint_header').notNull().default(true),
+  show_week_header: boolean('show_week_header').notNull().default(true),
   period_start_date: date('period_start_date').notNull(),
   sprint_length_weeks: integer('sprint_length_weeks').notNull().default(2),
   period_number_start: integer('period_number_start').notNull().default(1),
@@ -137,7 +140,7 @@ export const PROJECT_GANTT_SETTINGS = pgTable('PROJECT_GANTT_SETTINGS', {
 }, (/** @type {any} */ table) => [
   unique('uq_project_gantt_settings_project').on(table.project_id),
   check('project_gantt_settings_timeline_mode_chk', sql`${table.timeline_mode} IN ('dates', 'weeks', 'sprint')`),
-  check('project_gantt_settings_sprint_length_chk', sql`${table.sprint_length_weeks} BETWEEN 1 AND 12`),
+  check('project_gantt_settings_sprint_length_chk', sql`${table.sprint_length_weeks} BETWEEN 1 AND 3`),
   check('project_gantt_settings_period_number_chk', sql`${table.period_number_start} >= 0`),
 ]);
 

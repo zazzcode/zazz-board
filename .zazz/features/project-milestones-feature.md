@@ -1,6 +1,6 @@
 # Project Milestones Feature
 
-Current milestone: M1 planned  
+Current milestone: M1 in progress
 Next milestone: M2
 
 ## Feature Summary
@@ -67,7 +67,7 @@ Today, the system supports:
 - project navigation from `/projects` into `/projects/:code/kanban`
 - tracked `.zazz/features/` feature documents
 
-Today, the system does not support:
+The M1 work now adds or is adding:
 
 - project milestone records in the database
 - assigning deliverables to milestones
@@ -76,6 +76,7 @@ Today, the system does not support:
 - project-level Gantt JSON or Gantt CRUD endpoints
 - a Gantt tab in the project view switcher
 - a default project landing route at `/projects/:code/gantt`
+- lazy task expansion under deliverable rows
 - milestone-computed completion styling
 - database-backed Gantt status and dependency styling metadata
 
@@ -145,6 +146,14 @@ sequence deliverables across the whole project and may include work from multipl
 features, bug fixes, chores, or technical investments when that is how the project plan
 is shaped.
 
+Milestone dates are owner-controlled planning boundaries. A deliverable can start before
+its planned milestone window or complete after the milestone end date, but that does not
+automatically move the milestone start or end date. The milestone bar represents the
+owner's plan until an owner or authorized project action changes the milestone. Future
+visualization may show schedule drift inside the milestone bar, such as differently
+colored segments for late completion, but that is a separate capability from changing
+the milestone's authoritative date range.
+
 Milestones use their own small planning status model rather than reusing the full
 deliverable workflow:
 
@@ -196,9 +205,12 @@ for Gantt sequencing, separate from task-level execution relations.
 An agent-created execution item under a deliverable. Tasks inherit milestone context
 through their deliverable. A task does not get its own milestone foreign key in M1.
 
-Tasks remain dynamic execution detail. M1 does not require task schedule fields or task
-rows in the production Gantt chart. Task status may still contribute aggregate metadata
-on deliverable rows, such as task counts or blocked-task counts.
+Tasks remain dynamic execution detail. Zazz Board tasks represent agent execution work,
+not owner or human work items. M1 supports lazy task expansion under a deliverable so the
+first Gantt load stays focused on milestones and deliverables while still allowing a
+user to inspect the agent task rows for a deliverable with a separate API request. Task
+status may still contribute aggregate metadata on deliverable rows, such as task counts
+or blocked-task counts.
 
 ### Gantt View
 
@@ -221,8 +233,13 @@ timestamps, normalized status metadata, and task status aggregates without requi
 Gantt row per task.
 
 The contract should keep calendar dates as date-only ISO strings and use optional
-timeline metadata to describe how the client labels the chart scale. For the M1 mock,
-the preferred shape is a two-week sprint scale with one-week sublabels:
+timeline metadata to describe how the client labels the chart scale. The client adapter
+must convert those date-only values into the exact task row shape expected by the Gantt
+library, including explicit start, inclusive end, and duration values so milestone bars
+render from the API date range instead of relying on library inference.
+
+For the M1 mock and seeded production demo data, the preferred shape is a two-week sprint
+scale with one-week sublabels:
 `timeline.unit = "sprint"`, `timeline.sprintStartDate`, `timeline.sprintLengthWeeks`,
 `timeline.sprintLabelPrefix`, and `timeline.weekLabelPrefix`. The API does not store or
 return localized sprint/week labels; the client derives labels such as `Sprint 1` and
@@ -236,8 +253,9 @@ personal display preference. The first production settings should cover:
 
 - timeline mode: calendar dates, project weeks, or sprints
 - whether date labels are shown in addition to period labels
+- whether month, sprint, and week header rows are visible
 - period start date used for week/sprint numbering
-- sprint length in weeks
+- sprint length in weeks, limited to `1`, `2`, or `3`
 - starting sprint/week number, usually `1`
 - whether the default milestone is shown in the Gantt chart
 - non-localized label prefixes such as `Sprint` and `W`, with future localization handled
@@ -248,10 +266,21 @@ settings so the client can render without knowing the persistence shape. User-le
 preferences may later hide/show columns or choose a default zoom, but they must not
 override the project's canonical sprint calendar.
 
+The Gantt display configuration should support users who do not plan by sprint. A project
+can hide the sprint header row and show only month/week rows, or hide month and sprint
+rows to focus on project weeks. At least one header row must remain visible so the chart
+always has a readable time scale.
+
 The default milestone should be hidden by default in the main Gantt chart to avoid
 cluttering the roadmap with the assignment intake bucket. Project owners can enable a
 `Show default milestone` setting when they need to inspect or test the default bucket and
 its children.
+
+For Zazz Board's business calendar, weeks start on Sunday and end on Saturday. Sprint
+numbering is year-scoped: `Sprint 1` starts with the first Sunday-start planning week in
+January for that year, and sprint numbering resets to `1` the following year. Seed data
+and project defaults should use the first Sunday in January as the sprint period start
+for the year being demonstrated.
 
 ### Client/Server Synchronization Plan
 
@@ -458,6 +487,10 @@ has a proven JSON contract for persistent implementation.
 - `/projects/:code/gantt` exists and is the default destination after selecting a project.
 - The project view switcher includes `Gantt` directly before `Kanban`.
 - The client renders a milestone -> deliverable tree in SVAR React Gantt.
+- Deliverable rows can be expanded to lazy-load agent task rows from a separate API
+  endpoint.
+- The Gantt opens focused near the current date and shows a faint grey dashed current
+  date line while preserving manual horizontal scrolling.
 - M1 D1 implements a real Fastify `GET /projects/:code/gantt` route backed by fixed
   mock data under an API mock-data directory.
 - M1 D1 documents the JSON the UI needs, including rows, links, status/completion fields,
@@ -466,6 +499,8 @@ has a proven JSON contract for persistent implementation.
   inventory.
 - Existing deliverables have a default milestone in seeded and reset data.
 - Deliverables have schedule timestamps for planned and actual start/completion.
+- Milestone bars render from owner-controlled milestone dates, not from child
+  deliverable dates.
 - Deliverable dependencies are persisted and returned as Gantt `links[]`.
 - Project-scoped URLs and access checks remain the access boundary.
 - Realtime task and deliverable status changes update the Gantt view the same way they
@@ -507,17 +542,19 @@ D2 should add the persistence model:
   - `actual_completion_at`
 - no new task milestone FK in M1; tasks inherit milestone context through their
   deliverable
-- no new task schedule fields in M1; tasks remain dynamic execution detail surfaced in
-  task-focused views
+- M1 may expose task schedule rows through lazy deliverable expansion. Those rows remain
+  agent execution detail and inherit milestone context through their deliverable.
 - deliverable dependencies should be first-class planning records in M1, such as
   `DELIVERABLE_RELATIONS`, so the Gantt projection can return `links[]` before task rows
   exist. `TASK_RELATIONS` remain task execution/detail data.
 - project-level Gantt settings should persist separately from individual milestones. A
   dedicated `PROJECT_GANTT_SETTINGS` table or a validated project-owned JSON column are
   both acceptable in D2 if the API validates the same public contract. Preferred fields:
-  `timeline_mode`, `show_date_labels`, `period_start_date`, `sprint_length_weeks`,
+  `timeline_mode`, `show_date_labels`, `show_month_header`, `show_sprint_header`,
+  `show_week_header`, `period_start_date`, `sprint_length_weeks`,
   `period_number_start`, `sprint_label_prefix`, `week_label_prefix`, and
-  `show_default_milestone`.
+  `show_default_milestone`. `sprint_length_weeks` should be constrained to `1`, `2`, or
+  `3`, and at least one header visibility flag should be true.
 
 ### API Recommendation
 
@@ -624,9 +661,12 @@ should avoid solving feature sync until the project Gantt behavior is proven.
   `planned_start_at`, `planned_completion_at`, `actual_start_at`, and
   `actual_completion_at`.
 - Initial production Gantt load returns milestones, deliverables, and deliverable
-  dependency links. Task rows are not required in the production M1 Gantt chart.
+  dependency links. Task rows load only when a deliverable expands and remain agent
+  execution rows under that deliverable.
 - Deliverable dependencies are first-class planning records for the Gantt projection.
   Task relations remain execution-detail data for task-focused views.
+- Milestone owner dates are authoritative; child deliverable dates never resize a
+  milestone bar automatically. Schedule variance visualization is deferred.
 - Feature documents live in `.zazz/features/`; deliverable specifications live in
   `.zazz/specifications/`.
 - Feature documents can cross-cut project milestones. Database-backed feature integration

@@ -18,6 +18,16 @@ describe('Seeded project Gantt data', () => {
 
     expect(milestones.filter((row) => row.isDefault)).toHaveLength(1);
     expect(milestones.filter((row) => !row.isDefault).length).toBeGreaterThanOrEqual(4);
+    expect(milestones).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          displayName: 'Milestone 4',
+          startDate: '2026-06-14',
+          endDate: '2026-08-15',
+          status: 'IN_PROGRESS',
+        }),
+      ])
+    );
     expect(deliverables.map((row) => row.deliverableCode)).toEqual(
       expect.arrayContaining(['ZAZZ-1', 'ZAZZ-3', 'ZAZZ-5', 'ZAZZ-6', 'ZAZZ-9'])
     );
@@ -48,9 +58,9 @@ describe('Seeded project Gantt data', () => {
           deliverableCode: 'ZAZZ-9',
           displayName: 'gantt-milestone-mvp',
           status: 'IN_REVIEW',
-          startDate: '2026-06-14',
+          startDate: '2026-06-15',
           endDate: '2026-07-04',
-          actualStartAt: '2026-06-14T00:00:00.000Z',
+          actualStartAt: '2026-06-15T00:00:00.000Z',
           actualCompletionAt: null,
         }),
       ])
@@ -67,7 +77,7 @@ describe('Seeded project Gantt data', () => {
       expect.objectContaining({
         unit: 'sprint',
         showDefaultMilestone: false,
-        sprintStartDate: '2026-02-01',
+        sprintStartDate: '2026-01-04',
         sprintLengthWeeks: 2,
       })
     );
@@ -90,7 +100,7 @@ describe('Seeded project Gantt data', () => {
       .returns('res.body.rows');
 
     expect(expandedMvpTasks).toHaveLength(10);
-    expect(expandedMvpTasks.every((row) => row.startDate >= '2026-06-14' && row.endDate <= '2026-07-04')).toBe(true);
+    expect(expandedMvpTasks.every((row) => row.startDate >= '2026-06-15' && row.endDate <= '2026-07-04')).toBe(true);
   });
 });
 
@@ -154,7 +164,7 @@ describe('Project Gantt API', () => {
         version: expect.any(String),
         updatedAt: expect.any(String),
         range: expect.objectContaining({ startDate: expect.any(String), endDate: expect.any(String) }),
-        timeline: expect.objectContaining({ unit: 'sprint', periodStartDate: '2026-02-01' }),
+        timeline: expect.objectContaining({ unit: 'sprint', periodStartDate: '2026-01-04' }),
         links: expect.any(Array),
       })
     );
@@ -193,6 +203,9 @@ describe('Project Gantt API', () => {
         projectCode: 'ZAZZ',
         timelineMode: 'sprint',
         showDefaultMilestone: false,
+        showMonthHeader: true,
+        showSprintHeader: true,
+        showWeekHeader: true,
       });
 
     await spec()
@@ -202,6 +215,9 @@ describe('Project Gantt API', () => {
         timelineMode: 'weeks',
         showDateLabels: true,
         showDefaultMilestone: true,
+        showMonthHeader: false,
+        showSprintHeader: false,
+        showWeekHeader: true,
         periodStartDate: '2026-06-08',
         sprintLengthWeeks: 3,
         periodNumberStart: 4,
@@ -213,6 +229,9 @@ describe('Project Gantt API', () => {
         timelineMode: 'weeks',
         showDateLabels: true,
         showDefaultMilestone: true,
+        showMonthHeader: false,
+        showSprintHeader: false,
+        showWeekHeader: true,
       });
 
     await spec()
@@ -224,6 +243,9 @@ describe('Project Gantt API', () => {
           unit: 'week',
           showDateLabels: true,
           showDefaultMilestone: true,
+          showMonthHeader: false,
+          showSprintHeader: false,
+          showWeekHeader: true,
           periodStartDate: '2026-06-08',
           periodNumberStart: 4,
           sprintLengthWeeks: 3,
@@ -237,6 +259,9 @@ describe('Project Gantt API', () => {
         timelineMode: 'dates',
         showDateLabels: false,
         showDefaultMilestone: false,
+        showMonthHeader: true,
+        showSprintHeader: false,
+        showWeekHeader: true,
         periodStartDate: '2026-07-01',
         sprintLengthWeeks: 2,
         periodNumberStart: 1,
@@ -262,8 +287,29 @@ describe('Project Gantt API', () => {
         timelineMode: 'sprint',
         showDateLabels: false,
         showDefaultMilestone: false,
+        showMonthHeader: true,
+        showSprintHeader: true,
+        showWeekHeader: true,
         periodStartDate: '2026-06-01',
         sprintLengthWeeks: 0,
+        periodNumberStart: 1,
+        sprintLabelPrefix: 'Sprint',
+        weekLabelPrefix: 'W',
+      })
+      .expectStatus(400);
+
+    await spec()
+      .put('/projects/ZAZZ/gantt/settings')
+      .withHeaders('TB_TOKEN', TEST_TOKEN)
+      .withJson({
+        timelineMode: 'sprint',
+        showDateLabels: false,
+        showDefaultMilestone: false,
+        showMonthHeader: false,
+        showSprintHeader: false,
+        showWeekHeader: false,
+        periodStartDate: '2026-06-01',
+        sprintLengthWeeks: 2,
         periodNumberStart: 1,
         sprintLabelPrefix: 'Sprint',
         weekLabelPrefix: 'W',

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { toSvarGantt, toSvarGanttExpansion } from '../ganttAdapter.js';
+import {
+  createCurrentDateHighlighter,
+  getCenteredDateScrollLeft,
+  toSvarGantt,
+  toSvarGanttExpansion,
+} from '../ganttAdapter.js';
 
 const translations = {
   'gantt.defaultMilestone': 'Default',
@@ -78,20 +83,24 @@ describe('ganttAdapter', () => {
         expect.objectContaining({
           id: 'milestone:default',
           text: 'Default',
-          type: 'summary',
+          type: 'task',
           parent: 0,
           open: true,
         }),
         expect.objectContaining({
           id: 'milestone:one',
           text: 'Milestone 1',
-          type: 'summary',
+          type: 'task',
           zazzCompleted: true,
+          start: new Date('2026-06-15T00:00:00'),
+          end: new Date('2026-07-01T00:00:00'),
+          duration: 16,
         }),
         expect.objectContaining({
           id: 'deliverable:m1-d1',
           parent: 'milestone:one',
           lazy: true,
+          duration: 10,
           zazzCssClass: 'zazz-gantt-complete',
         }),
       ])
@@ -121,6 +130,59 @@ describe('ganttAdapter', () => {
     expect(sprintScale.format(new Date('2026-06-01T00:00:00'))).toBe('Sprint 1');
     expect(sprintScale.format(new Date('2026-06-15T00:00:00'))).toBe('Sprint 2');
     expect(weekScale.format(new Date('2026-06-22T00:00:00'))).toBe('W4');
+  });
+
+  it('respects month sprint and week header visibility settings', () => {
+    const result = toSvarGantt({
+      ...projectGantt,
+      timeline: {
+        ...projectGantt.timeline,
+        showMonthHeader: false,
+        showSprintHeader: false,
+        showWeekHeader: true,
+      },
+    }, t);
+
+    expect(result.scales).toHaveLength(1);
+    expect(result.scales[0].unit).toBe('week');
+    expect(result.scales[0].step).toBe(1);
+    expect(result.scales[0].format(new Date('2026-06-22T00:00:00'))).toBe('W4');
+  });
+
+  it('keeps at least one scale row if every header setting is disabled', () => {
+    const result = toSvarGantt({
+      ...projectGantt,
+      timeline: {
+        ...projectGantt.timeline,
+        showMonthHeader: false,
+        showSprintHeader: false,
+        showWeekHeader: false,
+      },
+    }, t);
+
+    expect(result.scales).toHaveLength(1);
+    expect(result.scales[0].unit).toBe('week');
+  });
+
+  it('marks the current date for the Gantt today indicator', () => {
+    const highlightTime = createCurrentDateHighlighter(new Date('2026-07-02T12:00:00'));
+
+    expect(highlightTime(new Date('2026-07-02T00:00:00'))).toBe('zazz-gantt-today-column');
+    expect(highlightTime(new Date('2026-07-03T00:00:00'))).toBe('');
+  });
+
+  it('computes the initial scroll offset that centers the current date', () => {
+    const result = getCenteredDateScrollLeft({
+      _start: new Date('2026-06-01T00:00:00'),
+      cellWidth: 2,
+      _chartWidth: 240,
+      _scales: {
+        width: 2000,
+        diff: (date, start) => (date.getTime() - start.getTime()) / (60 * 60 * 1000),
+      },
+    }, new Date('2026-07-02T00:00:00'));
+
+    expect(result).toBe(1368);
   });
 
   it('keeps generated milestone labels localized by the supplied translator', () => {

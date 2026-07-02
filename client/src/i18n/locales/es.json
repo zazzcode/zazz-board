@@ -185,12 +185,20 @@
       "sprintPrefix": "Prefijo de Sprint",
       "weekPrefix": "Prefijo de Semana",
       "showDateLabels": "Mostrar etiquetas de fecha",
-      "showDefaultMilestone": "Mostrar hito predeterminado"
+      "showDefaultMilestone": "Mostrar hito predeterminado",
+      "showMonthHeader": "Mes",
+      "showSprintHeader": "Sprint",
+      "showWeekHeader": "Semana"
     },
     "timelineModes": {
       "dates": "Fechas",
       "weeks": "Semanas",
       "sprints": "Sprints"
+    },
+    "sprintLengthOptions": {
+      "one": "1 semana",
+      "two": "2 semanas",
+      "three": "3 semanas"
     },
     "columns": {
       "item": "Elemento",

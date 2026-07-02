@@ -141,7 +141,23 @@
       "endDate": "Fecha de Fin",
       "deliverables": "Entregables",
       "selectDeliverables": "Seleccionar entregables",
-      "showDefaultMilestone": "Mostrar hito predeterminado"
+      "timelineMode": "Modo de Escala",
+      "periodStartDate": "Fecha de Inicio del Período",
+      "sprintLengthWeeks": "Duración del Sprint (semanas)",
+      "showDefaultMilestone": "Mostrar hito predeterminado",
+      "showMonthHeader": "Mes",
+      "showSprintHeader": "Sprint",
+      "showWeekHeader": "Semana"
+    },
+    "timelineModes": {
+      "dates": "Fechas",
+      "weeks": "Semanas",
+      "sprints": "Sprints"
+    },
+    "sprintLengthOptions": {
+      "one": "1 semana",
+      "two": "2 semanas",
+      "three": "3 semanas"
     },
     "columns": {
       "item": "Elemento",

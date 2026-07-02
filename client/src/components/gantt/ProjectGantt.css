@@ -1,4 +1,5 @@
 .zazz-gantt-shell {
+  position: relative;
   height: 100%;
   min-height: 520px;
   overflow: hidden;
@@ -44,6 +45,31 @@
 
 .zazz-gantt-shell :where(.wx-bar) {
   overflow: hidden;
+}
+
+.zazz-gantt-today-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 6;
+  width: 0;
+  border-left: 1px dashed rgba(206, 212, 218, 0.62);
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.zazz-gantt-today-column {
+  position: absolute;
+  height: 100%;
+  pointer-events: none;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0,
+    transparent calc(50% - 1px),
+    rgba(206, 212, 218, 0.2) calc(50% - 1px),
+    rgba(206, 212, 218, 0.2) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
 }
 
 .zazz-gantt-task {
@@ -108,6 +134,8 @@
 
 .zazz-gantt-milestone {
   color: #a5d8ff;
+  background: #20c997;
+  border-color: #38d9a9;
 }
 
 .zazz-gantt-deliverable,
@@ -121,6 +149,8 @@
 
 .zazz-gantt-shell[data-theme="light"] .zazz-gantt-milestone {
   color: #0b7285;
+  background: #12b886;
+  border-color: #087f5b;
 }
 
 .zazz-gantt-shell[data-theme="light"] .zazz-gantt-deliverable,

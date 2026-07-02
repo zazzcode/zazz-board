@@ -8,14 +8,16 @@ import {
   Group,
   Loader,
   Modal,
+  SegmentedControl,
   Select,
   SimpleGrid,
   Stack,
+  Switch,
   Text,
   TextInput,
   useMantineColorScheme,
 } from '@mantine/core';
-import { IconArrowDown, IconArrowUp, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconArrowDown, IconArrowUp, IconPlus, IconSettings, IconTrash } from '@tabler/icons-react';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useProjectEvents } from '../hooks/useProjectEvents.js';
 import { useProjectGantt } from '../hooks/useProjectGantt.js';
@@ -27,6 +29,19 @@ const EMPTY_MILESTONE_FORM = {
   startDate: '',
   endDate: '',
   deliverableIds: [],
+};
+const DEFAULT_GANTT_SETTINGS_FORM = {
+  timelineMode: 'sprint',
+  showDateLabels: false,
+  showDefaultMilestone: false,
+  showMonthHeader: true,
+  showSprintHeader: true,
+  showWeekHeader: true,
+  periodStartDate: '2026-01-04',
+  sprintLengthWeeks: 2,
+  periodNumberStart: 1,
+  sprintLabelPrefix: 'Sprint',
+  weekLabelPrefix: 'W',
 };
 
 function getTokenHeaders() {
@@ -57,6 +72,29 @@ function getMilestoneApiId(row) {
 
 function getDefaultMilestoneId(rows) {
   return normalizeGanttEntityId(rows.find((row) => row.entityType === 'milestone' && row.isDefault)?.id);
+}
+
+function getSettingsFormFromTimeline(timeline = {}) {
+  const unitModeMap = {
+    date: 'dates',
+    week: 'weeks',
+    sprint: 'sprint',
+  };
+
+  return {
+    ...DEFAULT_GANTT_SETTINGS_FORM,
+    timelineMode: unitModeMap[timeline.unit] || DEFAULT_GANTT_SETTINGS_FORM.timelineMode,
+    showDateLabels: Boolean(timeline.showDateLabels),
+    showDefaultMilestone: Boolean(timeline.showDefaultMilestone),
+    showMonthHeader: timeline.showMonthHeader !== false,
+    showSprintHeader: timeline.showSprintHeader !== false,
+    showWeekHeader: timeline.showWeekHeader !== false,
+    periodStartDate: timeline.periodStartDate || timeline.sprintStartDate || DEFAULT_GANTT_SETTINGS_FORM.periodStartDate,
+    sprintLengthWeeks: Number(timeline.sprintLengthWeeks || DEFAULT_GANTT_SETTINGS_FORM.sprintLengthWeeks),
+    periodNumberStart: Number(timeline.periodNumberStart || DEFAULT_GANTT_SETTINGS_FORM.periodNumberStart),
+    sprintLabelPrefix: timeline.sprintLabelPrefix || DEFAULT_GANTT_SETTINGS_FORM.sprintLabelPrefix,
+    weekLabelPrefix: timeline.weekLabelPrefix || DEFAULT_GANTT_SETTINGS_FORM.weekLabelPrefix,
+  };
 }
 
 function getVisibleGanttData(ganttData, rows) {
@@ -102,6 +140,10 @@ export function GanttPage({ selectedProject }) {
   const [milestoneMutationError, setMilestoneMutationError] = useState(null);
   const [deliverableToAddId, setDeliverableToAddId] = useState(null);
   const [draftRows, setDraftRows] = useState([]);
+  const [settingsModalOpened, setSettingsModalOpened] = useState(false);
+  const [settingsForm, setSettingsForm] = useState(DEFAULT_GANTT_SETTINGS_FORM);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsMutationError, setSettingsMutationError] = useState(null);
   const workingRows = useMemo(() => (
     draftRows.length > 0 ? draftRows : (ganttData?.rows || [])
   ), [draftRows, ganttData?.rows]);
@@ -126,6 +168,12 @@ export function GanttPage({ selectedProject }) {
   const editingMilestoneId = normalizeGanttEntityId(editingMilestone?.id);
   const editingMilestoneApiId = getMilestoneApiId(editingMilestone);
   const editingDefaultMilestone = Boolean(editingMilestoneId && editingMilestoneId === defaultMilestoneId);
+  const headerRowVisible = settingsForm.showMonthHeader || settingsForm.showSprintHeader || settingsForm.showWeekHeader;
+  const sprintLengthOptions = useMemo(() => ([
+    { value: '1', label: t('gantt.sprintLengthOptions.one') },
+    { value: '2', label: t('gantt.sprintLengthOptions.two') },
+    { value: '3', label: t('gantt.sprintLengthOptions.three') },
+  ]), [t]);
 
   const selectedDeliverables = useMemo(() => milestoneForm.deliverableIds.map((deliverableId) => {
     const deliverable = allDeliverables.find((item) => item.id === deliverableId);
@@ -236,6 +284,25 @@ export function GanttPage({ selectedProject }) {
     return payload;
   }, []);
 
+  const openSettingsModal = useCallback(() => {
+    setSettingsForm(getSettingsFormFromTimeline(ganttData?.timeline));
+    setSettingsMutationError(null);
+    setSettingsModalOpened(true);
+  }, [ganttData?.timeline]);
+
+  const closeSettingsModal = useCallback(() => {
+    setSettingsModalOpened(false);
+    setSettingsMutationError(null);
+  }, []);
+
+  const setHeaderRowVisible = useCallback((field, checked) => {
+    setSettingsForm((prev) => {
+      const next = { ...prev, [field]: checked };
+      if (!next.showMonthHeader && !next.showSprintHeader && !next.showWeekHeader) return prev;
+      return next;
+    });
+  }, []);
+
   const replaceMilestoneDeliverables = useCallback(async (milestoneId, deliverableIds) => {
     return requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/milestones/${encodeURIComponent(milestoneId)}/deliverables`, {
       method: 'PUT',
@@ -253,6 +320,35 @@ export function GanttPage({ selectedProject }) {
       setDraftRows(latestProjection.rows);
     }
   }, [refreshGantt]);
+
+  const saveSettingsForm = useCallback(async () => {
+    if (!projectCode || settingsSaving || !headerRowVisible) return;
+
+    setSettingsSaving(true);
+    setSettingsMutationError(null);
+
+    try {
+      await requestJson(`http://localhost:3030/projects/${encodeURIComponent(projectCode)}/gantt/settings`, {
+        method: 'PUT',
+        body: JSON.stringify(settingsForm),
+      });
+      await applySavedProjection(await refreshGantt());
+      closeSettingsModal();
+    } catch (error) {
+      setSettingsMutationError(error.message);
+    } finally {
+      setSettingsSaving(false);
+    }
+  }, [
+    applySavedProjection,
+    closeSettingsModal,
+    headerRowVisible,
+    projectCode,
+    refreshGantt,
+    requestJson,
+    settingsForm,
+    settingsSaving,
+  ]);
 
   const saveMilestoneForm = useCallback(async () => {
     if (!projectCode || milestoneSaving) return;
@@ -421,6 +517,14 @@ export function GanttPage({ selectedProject }) {
           >
             {t('gantt.createMilestone')}
           </Button>
+          <Button
+            size="xs"
+            variant="default"
+            leftSection={<IconSettings size={15} />}
+            onClick={openSettingsModal}
+          >
+            {t('gantt.projectSettings')}
+          </Button>
         </Group>
         <Text size="xs" c="dimmed">
           {t('gantt.timelineLabel')}
@@ -432,6 +536,80 @@ export function GanttPage({ selectedProject }) {
         t={t}
         onEditMilestone={openEditMilestone}
       />
+
+      <Modal
+        opened={settingsModalOpened}
+        onClose={closeSettingsModal}
+        title={t('gantt.projectSettings')}
+        size="md"
+      >
+        <Stack gap="md">
+          {settingsMutationError && (
+            <Alert color="red" title={t('gantt.errorTitle')}>
+              {settingsMutationError}
+            </Alert>
+          )}
+          <Select
+            label={t('gantt.fields.timelineMode')}
+            data={[
+              { value: 'sprint', label: t('gantt.timelineModes.sprints') },
+              { value: 'weeks', label: t('gantt.timelineModes.weeks') },
+              { value: 'dates', label: t('gantt.timelineModes.dates') },
+            ]}
+            value={settingsForm.timelineMode}
+            onChange={(value) => setSettingsForm((prev) => ({ ...prev, timelineMode: value || 'sprint' }))}
+          />
+          <Stack gap={4}>
+            <Text fw={500} size="sm">{t('gantt.fields.sprintLengthWeeks')}</Text>
+            <SegmentedControl
+              fullWidth
+              data={sprintLengthOptions}
+              value={String(settingsForm.sprintLengthWeeks)}
+              onChange={(value) => setSettingsForm((prev) => ({ ...prev, sprintLengthWeeks: Number(value) }))}
+            />
+          </Stack>
+          <TextInput
+            type="date"
+            label={t('gantt.fields.periodStartDate')}
+            value={settingsForm.periodStartDate}
+            onChange={(event) => setSettingsForm((prev) => ({ ...prev, periodStartDate: event.target.value }))}
+          />
+          <SimpleGrid cols={{ base: 1, sm: 3 }}>
+            <Switch
+              label={t('gantt.fields.showMonthHeader')}
+              checked={settingsForm.showMonthHeader}
+              onChange={(event) => setHeaderRowVisible('showMonthHeader', event.currentTarget.checked)}
+            />
+            <Switch
+              label={t('gantt.fields.showSprintHeader')}
+              checked={settingsForm.showSprintHeader}
+              onChange={(event) => setHeaderRowVisible('showSprintHeader', event.currentTarget.checked)}
+            />
+            <Switch
+              label={t('gantt.fields.showWeekHeader')}
+              checked={settingsForm.showWeekHeader}
+              onChange={(event) => setHeaderRowVisible('showWeekHeader', event.currentTarget.checked)}
+            />
+          </SimpleGrid>
+          <Switch
+            label={t('gantt.fields.showDefaultMilestone')}
+            checked={settingsForm.showDefaultMilestone}
+            onChange={(event) => setSettingsForm((prev) => ({ ...prev, showDefaultMilestone: event.currentTarget.checked }))}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={closeSettingsModal}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={saveSettingsForm}
+              loading={settingsSaving}
+              disabled={!settingsForm.periodStartDate || !headerRowVisible}
+            >
+              {t('common.save')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Modal
         opened={milestoneModalOpened}

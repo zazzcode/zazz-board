@@ -36,6 +36,7 @@ import { randomUUID } from 'crypto';
 
 const DEFAULT_GANTT_START_DATE = '2026-06-01';
 const DEFAULT_GANTT_END_DATE = '2026-08-14';
+const DEFAULT_GANTT_PERIOD_START_DATE = '2026-01-04';
 
 function toDateOnly(/** @type {string|Date|null|undefined} */ value) {
   if (!value) return null;
@@ -61,6 +62,9 @@ function getTimelineFromSettings(/** @type {any} */ settings) {
     unit: unitMap[settings.timelineMode] || 'sprint',
     showDateLabels: settings.showDateLabels,
     showDefaultMilestone: settings.showDefaultMilestone,
+    showMonthHeader: settings.showMonthHeader,
+    showSprintHeader: settings.showSprintHeader,
+    showWeekHeader: settings.showWeekHeader,
     periodStartDate: settings.periodStartDate,
     periodNumberStart: settings.periodNumberStart,
     sprintStartDate: settings.periodStartDate,
@@ -317,7 +321,10 @@ class DatabaseService {
         timeline_mode: 'sprint',
         show_date_labels: false,
         show_default_milestone: false,
-        period_start_date: DEFAULT_GANTT_START_DATE,
+        show_month_header: true,
+        show_sprint_header: true,
+        show_week_header: true,
+        period_start_date: DEFAULT_GANTT_PERIOD_START_DATE,
         sprint_length_weeks: 2,
         period_number_start: 1,
         sprint_label_prefix: 'Sprint',
@@ -894,6 +901,9 @@ class DatabaseService {
       timelineMode: settings.timeline_mode ?? settings.timelineMode,
       showDateLabels: settings.show_date_labels ?? settings.showDateLabels,
       showDefaultMilestone: settings.show_default_milestone ?? settings.showDefaultMilestone,
+      showMonthHeader: settings.show_month_header ?? settings.showMonthHeader,
+      showSprintHeader: settings.show_sprint_header ?? settings.showSprintHeader,
+      showWeekHeader: settings.show_week_header ?? settings.showWeekHeader,
       periodStartDate: toDateOnly(settings.period_start_date ?? settings.periodStartDate),
       sprintLengthWeeks: settings.sprint_length_weeks ?? settings.sprintLengthWeeks,
       periodNumberStart: settings.period_number_start ?? settings.periodNumberStart,
@@ -934,7 +944,10 @@ class DatabaseService {
       timeline_mode: 'sprint',
       show_date_labels: false,
       show_default_milestone: false,
-      period_start_date: DEFAULT_GANTT_START_DATE,
+      show_month_header: true,
+      show_sprint_header: true,
+      show_week_header: true,
+      period_start_date: DEFAULT_GANTT_PERIOD_START_DATE,
       sprint_length_weeks: 2,
       period_number_start: 1,
       sprint_label_prefix: 'Sprint',
@@ -956,8 +969,11 @@ class DatabaseService {
     if (!['dates', 'weeks', 'sprint'].includes(settings.timelineMode)) {
       throw new Error('Invalid timelineMode');
     }
-    if (settings.sprintLengthWeeks < 1 || settings.sprintLengthWeeks > 12) {
-      throw new Error('sprintLengthWeeks must be between 1 and 12');
+    if (![1, 2, 3].includes(settings.sprintLengthWeeks)) {
+      throw new Error('sprintLengthWeeks must be 1, 2, or 3');
+    }
+    if (!settings.showMonthHeader && !settings.showSprintHeader && !settings.showWeekHeader) {
+      throw new Error('At least one Gantt header row must be visible');
     }
     if (settings.periodNumberStart < 0) {
       throw new Error('periodNumberStart must be 0 or greater');
@@ -975,6 +991,9 @@ class DatabaseService {
         timeline_mode: settings.timelineMode,
         show_date_labels: settings.showDateLabels,
         show_default_milestone: settings.showDefaultMilestone,
+        show_month_header: settings.showMonthHeader,
+        show_sprint_header: settings.showSprintHeader,
+        show_week_header: settings.showWeekHeader,
         period_start_date: settings.periodStartDate,
         sprint_length_weeks: settings.sprintLengthWeeks,
         period_number_start: settings.periodNumberStart,

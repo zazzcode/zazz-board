@@ -13,6 +13,27 @@ function addInclusiveEndDay(value) {
   return new Date(date.getTime() + DAY_MS);
 }
 
+function getInclusiveDurationDays(startValue, endValue) {
+  const start = parseDate(startValue);
+  const end = addInclusiveEndDay(endValue);
+  if (!start || !end) return undefined;
+  return Math.max(1, Math.round((end.getTime() - start.getTime()) / DAY_MS));
+}
+
+function isSameLocalDay(left, right) {
+  if (!left || !right) return false;
+  return (
+    left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate()
+  );
+}
+
+function clampNumber(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(value, max));
+}
+
 function getElapsedWholeWeeks(date, startDate) {
   if (!date || !startDate) return 0;
   return Math.max(0, Math.floor((date.getTime() - startDate.getTime()) / WEEK_MS));
@@ -40,8 +61,33 @@ export function getGanttRowText(row, t) {
   return row.displayName || row.name || row.id;
 }
 
+export function createCurrentDateHighlighter(currentDate = new Date()) {
+  return (date) => (isSameLocalDay(date, currentDate) ? 'zazz-gantt-today-column' : '');
+}
+
+export function getDateChartOffset(ganttState, targetDate) {
+  const scales = ganttState?._scales;
+  const start = ganttState?._start;
+  const cellWidth = Number(ganttState?.cellWidth || 0);
+
+  if (!scales?.diff || !start || !targetDate || !cellWidth) return null;
+
+  return Math.round(scales.diff(targetDate, start, 'hour') * cellWidth);
+}
+
+export function getCenteredDateScrollLeft(ganttState, targetDate, visibleWidth) {
+  const scales = ganttState?._scales;
+  const chartWidth = Number(visibleWidth || ganttState?._chartWidth || 0);
+  const dateOffset = getDateChartOffset(ganttState, targetDate);
+
+  if (dateOffset === null) return null;
+
+  const rawLeft = dateOffset - (chartWidth / 2);
+  const maxLeft = Number.isFinite(scales.width - chartWidth) ? Math.max(scales.width - chartWidth, 0) : rawLeft;
+  return clampNumber(rawLeft, 0, maxLeft);
+}
+
 function getTaskType(row) {
-  if (row.entityType === 'milestone') return 'summary';
   return row.entityType === 'task' ? 'task' : 'task';
 }
 
@@ -55,6 +101,7 @@ export function toSvarTaskRow(row, t) {
     parent: row.parentId || 0,
     start: parseDate(row.startDate),
     end: addInclusiveEndDay(row.endDate),
+    duration: getInclusiveDurationDays(row.startDate, row.endDate),
     progress,
     type: getTaskType(row),
     open: row.entityType === 'milestone',
@@ -107,41 +154,40 @@ export function buildGanttScales(timeline = {}, fallbackStartDate) {
   const weekLabelPrefix = timeline.weekLabelPrefix || 'W';
   const unit = timeline.unit || 'sprint';
   const monthScale = { unit: 'month', step: 1, format: formatMonthYear };
+  const showMonthHeader = timeline.showMonthHeader !== false;
+  const showSprintHeader = timeline.showSprintHeader !== false;
+  const showWeekHeader = timeline.showWeekHeader !== false;
+  const weekNumberScale = {
+    unit: 'week',
+    step: 1,
+    format: (date) => `${weekLabelPrefix}${getTimelinePeriodNumber(date, timelineStartDate, periodNumberStart)}`,
+  };
+  const scales = [];
+
+  if (showMonthHeader) scales.push(monthScale);
 
   if (unit === 'date') {
-    return [
-      monthScale,
-      { unit: 'week', step: 1, format: 'dd MMM' },
-    ];
+    if (showWeekHeader) scales.push({ unit: 'week', step: 1, format: 'dd MMM' });
+    return scales.length > 0 ? scales : [monthScale];
   }
 
   if (unit === 'week') {
-    return [
-      monthScale,
-      {
-        unit: 'week',
-        step: 1,
-        format: (date) => `${weekLabelPrefix}${getTimelinePeriodNumber(date, timelineStartDate, periodNumberStart)}`,
-      },
-    ];
+    if (showWeekHeader) scales.push(weekNumberScale);
+    return scales.length > 0 ? scales : [weekNumberScale];
   }
 
-  return [
-    monthScale,
-    {
+  if (showSprintHeader) {
+    scales.push({
       unit: 'week',
       step: sprintLengthWeeks,
       format: (date) => {
         const sprintNumber = getTimelineSprintNumber(date, timelineStartDate, sprintLengthWeeks) + periodNumberStart - 1;
         return `${sprintLabelPrefix} ${sprintNumber}`;
       },
-    },
-    {
-      unit: 'week',
-      step: 1,
-      format: (date) => `${weekLabelPrefix}${getTimelinePeriodNumber(date, timelineStartDate, periodNumberStart)}`,
-    },
-  ];
+    });
+  }
+  if (showWeekHeader) scales.push(weekNumberScale);
+  return scales.length > 0 ? scales : [weekNumberScale];
 }
 
 export function toSvarGantt(projectGantt, t) {
