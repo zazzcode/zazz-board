@@ -24,11 +24,18 @@ describe('Seeded project Gantt data', () => {
     expect(deliverables).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          deliverableCode: 'ZAZZ-3',
+          deliverableCode: 'ZAZZ-1',
           startDate: '2026-02-02',
-          endDate: '2026-02-13',
+          endDate: '2026-02-06',
           actualStartAt: '2026-02-02T00:00:00.000Z',
           actualCompletionAt: '2026-02-06T00:00:00.000Z',
+        }),
+        expect.objectContaining({
+          deliverableCode: 'ZAZZ-3',
+          startDate: '2026-02-09',
+          endDate: '2026-02-13',
+          actualStartAt: '2026-02-09T00:00:00.000Z',
+          actualCompletionAt: '2026-02-13T00:00:00.000Z',
         }),
         expect.objectContaining({
           deliverableCode: 'ZAZZ-6',
@@ -39,6 +46,11 @@ describe('Seeded project Gantt data', () => {
         }),
       ])
     );
+    const deliverablesByCode = Object.fromEntries(deliverables.map((row) => [row.deliverableCode, row]));
+    expect(deliverablesByCode['ZAZZ-1'].parentId).toBe(deliverablesByCode['ZAZZ-3'].parentId);
+    expect(deliverablesByCode['ZAZZ-1'].startDate < deliverablesByCode['ZAZZ-3'].startDate).toBe(true);
+    expect(deliverablesByCode['ZAZZ-1'].lazyTasks).toBe(true);
+    expect(deliverablesByCode['ZAZZ-3'].lazyTasks).toBe(true);
     expect(gantt.links.length).toBeGreaterThanOrEqual(3);
     expect(gantt.timeline).toEqual(
       expect.objectContaining({
@@ -146,7 +158,7 @@ describe('Project Gantt API', () => {
         completedTaskCount: 1,
         blockedTaskCount: 1,
         taskStatusCounts: { COMPLETED: 1, READY: 1 },
-        lazyTasks: false,
+        lazyTasks: true,
       })
     );
   });

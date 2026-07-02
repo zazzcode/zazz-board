@@ -1134,7 +1134,7 @@ class DatabaseService {
           completedTaskCount: aggregate.completedTaskCount,
           blockedTaskCount: aggregate.blockedTaskCount,
           taskStatusCounts: aggregate.taskStatusCounts,
-          lazyTasks: false,
+          lazyTasks: aggregate.taskCount > 0,
           deliverableOrder: deliverable.milestonePosition,
         });
       }

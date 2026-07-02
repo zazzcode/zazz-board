@@ -20,20 +20,20 @@ const ZAZZ_MILESTONES = [
 
 const ZAZZ_DELIVERABLE_SCHEDULES = {
   'ZAZZ-1': {
-    milestoneKey: 'm2',
-    planned_start_at: '2026-03-02T00:00:00.000Z',
-    planned_completion_at: '2026-03-06T00:00:00.000Z',
-    actual_start_at: '2026-03-02T00:00:00.000Z',
-    actual_completion_at: '2026-03-06T00:00:00.000Z',
+    milestoneKey: 'm1',
+    planned_start_at: '2026-02-02T00:00:00.000Z',
+    planned_completion_at: '2026-02-06T00:00:00.000Z',
+    actual_start_at: '2026-02-02T00:00:00.000Z',
+    actual_completion_at: '2026-02-06T00:00:00.000Z',
     position: 10,
   },
   'ZAZZ-3': {
     milestoneKey: 'm1',
-    planned_start_at: '2026-02-02T00:00:00.000Z',
+    planned_start_at: '2026-02-09T00:00:00.000Z',
     planned_completion_at: '2026-02-13T00:00:00.000Z',
-    actual_start_at: '2026-02-02T00:00:00.000Z',
-    actual_completion_at: '2026-02-06T00:00:00.000Z',
-    position: 10,
+    actual_start_at: '2026-02-09T00:00:00.000Z',
+    actual_completion_at: '2026-02-13T00:00:00.000Z',
+    position: 20,
   },
   'ZAZZ-5': {
     milestoneKey: 'm2',
