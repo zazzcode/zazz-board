@@ -75,30 +75,17 @@ This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. 
 
 ---
 
-## Zazz agent skills
+## Zazz Board Agent Skills
 
-**Skills** (`.agents/skills/`): Role-specific capabilities for framework agents. Framework skills are vendored from [zazz-skills](https://github.com/zazzcode/zazz-skills); refresh via `./scripts/sync-skills-from-zazz-skills.sh` (see [README §Updating skills](./README.md#updating-skills-from-zazz-skills)).
+Repo-local agent skills live in `.agents/skills/`. Each skill declares its own `name` and `description` in `SKILL.md`;
+use that metadata as the source of truth for when the skill applies.
 
-| Skill                    | When it applies                                        |
-| ------------------------ | ------------------------------------------------------ |
-| **zazz-board-api**       | Required by all framework agents — API auth, endpoints |
-| proposal-builder         | Owner/stakeholder proposal discovery and recommendations |
-| feature-doc-builder      | Product/Project Owner feature requirements authoring  |
-| architecture-doc-builder | Project/feature-level architecture documents           |
-| spec-builder             | Owner + agent creating deliverable specification       |
-| standard-builder         | Inspects the codebase and drafts repo-specific standards |
-| qa-testing               | Verifies AC, frontend/backend behavior, evidence quality (replaces the former qa/qa-backend/qa-frontend skills) |
-| pr-builder               | Packages reviewer-ready PR titles and bodies           |
-| pr-review                | Automated self-review of PRs/local diffs              |
-| conformance              | One focused standards-alignment change + verified PR evidence |
-| doc-check                | Repo-local formatting/linting checks for doc changes   |
-| gh-stack                 | Manages stacked branches and dependent PRs             |
-| worktree                 | Sets up/manages the Zazz worktree model via Worktrunk  |
-| psql                     | Safe PostgreSQL diagnostic/profiling command guidance  |
-| worker *(local-only)*    | Implements tasks — core to zazz-board's dogfooded workflow; not in upstream |
-| database-baseline-refresh *(local-only)* | Preserves live dev DB data while upgrading schema and refreshing the canonical seed baseline |
+Most skills are vendored from [zazz-skills](https://github.com/zazzcode/zazz-skills). They may be customized locally,
+and new local skills may be added when this repo needs project-specific behavior. Refresh vendored skills with
+`./scripts/sync-skills-from-zazz-skills.sh` (see [README §Updating skills](./README.md#updating-skills-from-zazz-skills)).
 
-Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use PostgreSQL), `jira-api` (we use Zazz Board). See `IGNORE_SKILLS` in `scripts/sync-skills-from-zazz-skills.sh`.
+Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use PostgreSQL), `jira-api` (we use Zazz Board).
+See `IGNORE_SKILLS` in `scripts/sync-skills-from-zazz-skills.sh`.
 
 **Rules** (`.cursor/rules/`): Always-applied for Cursor (e.g. worktree workflow).
 
