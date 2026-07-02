@@ -17,9 +17,9 @@ describe('Seeded project Gantt data', () => {
     const deliverables = gantt.rows.filter((row) => row.entityType === 'deliverable');
 
     expect(milestones.filter((row) => row.isDefault)).toHaveLength(1);
-    expect(milestones.filter((row) => !row.isDefault).length).toBeGreaterThanOrEqual(3);
+    expect(milestones.filter((row) => !row.isDefault).length).toBeGreaterThanOrEqual(4);
     expect(deliverables.map((row) => row.deliverableCode)).toEqual(
-      expect.arrayContaining(['ZAZZ-1', 'ZAZZ-3', 'ZAZZ-5', 'ZAZZ-6'])
+      expect.arrayContaining(['ZAZZ-1', 'ZAZZ-3', 'ZAZZ-5', 'ZAZZ-6', 'ZAZZ-9'])
     );
     expect(deliverables).toEqual(
       expect.arrayContaining([
@@ -44,19 +44,30 @@ describe('Seeded project Gantt data', () => {
           actualStartAt: '2026-03-23T00:00:00.000Z',
           actualCompletionAt: '2026-04-03T00:00:00.000Z',
         }),
+        expect.objectContaining({
+          deliverableCode: 'ZAZZ-9',
+          displayName: 'gantt-milestone-mvp',
+          status: 'IN_REVIEW',
+          startDate: '2026-06-14',
+          endDate: '2026-07-04',
+          actualStartAt: '2026-06-14T00:00:00.000Z',
+          actualCompletionAt: null,
+        }),
       ])
     );
     const deliverablesByCode = Object.fromEntries(deliverables.map((row) => [row.deliverableCode, row]));
     expect(deliverablesByCode['ZAZZ-1'].parentId).toBe(deliverablesByCode['ZAZZ-3'].parentId);
     expect(deliverablesByCode['ZAZZ-1'].startDate < deliverablesByCode['ZAZZ-3'].startDate).toBe(true);
+    expect(deliverablesByCode['ZAZZ-9'].parentId).not.toBe(deliverablesByCode['ZAZZ-6'].parentId);
+    expect(deliverablesByCode['ZAZZ-9'].lazyTasks).toBe(true);
     expect(deliverablesByCode['ZAZZ-1'].lazyTasks).toBe(true);
     expect(deliverablesByCode['ZAZZ-3'].lazyTasks).toBe(true);
-    expect(gantt.links.length).toBeGreaterThanOrEqual(3);
+    expect(gantt.links.length).toBeGreaterThanOrEqual(4);
     expect(gantt.timeline).toEqual(
       expect.objectContaining({
         unit: 'sprint',
         showDefaultMilestone: false,
-        sprintStartDate: '2026-02-02',
+        sprintStartDate: '2026-02-01',
         sprintLengthWeeks: 2,
       })
     );
@@ -70,6 +81,16 @@ describe('Seeded project Gantt data', () => {
 
     expect(expandedTasks.length).toBeGreaterThan(0);
     expect(expandedTasks.every((row) => row.startDate >= '2026-03-23' && row.endDate <= '2026-04-03')).toBe(true);
+
+    const ganttMvpDeliverable = deliverables.find((row) => row.deliverableCode === 'ZAZZ-9');
+    const expandedMvpTasks = await spec()
+      .get(`/projects/ZAZZ/gantt/deliverables/${ganttMvpDeliverable.deliverableId}/tasks`)
+      .withHeaders('TB_TOKEN', TEST_TOKEN)
+      .expectStatus(200)
+      .returns('res.body.rows');
+
+    expect(expandedMvpTasks).toHaveLength(10);
+    expect(expandedMvpTasks.every((row) => row.startDate >= '2026-06-14' && row.endDate <= '2026-07-04')).toBe(true);
   });
 });
 
@@ -133,7 +154,7 @@ describe('Project Gantt API', () => {
         version: expect.any(String),
         updatedAt: expect.any(String),
         range: expect.objectContaining({ startDate: expect.any(String), endDate: expect.any(String) }),
-        timeline: expect.objectContaining({ unit: 'sprint', periodStartDate: '2026-02-02' }),
+        timeline: expect.objectContaining({ unit: 'sprint', periodStartDate: '2026-02-01' }),
         links: expect.any(Array),
       })
     );

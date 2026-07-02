@@ -152,7 +152,7 @@ export async function resetProjectDefaults() {
       timeline_mode: 'sprint',
       show_date_labels: false,
       show_default_milestone: false,
-      period_start_date: '2026-02-02',
+      period_start_date: '2026-02-01',
       sprint_length_weeks: 2,
       period_number_start: 1,
       sprint_label_prefix: 'Sprint',
@@ -172,7 +172,7 @@ async function getOrCreateDefaultMilestone(project) {
   const [created] = await db.insert(MILESTONES).values({
     project_id: project.id,
     start_date: '2026-02-02',
-    end_date: '2026-04-03',
+    end_date: '2026-08-15',
     is_default: true,
     status: 'IN_PROGRESS',
     created_by: project.created_by,

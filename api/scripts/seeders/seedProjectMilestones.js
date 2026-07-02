@@ -10,12 +10,14 @@ import {
 import { asc, eq, sql } from 'drizzle-orm';
 
 const DEFAULT_START_DATE = '2026-02-02';
-const DEFAULT_END_DATE = '2026-04-03';
+const DEFAULT_END_DATE = '2026-08-15';
+const DEFAULT_PERIOD_START_DATE = '2026-02-01';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ZAZZ_MILESTONES = [
   { key: 'm1', start_date: '2026-02-02', end_date: '2026-02-13', status: 'IN_PROGRESS' },
   { key: 'm2', start_date: '2026-03-02', end_date: '2026-03-20', status: 'IN_PROGRESS' },
   { key: 'm3', start_date: '2026-03-23', end_date: '2026-04-03', status: 'IN_PROGRESS' },
+  { key: 'm4', start_date: '2026-06-14', end_date: '2026-08-15', status: 'IN_PROGRESS' },
 ];
 
 const ZAZZ_DELIVERABLE_SCHEDULES = {
@@ -49,6 +51,14 @@ const ZAZZ_DELIVERABLE_SCHEDULES = {
     planned_completion_at: '2026-04-03T00:00:00.000Z',
     actual_start_at: '2026-03-23T00:00:00.000Z',
     actual_completion_at: '2026-04-03T00:00:00.000Z',
+    position: 10,
+  },
+  'ZAZZ-9': {
+    milestoneKey: 'm4',
+    planned_start_at: '2026-06-14T00:00:00.000Z',
+    planned_completion_at: '2026-07-04T00:00:00.000Z',
+    actual_start_at: '2026-06-14T00:00:00.000Z',
+    actual_completion_at: null,
     position: 10,
   },
 };
@@ -120,7 +130,7 @@ async function seedProjectSettings(project) {
     timeline_mode: 'sprint',
     show_date_labels: false,
     show_default_milestone: false,
-    period_start_date: DEFAULT_START_DATE,
+    period_start_date: DEFAULT_PERIOD_START_DATE,
     sprint_length_weeks: 2,
     period_number_start: 1,
     sprint_label_prefix: 'Sprint',
@@ -282,6 +292,7 @@ async function seedZazzDeliverableRelations() {
     ['ZAZZ-3', 'ZAZZ-1'],
     ['ZAZZ-5', 'ZAZZ-3'],
     ['ZAZZ-6', 'ZAZZ-5'],
+    ['ZAZZ-9', 'ZAZZ-6'],
   ].filter(([deliverableCode, relatedCode]) => byCode[deliverableCode] && byCode[relatedCode]);
 
   if (!relations.length) return 0;
