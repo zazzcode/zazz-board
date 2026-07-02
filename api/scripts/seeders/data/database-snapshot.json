@@ -567,7 +567,7 @@
       "name": "multiple-agent-tokens-feature",
       "description": "Zazz Board currently uses a single token per user (`USERS.access_token`). Both human users and AI agents share that token. This creates several problems:\n\n- **No project isolation**: An agent token can access any project the user can access. There is no way to scope an agent to a specific project.\n- **No multi-agent separation**: Multiple agents (planner, worker, QA, etc.) for the same user must share one token; there is no way to distinguish or revoke individual agent credentials.\n- **Audit and security**: Revoking one agent's access requires changing the user's token, which affects all agents and the human user.\n\n**Desired state**: Each user can create multiple **agent tokens**, each tied to a specific project. Agent tokens are scoped to **both user and project**—a token belongs to one user and is authorized for one project only (token for user A + project X cannot access project Y). The user's **user token** (existing `USERS.access_token`) remains for human use and grants full access to all projects the user can access. Agent tokens are stored separately and managed per-project.",
       "type": "FEATURE",
-      "status": "IN_PROGRESS",
+      "status": "IN_REVIEW",
       "status_history": [
         {
           "status": "PLANNING",
@@ -577,6 +577,11 @@
         {
           "status": "IN_PROGRESS",
           "changedAt": "2026-03-08T20:29:48.822Z",
+          "changedBy": 5
+        },
+        {
+          "status": "IN_REVIEW",
+          "changedAt": "2026-07-02T14:59:44.247Z",
           "changedBy": 5
         }
       ],
@@ -596,7 +601,7 @@
       "created_by": 5,
       "created_at": "2026-03-05T00:27:06.304Z",
       "updated_by": 5,
-      "updated_at": "2026-07-02T14:43:43.421Z"
+      "updated_at": "2026-07-02T14:59:44.248Z"
     }
   ],
   "tasks": [
