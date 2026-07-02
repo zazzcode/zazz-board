@@ -74,6 +74,12 @@ function getDefaultMilestoneId(rows) {
   return normalizeGanttEntityId(rows.find((row) => row.entityType === 'milestone' && row.isDefault)?.id);
 }
 
+function getSourceGanttRow(row, rows) {
+  const rowId = normalizeGanttEntityId(row?.id);
+  if (!rowId) return row;
+  return rows.find((candidate) => normalizeGanttEntityId(candidate.id) === rowId) || row;
+}
+
 function getSettingsFormFromTimeline(timeline = {}) {
   const unitModeMap = {
     date: 'dates',
@@ -211,16 +217,17 @@ export function GanttPage({ selectedProject }) {
   }, []);
 
   const openEditMilestone = useCallback((milestone) => {
-    const milestoneId = normalizeGanttEntityId(milestone.id);
+    const sourceMilestone = getSourceGanttRow(milestone, workingRows);
+    const milestoneId = normalizeGanttEntityId(sourceMilestone.id);
     const deliverableIds = workingRows
       .filter((row) => row.entityType === 'deliverable' && normalizeGanttEntityId(row.parentId) === milestoneId)
       .map((row) => String(row.deliverableId || row.id));
 
-    setEditingMilestone({ ...milestone, id: milestoneId });
+    setEditingMilestone({ ...sourceMilestone, id: milestoneId });
     setMilestoneForm({
-      name: getMilestoneName(milestone),
-      startDate: milestone.startDate || '',
-      endDate: milestone.endDate || '',
+      name: getMilestoneName(sourceMilestone),
+      startDate: sourceMilestone.startDate || '',
+      endDate: sourceMilestone.endDate || '',
       deliverableIds,
     });
     setDeliverableToAddId(null);

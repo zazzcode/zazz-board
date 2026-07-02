@@ -1,5 +1,6 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
+const CHART_END_PADDING_DAYS = 21;
 
 function parseDate(value) {
   if (!value) return undefined;
@@ -11,6 +12,12 @@ function addInclusiveEndDay(value) {
   const date = parseDate(value);
   if (!date) return undefined;
   return new Date(date.getTime() + DAY_MS);
+}
+
+function addDays(value, days) {
+  const date = parseDate(value);
+  if (!date) return undefined;
+  return new Date(date.getTime() + (days * DAY_MS));
 }
 
 function getInclusiveDurationDays(startValue, endValue) {
@@ -202,7 +209,7 @@ export function toSvarGantt(projectGantt, t) {
     columns: buildGanttColumns(t),
     scales: buildGanttScales(projectGantt?.timeline, projectStart),
     projectStart,
-    projectEnd: addInclusiveEndDay(projectGantt?.range?.endDate),
+    projectEnd: addDays(projectGantt?.range?.endDate, CHART_END_PADDING_DAYS),
   };
 }
 

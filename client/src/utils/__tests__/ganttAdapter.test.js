@@ -115,6 +115,7 @@ describe('ganttAdapter', () => {
     );
     expect(result.projectStart).toBeInstanceOf(Date);
     expect(result.projectEnd).toBeInstanceOf(Date);
+    expect(result.projectEnd).toEqual(new Date('2026-07-21T00:00:00'));
   });
 
   it('builds sprint and project-week scale labels from real dates', () => {

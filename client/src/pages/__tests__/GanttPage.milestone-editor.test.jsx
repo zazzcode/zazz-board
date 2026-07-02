@@ -107,7 +107,13 @@ vi.mock('../../components/gantt/ProjectGantt.jsx', () => ({
         type="button"
         onClick={() => {
           const milestone = projectGantt.rows.find((row) => row.id === 'milestone:11');
-          onEditMilestone({ ...milestone, id: ':milestone:11' });
+          onEditMilestone({
+            id: ':milestone:11',
+            text: milestone.displayName,
+            start: new Date(`${milestone.startDate}T00:00:00`),
+            end: new Date(`${milestone.endDate}T00:00:00`),
+            zazzEntityType: 'milestone',
+          });
         }}
       >
         Open Milestone 1

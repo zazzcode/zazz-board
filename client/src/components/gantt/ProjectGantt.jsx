@@ -28,7 +28,7 @@ function isMilestoneRow(row) {
   return row?.zazzEntityType === 'milestone' || row?.data?.entityType === 'milestone';
 }
 
-function buildColumnsWithMilestoneActions(columns, t, onEditMilestone) {
+function buildColumnsWithMilestoneActions(columns, t, onEditMilestone, getSourceRowById) {
   if (!onEditMilestone) return columns;
 
   const actionsColumn = {
@@ -48,7 +48,7 @@ function buildColumnsWithMilestoneActions(columns, t, onEditMilestone) {
             aria-label={t('gantt.editMilestone')}
             onClick={(event) => {
               event.stopPropagation();
-              onEditMilestone(row.data || row);
+              onEditMilestone(getSourceRowById(row.id) || row.data || row);
             }}
           >
             <IconEdit size={15} stroke={1.8} />
@@ -78,12 +78,18 @@ export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMile
   const currentDate = useMemo(() => new Date(), []);
   const highlightTime = useMemo(() => createCurrentDateHighlighter(currentDate), [currentDate]);
   const svarData = useMemo(() => toSvarGantt(projectGantt, t), [projectGantt, t]);
+  const sourceRowsById = useMemo(() => new Map(
+    (projectGantt?.rows || []).map((row) => [normalizeSvarId(row.id), row])
+  ), [projectGantt?.rows]);
+  const getSourceRowById = useCallback((id) => (
+    sourceRowsById.get(normalizeSvarId(id))
+  ), [sourceRowsById]);
   const columns = useMemo(
-    () => buildColumnsWithMilestoneActions(svarData.columns, t, onEditMilestone),
-    [onEditMilestone, svarData.columns, t]
+    () => buildColumnsWithMilestoneActions(svarData.columns, t, onEditMilestone, getSourceRowById),
+    [getSourceRowById, onEditMilestone, svarData.columns, t]
   );
   const Theme = colorScheme === 'dark' ? WillowDark : Willow;
-  const projectionKey = `${projectGantt?.projectCode || ''}:${projectGantt?.version || projectGantt?.updatedAt || ''}`;
+  const projectionKey = projectGantt?.projectCode || '';
 
   const updateTodayMarker = useCallback(() => {
     const api = apiRef.current;
@@ -141,7 +147,7 @@ export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMile
     centeredProjectionRef.current = null;
     setTodayMarkerLeft(null);
     requestAnimationFrame(centerOnCurrentDate);
-  }, [centerOnCurrentDate, svarData.projectStart, svarData.projectEnd]);
+  }, [centerOnCurrentDate, projectionKey]);
 
   useEffect(() => () => {
     apiRef.current?.detach?.(TODAY_SCROLL_LISTENER_TAG);
