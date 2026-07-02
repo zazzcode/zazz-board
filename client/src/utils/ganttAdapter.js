@@ -27,6 +27,14 @@ function getTimelineSprintNumber(date, timelineStartDate, sprintLengthWeeks) {
   return Math.floor(getElapsedWholeWeeks(date, timelineStartDate) / length) + 1;
 }
 
+function formatMonthYear(date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
 export function getGanttRowText(row, t) {
   if (row.labelKey && t) return t(row.labelKey, row.labelParams || {});
   return row.displayName || row.name || row.id;
@@ -98,17 +106,18 @@ export function buildGanttScales(timeline = {}, fallbackStartDate) {
   const sprintLabelPrefix = timeline.sprintLabelPrefix || 'Sprint';
   const weekLabelPrefix = timeline.weekLabelPrefix || 'W';
   const unit = timeline.unit || 'sprint';
+  const monthScale = { unit: 'month', step: 1, format: formatMonthYear };
 
   if (unit === 'date') {
     return [
-      { unit: 'month', step: 1, format: 'MMM yyyy' },
+      monthScale,
       { unit: 'week', step: 1, format: 'dd MMM' },
     ];
   }
 
   if (unit === 'week') {
     return [
-      { unit: 'month', step: 1, format: 'MMM yyyy' },
+      monthScale,
       {
         unit: 'week',
         step: 1,
@@ -118,7 +127,7 @@ export function buildGanttScales(timeline = {}, fallbackStartDate) {
   }
 
   return [
-    { unit: 'month', step: 1, format: 'MMM yyyy' },
+    monthScale,
     {
       unit: 'week',
       step: sprintLengthWeeks,

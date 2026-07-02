@@ -9,7 +9,7 @@ This directory contains API integration tests for Zazz Board using **Vitest** an
 ## Quick Start: Run tests
 
 ### Prerequisites
-- Node.js 22+ and npm
+- Node.js 24 LTS (`v24.18.0`) and npm 11+
 - Docker Desktop running (PostgreSQL 15 on port 5433)
 - Test database created and seeded (see [Environment Setup](#environment-setup))
 - `api/.env` with `DATABASE_URL_TEST` set (see [AGENTS.md](../../AGENTS.md))

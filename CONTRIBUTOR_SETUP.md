@@ -4,7 +4,7 @@ This guide is for developers/committers working on the codebase locally. **Only 
 
 ## Prerequisites
 
-- Node.js 22+
+- Node.js 24 LTS (`v24.18.0`) and npm 11+
 - Docker Desktop or Colima (for Postgres only)
 
 ## 1) Install dependencies
@@ -12,11 +12,14 @@ This guide is for developers/committers working on the codebase locally. **Only 
 From repo root:
 
 ```bash
+nvm use
 npm install
 npm install --workspace=api
 cd client && npm install --legacy-peer-deps && cd ..
 cp api/.env.example api/.env
 ```
+
+The project `.nvmrc` is pinned to `v24.18.0`; `nvm use` should report Node.js `v24.18.0` and npm `11.16.0`.
 
 The root `npm install` step also installs the Git hooks for this repo. Pre-commit checks are intentionally lightweight:
 

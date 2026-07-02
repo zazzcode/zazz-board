@@ -72,16 +72,16 @@ export const TRANSLATIONS = pgTable('TRANSLATIONS', {
 // Projects table
 export const PROJECTS = pgTable('PROJECTS', {
   id: serial('id').primaryKey(),
-  title: varchar('title', { length: 255 }).notNull(),
-  code: varchar('code', { length: 10 }).notNull().unique(),
-  description: text('description'),
   leader_id: integer('leader_id').notNull().references(() => USERS.id, { onDelete: 'restrict' }),
+  code: varchar('code', { length: 10 }).notNull().unique(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
   next_deliverable_sequence: integer('next_deliverable_sequence').notNull().default(1),
   status_workflow: varchar('status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['READY', 'IN_PROGRESS', 'QA', 'COMPLETED']::varchar[]`),
   deliverable_status_workflow: varchar('deliverable_status_workflow', { length: 25 }).array().notNull().default(sql`ARRAY['PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'STAGED', 'DONE']::varchar[]`),
   completion_criteria_status: varchar('completion_criteria_status', { length: 25 })
     .references(() => STATUS_DEFINITIONS.code, { onDelete: 'set null' }),
-  task_graph_layout_direction: graphLayoutDirectionEnum('task_graph_layout_direction').default('LR'),
+  task_graph_layout_direction: graphLayoutDirectionEnum('task_graph_layout_direction').default('LR').notNull(),
   created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),
@@ -145,7 +145,7 @@ export const PROJECT_GANTT_SETTINGS = pgTable('PROJECT_GANTT_SETTINGS', {
 export const DELIVERABLES = pgTable('DELIVERABLES', {
   id: serial('id').primaryKey(),
   project_id: integer('project_id').notNull().references(() => PROJECTS.id, { onDelete: 'cascade' }),
-  milestone_id: integer('milestone_id').references(() => MILESTONES.id, { onDelete: 'set null' }),
+  milestone_id: integer('milestone_id').notNull().references(() => MILESTONES.id, { onDelete: 'restrict' }),
   project_code: varchar('project_code', { length: 10 }).notNull(),
   code: varchar('code', { length: 25 }).notNull().unique(),
   name: varchar('name', { length: 30 }).notNull(),
@@ -204,11 +204,11 @@ export const TASKS = pgTable('TASKS', {
   position: integer('position').notNull().default(0), // Kanban column ordering
 
   // --- State flags ---
-  is_blocked: boolean('is_blocked').default(false),
+  is_blocked: boolean('is_blocked').notNull().default(false),
   blocked_reason: text('blocked_reason'),
   // Cancelled is a flag, NOT a workflow status — the status field stays a clean
   // workflow state; dependents of a cancelled task can still be promoted normally
-  is_cancelled: boolean('is_cancelled').default(false),
+  is_cancelled: boolean('is_cancelled').notNull().default(false),
 
   // --- Tracking ---
   git_worktree: varchar('git_worktree'),
@@ -217,7 +217,7 @@ export const TASKS = pgTable('TASKS', {
   coordination_code: varchar('coordination_code', { length: 25 })
     .references(() => COORDINATION_TYPES.code, { onDelete: 'set null' }),
 
-  // --- Audit (always last) ---
+  // --- Audit (always last: created_by, created_at, updated_by, updated_at) ---
   created_by: integer('created_by').references(() => USERS.id, { onDelete: 'set null' }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_by: integer('updated_by').references(() => USERS.id, { onDelete: 'set null' }),

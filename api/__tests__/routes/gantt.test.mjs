@@ -21,15 +21,43 @@ describe('Seeded project Gantt data', () => {
     expect(deliverables.map((row) => row.deliverableCode)).toEqual(
       expect.arrayContaining(['ZAZZ-1', 'ZAZZ-3', 'ZAZZ-5', 'ZAZZ-6'])
     );
+    expect(deliverables).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          deliverableCode: 'ZAZZ-3',
+          startDate: '2026-02-02',
+          endDate: '2026-02-13',
+          actualStartAt: '2026-02-02T00:00:00.000Z',
+          actualCompletionAt: '2026-02-06T00:00:00.000Z',
+        }),
+        expect.objectContaining({
+          deliverableCode: 'ZAZZ-6',
+          startDate: '2026-03-23',
+          endDate: '2026-04-03',
+          actualStartAt: '2026-03-23T00:00:00.000Z',
+          actualCompletionAt: '2026-04-03T00:00:00.000Z',
+        }),
+      ])
+    );
     expect(gantt.links.length).toBeGreaterThanOrEqual(3);
     expect(gantt.timeline).toEqual(
       expect.objectContaining({
         unit: 'sprint',
         showDefaultMilestone: false,
-        sprintStartDate: '2026-06-01',
+        sprintStartDate: '2026-02-02',
         sprintLengthWeeks: 2,
       })
     );
+
+    const agentTokensDeliverable = deliverables.find((row) => row.deliverableCode === 'ZAZZ-6');
+    const expandedTasks = await spec()
+      .get(`/projects/ZAZZ/gantt/deliverables/${agentTokensDeliverable.deliverableId}/tasks`)
+      .withHeaders('TB_TOKEN', TEST_TOKEN)
+      .expectStatus(200)
+      .returns('res.body.rows');
+
+    expect(expandedTasks.length).toBeGreaterThan(0);
+    expect(expandedTasks.every((row) => row.startDate >= '2026-03-23' && row.endDate <= '2026-04-03')).toBe(true);
   });
 });
 
@@ -93,7 +121,7 @@ describe('Project Gantt API', () => {
         version: expect.any(String),
         updatedAt: expect.any(String),
         range: expect.objectContaining({ startDate: expect.any(String), endDate: expect.any(String) }),
-        timeline: expect.objectContaining({ unit: 'sprint', periodStartDate: '2026-06-01' }),
+        timeline: expect.objectContaining({ unit: 'sprint', periodStartDate: '2026-02-02' }),
         links: expect.any(Array),
       })
     );

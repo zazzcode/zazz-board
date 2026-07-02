@@ -110,9 +110,12 @@ describe('ganttAdapter', () => {
 
   it('builds sprint and project-week scale labels from real dates', () => {
     const result = toSvarGantt(projectGantt, t);
+    const monthScale = result.scales[0];
     const sprintScale = result.scales[1];
     const weekScale = result.scales[2];
 
+    expect(monthScale.unit).toBe('month');
+    expect(monthScale.format(new Date('2026-06-01T00:00:00Z'))).toBe('Jun 2026');
     expect(sprintScale.unit).toBe('week');
     expect(sprintScale.step).toBe(2);
     expect(sprintScale.format(new Date('2026-06-01T00:00:00'))).toBe('Sprint 1');

@@ -7,10 +7,7 @@ import {
   TAGS,
   PROJECTS,
   AGENT_TOKENS,
-  MILESTONES,
-  PROJECT_GANTT_SETTINGS,
   DELIVERABLES,
-  DELIVERABLE_RELATIONS,
   TASKS,
   TASK_TAGS,
   TASK_RELATIONS,
@@ -19,7 +16,11 @@ import {
 } from '../../lib/db/schema.js';
 import { sql } from 'drizzle-orm';
 import { loadDatabaseSnapshot } from './databaseSnapshot.js';
-import { seedProjectMilestones } from './seedProjectMilestones.js';
+import {
+  prepareDeliverablesForProjectMilestones,
+  seedProjectMilestoneAssignments,
+  seedProjectMilestoneContainers,
+} from './seedProjectMilestones.js';
 
 const dateFieldsByKey = {
   users: ['created_at', 'updated_at'],
@@ -31,7 +32,15 @@ const dateFieldsByKey = {
   agent_tokens: ['created_at'],
   milestones: ['start_date', 'end_date', 'created_at', 'updated_at'],
   project_gantt_settings: ['period_start_date', 'created_at', 'updated_at'],
-  deliverables: ['approved_at', 'created_at', 'updated_at'],
+  deliverables: [
+    'approved_at',
+    'planned_start_at',
+    'planned_completion_at',
+    'actual_start_at',
+    'actual_completion_at',
+    'created_at',
+    'updated_at',
+  ],
   deliverable_relations: ['created_at', 'updated_at'],
   tasks: ['started_at', 'completed_at', 'created_at', 'updated_at'],
   task_relations: ['updated_at'],
@@ -46,10 +55,7 @@ const insertOrder = [
   { key: 'tags', label: 'tags', table: TAGS },
   { key: 'projects', label: 'projects', table: PROJECTS },
   { key: 'agent_tokens', label: 'agent tokens', table: AGENT_TOKENS },
-  { key: 'milestones', label: 'milestones', table: MILESTONES },
-  { key: 'project_gantt_settings', label: 'project gantt settings', table: PROJECT_GANTT_SETTINGS },
   { key: 'deliverables', label: 'deliverables', table: DELIVERABLES },
-  { key: 'deliverable_relations', label: 'deliverable relations', table: DELIVERABLE_RELATIONS },
   { key: 'tasks', label: 'tasks', table: TASKS },
   { key: 'task_tags', label: 'task tags', table: TASK_TAGS },
   { key: 'task_relations', label: 'task relations', table: TASK_RELATIONS },
@@ -87,7 +93,10 @@ async function insertSnapshotRows(key, label, table, rows) {
     return 0;
   }
 
-  const preparedRows = rows.map((row) => convertDateFields(row, dateFieldsByKey[key]));
+  let preparedRows = rows.map((row) => convertDateFields(row, dateFieldsByKey[key]));
+  if (key === 'deliverables') {
+    preparedRows = await prepareDeliverablesForProjectMilestones(preparedRows);
+  }
   await db.insert(table).values(preparedRows);
   console.log(`  ✅ Seeded ${preparedRows.length} ${label}`);
   return preparedRows.length;
@@ -117,10 +126,13 @@ export async function seedDatabaseSnapshot() {
       entry.table,
       snapshot[entry.key] || []
     );
+
+    if (entry.key === 'agent_tokens') {
+      Object.assign(counts, await seedProjectMilestoneContainers());
+    }
   }
 
-  const milestoneCounts = await seedProjectMilestones();
-  Object.assign(counts, milestoneCounts);
+  Object.assign(counts, await seedProjectMilestoneAssignments());
 
   for (const tableName of sequenceTables) {
     await resetSequence(tableName);

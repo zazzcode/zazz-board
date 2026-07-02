@@ -4,7 +4,7 @@
 
 **Current initiative focus:** `spec-builder`, `planner`, and `worker` agent flows. Coordinator/QA agent flows are not the current release focus.
 
-**Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
+**Stack**: Fastify API (JavaScript, ESM on Node.js 24 LTS) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
 
 **Framework:** Zazz Board is the tool that enables teams to practice the [Zazz Framework](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners (Project Owners and Deliverable Owners) and agents collaborate.
 
@@ -59,6 +59,8 @@ Seed data includes a **sample project** (e.g. **ZAZZ**) so you can explore deliv
 
 ## Quick start
 Production/self-hosted Docker setup with two flows.
+
+Docker images for the API and client build use Node.js `v24.18.0`, matching `.nvmrc`.
 
 ### Flow A — Initial install (first time)
 
@@ -285,6 +287,30 @@ Then run tests (from `api/`):
 set -a && source .env && set +a && NODE_ENV=test npm run test
 ```
 
+### Using nvm in non-interactive shells
+
+Developers who use `nvm` usually get `node` and `npm` automatically in interactive terminals because their shell startup files load `nvm`. Non-interactive shells, editor tasks, agent shells, and some CI steps may not load that setup, which can make `npm` appear to be missing even though it works in a normal terminal.
+
+The repo includes `.nvmrc` pinned to Node.js `v24.18.0`, so `nvm use` selects the project runtime. With the current project runtime, npm reports `11.16.0`.
+
+If a non-interactive command reports `npm: command not found`, initialize `nvm` explicitly before running repo commands:
+
+```bash
+export NVM_DIR="$HOME/.nvm"
+source "$NVM_DIR/nvm.sh"
+nvm use
+```
+
+For example:
+
+```bash
+export NVM_DIR="$HOME/.nvm"
+source "$NVM_DIR/nvm.sh"
+nvm use
+cd api
+set -a && source .env && set +a && NODE_ENV=test npm run test
+```
+
 See [api/__tests__/README.md](./api/__tests__/README.md) for details.
 
 ---
@@ -350,7 +376,8 @@ For **Swagger UI**, see [How to access the docs with your access token](#how-to-
 ## Common issues
 
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test server).
-- **drizzle-kit** “please install drizzle-orm”: From repo root, `ln -sf ./api/node_modules/drizzle-orm ./node_modules/drizzle-orm`.
+- **drizzle-kit** “please install drizzle-orm”: From repo root, run `npm install` and `npm install --workspace=api`. Do not create manual `node_modules` symlinks in worktrees.
+- **`npm: command not found` when using nvm**: initialize `nvm` explicitly in non-interactive shells; see [Using nvm in non-interactive shells](#using-nvm-in-non-interactive-shells).
 - **Tests**: Always source `api/.env` and set `NODE_ENV=test`; see [AGENTS.md](./AGENTS.md) and [api/__tests__/README.md](./api/__tests__/README.md).
 
 ---

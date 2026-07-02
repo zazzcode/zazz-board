@@ -121,7 +121,7 @@ Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use Postgr
 
 ## Setup & run
 
-**Setup**: See [CONTRIBUTOR_SETUP.md](CONTRIBUTOR_SETUP.md). TL;DR: Node 22+, Docker (Postgres only), `npm run docker:up:db`, run API and client in separate terminals.
+**Setup**: See [CONTRIBUTOR_SETUP.md](CONTRIBUTOR_SETUP.md). TL;DR: Node.js 24 LTS (`v24.18.0`), Docker (Postgres only), `npm run docker:up:db`, run API and client in separate terminals.
 
 **Run**: `npm run dev:api` + `npm run dev:client` (or `npm run dev`). API :3030, client :3001.
 

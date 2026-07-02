@@ -27,7 +27,7 @@ standards:
         - understanding the stack, layers, or cloud deployment
         - adding or changing a service
     purpose: >-
-      Stack (JavaScript only, Node 22+, Fastify, React/Vite/Mantine, PostgreSQL 15, Drizzle),
+      Stack (JavaScript only, Node.js 24 LTS, Fastify, React/Vite/Mantine, PostgreSQL 15, Drizzle),
       the API/Services/Client layers, the databaseService/tokenService seam, and optional S3/GCS image storage.
 
   - file: data-architecture.md
@@ -43,8 +43,9 @@ standards:
         - writing databaseService queries
     purpose: >-
       Schema-first design, Drizzle/PostgreSQL conventions, the databaseService DB seam,
-      snake_case DB ↔ camelCase JS field mapping, UPPER_SNAKE_CASE codes, sparse task
-      positions, pre-v1 vs v1 migration workflow, and key tables.
+      schema column ordering, snake_case DB ↔ camelCase JS field mapping,
+      UPPER_SNAKE_CASE codes, sparse task positions, pre-v1 vs v1 migration
+      workflow, and key tables.
 
   - file: data-layer.md
     tier: repo-specific
