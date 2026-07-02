@@ -10,23 +10,24 @@ Use this skill when a user asks for a handoff document, continuation note, stale
 ## Core Rules
 
 - Handoff documents are platform-neutral working notes. Do not make them Codex-specific, Claude-specific, Cursor-specific, or tied to any single agent runtime.
-- Store temporary handoff documents under `.zazz/ephemeral/` unless the user explicitly asks for a tracked project document.
+- Store temporary handoff documents under `DOCS_ROOT/ephemeral/` unless the user explicitly specifies another location. In this repo, `DOCS_ROOT` is `.zazz`, so the default location is `.zazz/ephemeral/`.
 - Name every handoff document with local date and time down to seconds:
 
 ```text
 <topic>-handoff-YYYY-MM-DD-HHMMSS.md
 ```
 
-- Do not commit handoff documents from `.zazz/ephemeral/`; that directory is intentionally ignored except for its README.
+- Do not commit handoff documents. The generated handoff file must be ignored by git.
 - Do not change `.zazz/standards/*` while creating a handoff unless the user explicitly confirms the standards change.
 
 ## Workflow
 
 1. Read the current task context, relevant diffs, recent commits, and test or verification results.
-2. Create `.zazz/ephemeral/` if it does not exist.
-3. Generate the timestamp from local time unless the user requests another timezone.
-4. Write a concise Markdown handoff with enough context for another agent or developer to continue safely.
-5. Verify the handoff file is ignored by git before finishing.
+2. Identify `DOCS_ROOT`. Use `.zazz` when the repo has one; otherwise use the repository's documented project-doc root.
+3. Create `DOCS_ROOT/ephemeral/` if it does not exist.
+4. Generate the timestamp from local time unless the user requests another timezone.
+5. Write a concise Markdown handoff with enough context for another agent or developer to continue safely.
+6. Verify the handoff file is ignored by git before finishing.
 
 ## Recommended Content
 

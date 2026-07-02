@@ -37,6 +37,8 @@ If any branch/worktree adds or changes settings in `.env` or `api/.env`:
 
 Consult `.zazz/standards/` for authoritative project rules. Index: [.zazz/standards/index.yaml](.zazz/standards/index.yaml). See [.zazz/standards/contextual-split.md](.zazz/standards/contextual-split.md) for how the standards are tiered and synced.
 
+This project's `DOCS_ROOT` is `.zazz`.
+
 Three tiers: **repo-specific** (take precedence), **generic methodology** (vendored from zazz-skills), and **placeholder stack standards** (to be expanded via the `standard-builder` skill).
 
 Repo-specific (take precedence):
