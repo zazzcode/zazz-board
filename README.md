@@ -12,7 +12,7 @@
 
 ## Table of contents
 
-- [Main views and features](#main-views-and-features)
+- [Board views](#board-views)
 - [Quick start](#quick-start)
 - [Contributor setup](#contributor-setup)
 - [Running in the cloud](#running-in-the-cloud)
@@ -27,16 +27,20 @@
 
 ---
 
-## Main views and features
+## Board views
+
+Zazz Board gives owners and agents several project-level views over the same deliverables and tasks:
 
 | View | Purpose |
 |------|--------|
-| **Project list** | Create/edit projects; configure task and deliverable workflows. |
-| **Deliverable list** | Sortable table of deliverables per project; SPEC/PLAN/PRD paths with copy-to-clipboard; PR links. |
-| **Deliverable Kanban** | Columns from project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done). Drag-and-drop deliverable cards; task progress and PR URL on cards. |
-| **Project Gantt** | Milestone and deliverable timeline for a project, with month/sprint/week headers, a current-date marker, configurable sprint length/header rows, milestone editing, deliverable dependencies, and lazy-loaded task rows under deliverables. |
-| **Task Kanban** | Columns from project’s task workflow (To Do, Ready, In Progress, QA, Completed). Tasks show deliverable name in card footer. Drag-and-drop. |
-| **Task graph** | **Task Graph** — one deliverable’s task graph at a time; select deliverable via dropdown. Readiness and coordination types (e.g. TEST_TOGETHER, DEPLOY_TOGETHER) supported. |
+| **Project** | Create and edit projects, choose the active project, and configure project-level task, deliverable, and Gantt settings. |
+| **Gantt chart** | Plan and inspect project milestones, dated deliverables, dependencies, month/sprint/week headers, the current-date marker, and lazy-loaded task rows under deliverables. |
+| **Deliverables Kanban** | Track deliverables through the project’s deliverable workflow (Planning, In Progress, In Review, Staged, Done), with drag-and-drop cards, task progress, and PR URLs. |
+| **Task Kanban** | Track agent tasks through the project’s task workflow (To Do, Ready, In Progress, QA, Completed), with deliverable context on each task card. |
+| **Task Graph** | Inspect one deliverable’s task dependency graph at a time, including readiness and coordination relationships such as `TEST_TOGETHER` and `DEPLOY_TOGETHER`. |
+
+The deliverables table gives an additional sortable list view with SPEC/PLAN/PRD paths, copy-to-clipboard actions, PR
+links, and task counts.
 
 ### Deliverable lifecycle (high level)
 
