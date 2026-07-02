@@ -81,6 +81,28 @@
   overflow: hidden;
 }
 
+.zazz-gantt-row-title {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  cursor: pointer;
+}
+
+.zazz-gantt-row-title:hover {
+  color: var(--mantine-color-blue-4);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .zazz-gantt-task-label {
   display: block;
   overflow: hidden;

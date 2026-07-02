@@ -474,7 +474,7 @@ enough detail for the client to prompt the user to reload/review.
 
 **Why.** Project planning can involve several humans. A version marker gives the client a
 straightforward way to detect stale modal drafts and avoid silently overwriting another
-planner's milestone or deliverable-order changes.
+user's milestone or deliverable-order changes.
 
 ### D-4 — Keep Milestone CRUD Separate From Gantt Projection
 
@@ -766,7 +766,7 @@ The agent must stop and surface to the Owner if:
 
 ---
 
-## 7. Test Plan
+## 7. Test Strategy
 
 Reference data sources:
 
@@ -1121,5 +1121,69 @@ Only declare done after the verifier reports all-pass.
 
 ---
 
+## 13. Implementation Feedback Iterations
+
+This append-only section records feature behavior, UX, API contract, and bug-fix changes
+made from owner steering during implementation or feedback during the human review and
+testing phase after the original D2 specification was greenlit. The specification above
+remains the source of truth for the original implementation contract.
+
+### I-1 — Gantt Row And Bar Activation Opens Existing Editors
+
+**Context.** After the original Gantt projection, milestone editing, display settings,
+current-date focus, task lazy expansion, and seed data were implemented, interactive
+review showed that milestones and deliverables were visible in the Gantt but not easy
+enough to inspect or edit from the chart itself.
+
+**Improvement.** The Gantt view now treats milestone and deliverable rows as activation
+surfaces:
+
+- double-clicking a milestone name in the grid opens the existing milestone editor
+- double-clicking a milestone bar opens the existing milestone editor
+- the milestone row action continues to open the existing milestone editor
+- double-clicking a deliverable name in the grid opens the shared routed deliverable
+  editor
+- double-clicking a deliverable bar opens the shared routed deliverable editor
+- a deliverable row action opens the shared routed deliverable editor
+
+**Boundary.** This improvement reuses existing modal/edit flows and keeps the Gantt API
+projection lean. Gantt deliverable activation navigates to the canonical deliverable
+editor route rather than adding full deliverable metadata to every Gantt projection row.
+The chart remains read-only for direct schedule drag/resize editing.
+
+**Verification.** Client coverage exercises Gantt grid title double-clicks, Gantt bar
+double-clicks, and the deliverable edit action path through `GanttPage` into the
+canonical deliverable editor route.
+
+### I-2 — Shared Deliverable Editor Exposes Schedule Dates
+
+**Context.** Interactive review showed that the deliverable editor opened from project
+views did not expose the planned schedule fields that place deliverables on the Gantt,
+and did not show actual execution timestamps for context.
+
+**Improvement.** The shared deliverable editor used by the deliverable list, deliverable
+Kanban, and Gantt route now exposes schedule data consistently:
+
+- `planned_start_at` is editable as a typed date picker
+- `planned_completion_at` is editable as a typed date picker
+- `actual_start_at` is displayed as a read-only date
+- `actual_completion_at` is displayed as a read-only date
+- the canonical client route `/projects/:code/deliverables/:deliverableId` opens that
+  same editor for a specific deliverable
+- the deliverable API/OpenAPI schemas document planned schedule fields on create/update
+  and planned plus actual fields on deliverable responses
+
+**Boundary.** Actual schedule fields remain execution facts and are not submitted by the
+general deliverable editor. The client sends planned schedule changes through the
+existing deliverable update API. The Gantt chart still does not support direct bar
+dragging or resizing for schedule mutation.
+
+**Verification.** Client coverage exercises the canonical routed deliverable editor,
+typed planned date edits, read-only actual date display, and Gantt navigation into the
+shared editor route. API OpenAPI coverage asserts planned schedule request fields and
+planned/actual response fields.
+
+---
+
 *End of specification. Implementation proceeds from this specification and the run log;
-no separate plan is created.*
+no separate execution document is created.*

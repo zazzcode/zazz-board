@@ -50,7 +50,7 @@ export const deliverableSchemas = {
   createDeliverable: {
     tags: ['deliverables'],
     summary: 'Create deliverable',
-    description: 'Creates a new deliverable card in the project. Use this when starting work on a new feature, bug fix, or other work item. The response includes id (numeric—use for create task and other API paths), projectCode (project code), and deliverableCode (string, e.g. ZAZZ-4—use for display). You can include specFilepath and planFilepath on create if known, or add them later via update deliverable.',
+    description: 'Creates a new deliverable in the project. Use this when starting work on a new feature, bug fix, or other work item. The response includes id (numeric—use for create task and other API paths), projectCode (project code), and deliverableCode (string, e.g. ZAZZ-4—use for display). You can include specFilepath, plannedStartAt, and plannedCompletionAt on create if known, or add them later via update deliverable.',
     params: {
       type: 'object',
       required: ['projectCode'],
@@ -69,7 +69,9 @@ export const deliverableSchemas = {
         planFilepath: { type: 'string', maxLength: 500, description: 'Relative path to the PLAN document (e.g. .zazz/deliverables/user-auth-PLAN.md). Add when PLAN exists.' },
         gitWorktree: { type: 'string', maxLength: 255, description: 'Git worktree name for implementation (e.g. feature-auth). Add when work begins.' },
         gitBranch: { type: 'string', maxLength: 255, description: 'Git branch name (e.g. feature-auth). Add when work begins.' },
-        pullRequestUrl: { type: 'string', maxLength: 500, description: 'URL to the PR when ready for review.' }
+        pullRequestUrl: { type: 'string', maxLength: 500, description: 'URL to the PR when ready for review.' },
+        plannedStartAt: { type: 'string', format: 'date-time', nullable: true, description: 'Planned start timestamp for Gantt placement.' },
+        plannedCompletionAt: { type: 'string', format: 'date-time', nullable: true, description: 'Planned completion timestamp for Gantt placement.' }
       },
       additionalProperties: false
     },
@@ -81,7 +83,7 @@ export const deliverableSchemas = {
   updateDeliverable: {
     tags: ['deliverables'],
     summary: 'Update deliverable',
-    description: 'Updates deliverable metadata. Use this to add or change: specFilepath (after SPEC is written), planFilepath (after PLAN is approved), gitWorktree and gitBranch (when work begins), pullRequestUrl (when PR is opened). Send only the fields you are updating. id is the numeric id from create deliverable or list deliverables.',
+    description: 'Updates deliverable metadata. Use this to add or change: specFilepath, gitWorktree and gitBranch (when work begins), pullRequestUrl (when PR is opened), and plannedStartAt/plannedCompletionAt (for Gantt placement). Send only the fields you are updating. id is the numeric id from create deliverable or list deliverables.',
     params: {
       type: 'object',
       required: ['projectCode', 'id'],
@@ -102,6 +104,8 @@ export const deliverableSchemas = {
         gitWorktree: { type: 'string', maxLength: 255, description: 'Git worktree name (e.g. feature-auth). Set when implementation begins.' },
         gitBranch: { type: 'string', maxLength: 255, description: 'Git branch name. Set when implementation begins.' },
         pullRequestUrl: { type: 'string', maxLength: 500, description: 'PR URL when ready for review.' },
+        plannedStartAt: { type: 'string', format: 'date-time', nullable: true, description: 'Planned start timestamp for Gantt placement.' },
+        plannedCompletionAt: { type: 'string', format: 'date-time', nullable: true, description: 'Planned completion timestamp for Gantt placement.' },
         position: { type: 'integer', minimum: 0, description: 'Sort order in deliverable list.' }
       },
       additionalProperties: false

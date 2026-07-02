@@ -28,27 +28,83 @@ function isMilestoneRow(row) {
   return row?.zazzEntityType === 'milestone' || row?.data?.entityType === 'milestone';
 }
 
-function buildColumnsWithMilestoneActions(columns, t, onEditMilestone, getSourceRowById) {
-  if (!onEditMilestone) return columns;
+function isDeliverableRow(row) {
+  return row?.zazzEntityType === 'deliverable' || row?.data?.entityType === 'deliverable';
+}
+
+function resolveSourceRow(row, getSourceRowById) {
+  return getSourceRowById(row.id) || row.data || row;
+}
+
+function getEntityEditLabel(row, t) {
+  if (isMilestoneRow(row)) return t('gantt.editMilestone');
+  if (isDeliverableRow(row)) return t('gantt.editDeliverable');
+  return null;
+}
+
+function dispatchEntityEdit(row, handlers, getSourceRowById) {
+  if (isMilestoneRow(row) && handlers.onEditMilestone) {
+    handlers.onEditMilestone(resolveSourceRow(row, getSourceRowById));
+    return;
+  }
+
+  if (isDeliverableRow(row) && handlers.onEditDeliverable) {
+    handlers.onEditDeliverable(resolveSourceRow(row, getSourceRowById));
+  }
+}
+
+function buildColumnsWithEntityActions(columns, t, handlers, getSourceRowById) {
+  const canEditEntities = handlers.onEditMilestone || handlers.onEditDeliverable;
+  if (!canEditEntities) return columns;
+
+  const textColumn = columns.find((column) => column.id === 'text');
+  const interactiveTextColumn = textColumn
+    ? {
+        ...textColumn,
+        cell: ({ row }) => {
+          const label = getEntityEditLabel(row, t);
+          const sourceRow = resolveSourceRow(row, getSourceRowById);
+          const text = row.text || sourceRow.displayName || sourceRow.name || row.id;
+
+          if (!label) return text;
+
+          return (
+            <button
+              type="button"
+              className="zazz-gantt-row-title"
+              title={label}
+              aria-label={`${label}: ${text}`}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                dispatchEntityEdit(row, handlers, getSourceRowById);
+              }}
+            >
+              {text}
+            </button>
+          );
+        },
+      }
+    : null;
 
   const actionsColumn = {
-    id: 'zazzMilestoneActions',
+    id: 'zazzEntityActions',
     header: '',
     width: 42,
     align: 'right',
     cell: ({ row }) => {
-      if (!isMilestoneRow(row)) return null;
+      const label = getEntityEditLabel(row, t);
+      if (!label) return null;
 
       return (
         <div className="zazz-gantt-row-actions">
           <button
             type="button"
             className="zazz-gantt-row-action"
-            title={t('gantt.editMilestone')}
-            aria-label={t('gantt.editMilestone')}
+            title={label}
+            aria-label={label}
             onClick={(event) => {
               event.stopPropagation();
-              onEditMilestone(getSourceRowById(row.id) || row.data || row);
+              dispatchEntityEdit(row, handlers, getSourceRowById);
             }}
           >
             <IconEdit size={15} stroke={1.8} />
@@ -62,13 +118,20 @@ function buildColumnsWithMilestoneActions(columns, t, onEditMilestone, getSource
   if (textIndex === -1) return [...columns, actionsColumn];
 
   return [
-    ...columns.slice(0, textIndex + 1),
+    ...columns.slice(0, textIndex),
+    interactiveTextColumn,
     actionsColumn,
     ...columns.slice(textIndex + 1),
   ];
 }
 
-export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMilestone }) {
+export function ProjectGantt({
+  projectGantt,
+  loadDeliverableTasks,
+  t,
+  onEditMilestone,
+  onEditDeliverable,
+}) {
   const { colorScheme } = useMantineColorScheme();
   const apiRef = useRef(null);
   const chartWidthRef = useRef(0);
@@ -84,9 +147,13 @@ export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMile
   const getSourceRowById = useCallback((id) => (
     sourceRowsById.get(normalizeSvarId(id))
   ), [sourceRowsById]);
+  const editHandlers = useMemo(() => ({
+    onEditMilestone,
+    onEditDeliverable,
+  }), [onEditDeliverable, onEditMilestone]);
   const columns = useMemo(
-    () => buildColumnsWithMilestoneActions(svarData.columns, t, onEditMilestone, getSourceRowById),
-    [getSourceRowById, onEditMilestone, svarData.columns, t]
+    () => buildColumnsWithEntityActions(svarData.columns, t, editHandlers, getSourceRowById),
+    [editHandlers, getSourceRowById, svarData.columns, t]
   );
   const Theme = colorScheme === 'dark' ? WillowDark : Willow;
   const projectionKey = projectGantt?.projectCode || '';
@@ -173,6 +240,10 @@ export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMile
     });
   }, [loadDeliverableTasks, svarData.tasks, t]);
 
+  const handleTaskDoubleClick = useCallback((task) => {
+    dispatchEntityEdit(task, editHandlers, getSourceRowById);
+  }, [editHandlers, getSourceRowById]);
+
   return (
     <div className="zazz-gantt-shell" data-theme={colorScheme} data-testid="project-gantt">
       <Theme>
@@ -201,6 +272,10 @@ export function ProjectGantt({ projectGantt, loadDeliverableTasks, t, onEditMile
             <div
               className={`zazz-gantt-task ${data.zazzCssClass || ''}`}
               title={data.text}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                handleTaskDoubleClick(data);
+              }}
             >
               <span className="zazz-gantt-task-label">{data.text}</span>
             </div>

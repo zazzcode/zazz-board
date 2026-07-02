@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Container, Text, Button, Group, Table, ActionIcon, Menu, CopyButton, Tooltip, Badge } from '@mantine/core';
 import { IconArrowUp, IconArrowDown, IconEdit, IconTrash, IconCopy, IconCheck } from '@tabler/icons-react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useDeliverables } from '../hooks/useDeliverables.js';
 import { DeliverableModal } from '../components/DeliverableModal.jsx';
@@ -8,6 +9,9 @@ import { DeliverableModal } from '../components/DeliverableModal.jsx';
 export function DeliverableListPage({ selectedProject }) {
   const { t, translateDeliverableType, translateDeliverableStatus } = useTranslation();
   const { deliverables, loading, createDeliverable, updateDeliverable, deleteDeliverable } = useDeliverables(selectedProject);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { deliverableId } = useParams();
   
   const [sortBy, setSortBy] = useState('deliverableCode');
   const [sortDirection, setSortDirection] = useState('asc');
@@ -32,6 +36,15 @@ export function DeliverableListPage({ selectedProject }) {
     });
     return sorted;
   }, [deliverables, sortBy, sortDirection]);
+
+  const routeDeliverable = useMemo(() => (
+    deliverableId
+      ? deliverables.find((deliverable) => String(deliverable.id) === String(deliverableId))
+      : null
+  ), [deliverableId, deliverables]);
+
+  const modalDeliverable = routeDeliverable || editingDeliverable;
+  const editorOpened = modalOpened || Boolean(routeDeliverable);
 
   if (!selectedProject) {
     return <Container size="xl" py="xl"><Text>{t('common.loading')}</Text></Container>;
@@ -69,18 +82,29 @@ export function DeliverableListPage({ selectedProject }) {
   };
 
   const handleEditClick = (deliverable) => {
-    setEditingDeliverable(deliverable);
-    setModalOpened(true);
+    if (!selectedProject?.code) return;
+
+    const returnTo = `${location.pathname}${location.search}`;
+    navigate(`/projects/${encodeURIComponent(selectedProject.code)}/deliverables/${encodeURIComponent(deliverable.id)}`, {
+      state: { returnTo },
+    });
   };
 
   const handleModalClose = () => {
+    if (deliverableId && selectedProject?.code) {
+      const returnTo = location.state?.returnTo;
+      const projectPathPrefix = `/projects/${selectedProject.code}/`;
+      navigate(returnTo?.startsWith(projectPathPrefix) ? returnTo : `/projects/${selectedProject.code}/deliverables`);
+      return;
+    }
+
     setModalOpened(false);
     setEditingDeliverable(null);
   };
 
   const handleModalSubmit = async (data) => {
-    if (editingDeliverable) {
-      return await updateDeliverable(editingDeliverable.id, data);
+    if (modalDeliverable) {
+      return await updateDeliverable(modalDeliverable.id, data);
     }
     return await createDeliverable(data);
   };
@@ -134,12 +158,12 @@ export function DeliverableListPage({ selectedProject }) {
           </Table>
         </div>
       )}
-      {modalOpened && (
+      {editorOpened && (
         <DeliverableModal
-          opened={modalOpened}
+          opened={editorOpened}
           onClose={handleModalClose}
           onSubmit={handleModalSubmit}
-          deliverable={editingDeliverable}
+          deliverable={modalDeliverable}
         />
       )}
     </Container>

@@ -15,10 +15,10 @@
     a worktree / branch / PR may contain one deliverable, multiple deliverables, or a
     single-lane stack of branches. This template is for non-stacked specifications.
 
-  This deliverable specification is the implementation contract. There is no separate plan.
+  This deliverable specification is the implementation contract. There is no separate execution document.
 
   The specification is test/AC-driven:
-    define acceptance criteria and test plan before execution sequence.
+    define acceptance criteria and test strategy before execution sequence.
 
   The specification also defines the approved review shape before implementation:
     one PR, one milestone PR, sibling PRs, stacked PRs, or a large exception.
@@ -258,7 +258,7 @@ The agent must stop and surface to the Owner if any of these occur:
 
 ---
 
-## 7. Test Plan
+## 7. Test Strategy
 
 Test value rule: every automated test below must prove an AC, invariant, public
 contract, realistic edge case, regression, or named risk. Prefer compact matrices that
@@ -292,7 +292,7 @@ Manual verification:
 
 ## 8. TDD Entry Point + Prescriptive Execution Sequence
 
-The execution sequence is derived from §6 Acceptance Criteria and §7 Test Plan. Do not
+The execution sequence is derived from §6 Acceptance Criteria and §7 Test Strategy. Do not
 change the implementation contract by changing only this section; revise ACs/decisions
 first when the contract changes.
 
@@ -419,7 +419,7 @@ NON-NEGOTIABLE RULES
 ORDER OF WORK
 1. Read the specification, run log, required docs, standards, and code references.
 2. Resolve OQs.
-3. Review ACs (§6) and Test Plan (§7); start with the TDD entry point in §8.
+3. Review ACs (§6) and Test Strategy (§7); start with the TDD entry point in §8.
 4. Confirm the implementation still matches the approved review shape in §3.
 5. Execute the specification's phases.
 6. Run verification and complete the DoD (§9).
@@ -442,4 +442,37 @@ Only declare done after the verifier reports all-pass.
 
 ---
 
-*End of specification. Implementation proceeds from this specification and the run log; no separate plan is created.*
+## 13. Implementation Feedback Iterations
+
+<!--
+Optional append-only changelog section. Keep the greenlit specification body intact.
+Delete this section until accepted owner steering during implementation, human review,
+testing, QA/UAT, user, or PR-review feedback changes feature behavior, UX, API contract,
+or bug-fix scope within this deliverable's original context.
+
+Do not use this section for README cleanup, skill/process updates, PR-body edits,
+standards maintenance, pure refactors, test-only cleanup with no behavior-contract
+impact, or repository guidance changes unless that documentation is itself the
+deliverable's user-facing product capability.
+-->
+
+This append-only section records feature behavior, UX, API contract, and bug-fix changes
+made from owner steering during implementation or feedback during the human review and
+testing phase after the original specification was greenlit. The specification above
+remains the source of truth for the original implementation contract.
+
+### I-1 — {{ Short Behavior Name }}
+
+**Source.** {{ Owner steering, user feedback, PR review feedback, QA finding, implementation-discovered bug, date/context. }}
+
+**Context.** {{ What gap, bug, or refinement was discovered. }}
+
+**Improvement.** {{ What changed in product behavior, UX, API contract, or bug handling. }}
+
+**Boundary.** {{ What did not change, especially where the original specification contract remains intact. }}
+
+**Verification.** {{ Automated tests, manual check, live API/schema check, or review evidence. }}
+
+---
+
+*End of specification. Implementation proceeds from this specification and the run log; no separate execution document is created.*

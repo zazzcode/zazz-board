@@ -162,6 +162,7 @@
     "errorTitle": "No se pudo cargar la vista Gantt",
     "createMilestone": "Crear Hito",
     "editMilestone": "Editar Hito",
+    "editDeliverable": "Editar Entregable",
     "timelineLabel": "Medido por la escala del proyecto",
     "projectSettings": "Configuración de Gantt",
     "projectSettingsOwnerOnly": "Solo el líder del proyecto puede editar la configuración de Gantt",

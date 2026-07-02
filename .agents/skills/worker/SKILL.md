@@ -1,6 +1,6 @@
 ---
 name: worker
-description: Executes an approved deliverable PLAN by implementing code, following TDD, and keeping task, relation, status, and lock state synchronized with Zazz Board.
+description: Executes an approved deliverable SPEC as the implementation unit, using a lead agent and/or delegated subagents, following TDD, and keeping task, relation, status, and lock state synchronized with Zazz Board.
 ---
 
 # Worker Skill
@@ -11,8 +11,12 @@ Before you start, check whether this repo provides extra local guidance at `.age
 If that file exists, read it after this skill and treat it as friendly repo-specific extension guidance for how `worker` should be applied in this application.
 
 ## Mission
-Execute an approved deliverable PLAN from start to finish, including:
-- just-in-time task realization from plan steps
+Execute an approved deliverable SPEC from start to finish. A worker is the
+implementation unit: it may be one lead agent, delegated subagents, or both
+working together under the active model/harness.
+
+Execution includes:
+- just-in-time task realization from the specification's acceptance criteria and execution sequence
 - dependency relation realization
 - implementation with TDD
 - status lifecycle management
@@ -23,17 +27,17 @@ This role is implementation-first and orchestration-capable.
 
 Primary outputs:
 
-- implemented code that satisfies the approved SPEC and PLAN
+- implemented code that satisfies the approved SPEC
 - passing task-level verification evidence from the required TDD loop
 - truthful board state for tasks, relations, blockers, statuses, and locks
 
 ## Role Scope
-- Worker agent is the primary role with full board API interaction.
-- Spec-builder/planner activities may be orchestrated directly by the human Owner outside this skill.
+- Worker is the primary implementation role with full board API interaction.
+- Specification authoring and refinement may be orchestrated directly by the human Owner outside this skill.
 - When this skill is active, prioritize implementation execution and board truth synchronization.
 
 ## First Rule: Use Built-In Execution Optimizations
-If the active agent/model supports built-in execution optimizations (multi-agent teams, subagents, structured planning/task tools), you MUST use them.
+If the active agent/model supports built-in execution optimizations (multi-agent teams, subagents, structured task tools), you MUST use them.
 
 ---
 
@@ -69,7 +73,6 @@ Before execution, you MUST have:
 2. Deliverable code
 3. Deliverable ID (integer)
 4. Approved SPEC path
-5. Approved PLAN path
 
 If any required input is missing, stop and ask the Owner.
 
@@ -79,10 +82,10 @@ If any required input is missing, stop and ask the Owner.
 
 You MUST execute in this order:
 
-1. Read SPEC and PLAN fully.
-2. Build a step map from PLAN (`phaseStep` IDs, dependencies, parallel groups).
-3. Validate that the PLAN explicitly identifies parallelizable tasks/steps.
-   - If not explicit, pause and ask Owner/Planner for clarification before parallel execution.
+1. Read the SPEC fully.
+2. Build a step map from the SPEC's acceptance criteria, test strategy, execution sequence, task graph guidance, and dependency notes.
+3. Validate that the SPEC explicitly identifies parallelizable tasks/steps before parallel execution.
+   - If not explicit, serialize the work unless the Owner confirms a parallel decomposition.
 4. Compute the dependency-ready set.
 5. For each ready task you are about to execute, ensure its board task exists (create/reconcile just in time).
 6. Ensure all required `DEPENDS_ON` edges for that task exist before starting.
@@ -104,18 +107,18 @@ Do not implement tasks that violate dependency ordering.
 
 ## Just-In-Time Board Sync (Required)
 
-Do not preload all PLAN tasks onto the board at once.
+Do not preload all SPEC-derived tasks onto the board at once.
 
 Execution model:
-1. Add tasks as the plan is executed.
+1. Add tasks as the specification is executed.
 2. Before starting a task, ensure it exists on the board and is dependency-ready.
 3. Maintain relations and statuses in real time while implementation proceeds.
    - Graph edges are part of board truth. As soon as a dependent task exists, its required `DEPENDS_ON` relations must also exist.
 4. When scope changes, append new tasks to the graph instead of rewriting completed history.
-5. If PLAN wording changes mid-execution, do not bulk rewrite the board; only add/update what is needed for the next executable work.
+5. If SPEC wording changes mid-execution, do not bulk rewrite the board; only add/update what is needed for the next executable work.
 6. Blocking is a task property (`isBlocked` + `blockedReason`), not a workflow status column.
 
-This keeps board state aligned with actual execution and avoids plan/backlog drift.
+This keeps board state aligned with actual execution and avoids specification/backlog drift.
 
 ---
 
@@ -194,7 +197,7 @@ If subagents/teams are supported, parallelization is required.
 ### Subagent contract (required when available)
 When using subagents/teams, the parent worker must assign explicit ownership and integration rules:
 1. Assign exactly one executable task per subagent.
-2. Assign an explicit owned file set per subagent (from PLAN file assignments).
+2. Assign an explicit owned file set per subagent from the SPEC scope, execution sequence, and acceptance criteria.
 3. Require each subagent to edit only its owned files.
 4. Require each subagent to report:
    - files changed
@@ -208,7 +211,7 @@ When using subagents/teams, the parent worker must assign explicit ownership and
 
 ### Parallelization algorithm
 1. Compute the ready set (dependencies satisfied).
-2. Build each task's ownership set from PLAN file assignments (or the smallest defensible file set if PLAN omits explicit files).
+2. Build each task's ownership set from the SPEC file list, execution sequence, and nearby code ownership evidence.
 3. Select only tasks whose ownership sets are pairwise disjoint.
 4. If two ready tasks overlap on any file, serialize them (do not run in parallel).
 5. Spawn subagents for as many safe tasks as possible (default max parallel workers: 3 unless Owner specifies otherwise).
@@ -252,7 +255,7 @@ You MUST ask the Owner when:
 - instructions are unclear
 - requirements are underdefined
 - constraints conflict
-- multiple materially different implementations are possible and SPEC/PLAN does not decide
+- multiple materially different implementations are possible and the SPEC does not decide
 
 When escalating, include:
 1. exact ambiguity

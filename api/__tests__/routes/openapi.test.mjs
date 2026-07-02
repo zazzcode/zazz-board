@@ -48,9 +48,15 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.name).toBeDefined();
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.specFilepath).toBeDefined();
     expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.planFilepath).toBeDefined();
+    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.plannedStartAt?.format).toBe('date-time');
+    expect(path.post.requestBody?.content?.['application/json']?.schema?.properties?.plannedCompletionAt?.format).toBe('date-time');
     const responseSchema = path.post.responses?.['201']?.content?.['application/json']?.schema;
     expect(responseSchema?.properties?.projectCode).toBeDefined();
     expect(responseSchema?.properties?.deliverableCode).toBeDefined();
+    expect(responseSchema?.properties?.plannedStartAt?.format).toBe('date-time');
+    expect(responseSchema?.properties?.plannedCompletionAt?.format).toBe('date-time');
+    expect(responseSchema?.properties?.actualStartAt?.format).toBe('date-time');
+    expect(responseSchema?.properties?.actualCompletionAt?.format).toBe('date-time');
     expect(responseSchema?.properties?.code).toBeUndefined();
   });
 
@@ -73,6 +79,10 @@ describe('OpenAPI / Swagger documentation', () => {
     expect(bodySchema?.properties?.specFilepath).toBeDefined();
     expect(bodySchema?.properties?.planFilepath).toBeDefined();
     expect(bodySchema?.properties?.gitWorktree).toBeDefined();
+    expect(bodySchema?.properties?.plannedStartAt?.format).toBe('date-time');
+    expect(bodySchema?.properties?.plannedCompletionAt?.format).toBe('date-time');
+    expect(bodySchema?.properties?.actualStartAt).toBeUndefined();
+    expect(bodySchema?.properties?.actualCompletionAt).toBeUndefined();
   });
 
   it('should document core agent operations: change deliverable status', async () => {

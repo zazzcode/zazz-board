@@ -162,6 +162,7 @@
     "errorTitle": "Impossible de charger la vue Gantt",
     "createMilestone": "Créer un Jalon",
     "editMilestone": "Modifier le Jalon",
+    "editDeliverable": "Modifier le Livrable",
     "timelineLabel": "Mesuré selon le calendrier du projet",
     "projectSettings": "Paramètres Gantt",
     "projectSettingsOwnerOnly": "Seul le responsable du projet peut modifier les paramètres Gantt",

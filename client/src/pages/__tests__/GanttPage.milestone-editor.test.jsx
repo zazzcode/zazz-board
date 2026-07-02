@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MantineProvider } from '@mantine/core';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { GanttPage } from '../GanttPage.jsx';
 
 let mockShowDefaultMilestone = true;
 const mockRefreshGantt = vi.fn();
+const mockRefreshDeliverables = vi.fn();
+const mockUpdateDeliverable = vi.fn();
 
 function createGanttData(rows) {
   return {
@@ -97,8 +100,28 @@ vi.mock('../../hooks/useProjectGantt.js', () => ({
   }),
 }));
 
+vi.mock('../../hooks/useDeliverables.js', () => ({
+  useDeliverables: () => ({
+    deliverables: [
+      {
+        id: 101,
+        name: 'First deliverable',
+        type: 'FEATURE',
+        description: 'Full deliverable record',
+        specFilepath: '.zazz/specifications/first.md',
+        planFilepath: '',
+        gitWorktree: 'mw-proj-milestones-gantt-db-api',
+        gitBranch: 'mw-proj-milestones-gantt-db-api',
+        pullRequestUrl: '',
+      },
+    ],
+    updateDeliverable: mockUpdateDeliverable,
+    refreshDeliverables: mockRefreshDeliverables,
+  }),
+}));
+
 vi.mock('../../components/gantt/ProjectGantt.jsx', () => ({
-  ProjectGantt: ({ projectGantt, onEditMilestone }) => (
+  ProjectGantt: ({ projectGantt, onEditMilestone, onEditDeliverable }) => (
     <>
       <div data-testid="visible-row-ids">
         {projectGantt.rows.map((row) => row.id).join('|')}
@@ -124,14 +147,28 @@ vi.mock('../../components/gantt/ProjectGantt.jsx', () => ({
       >
         Open Default
       </button>
+      <button
+        type="button"
+        onClick={() => onEditDeliverable(projectGantt.rows.find((row) => row.id === 'deliverable:101'))}
+      >
+        Open First Deliverable
+      </button>
     </>
   ),
 }));
 
+function CurrentLocation() {
+  const location = useLocation();
+  return <div data-testid="current-location">{location.pathname}{location.search}</div>;
+}
+
 function renderGanttPage() {
   return render(
     <MantineProvider>
-      <GanttPage selectedProject={{ code: 'ZAZZ', title: 'Zazz Board' }} />
+      <MemoryRouter initialEntries={['/projects/ZAZZ/gantt']}>
+        <GanttPage selectedProject={{ code: 'ZAZZ', title: 'Zazz Board' }} />
+        <CurrentLocation />
+      </MemoryRouter>
     </MantineProvider>
   );
 }
@@ -140,7 +177,11 @@ describe('GanttPage milestone editor', () => {
   beforeEach(() => {
     mockShowDefaultMilestone = true;
     mockRefreshGantt.mockReset();
+    mockRefreshDeliverables.mockReset();
+    mockUpdateDeliverable.mockReset();
     mockRefreshGantt.mockResolvedValue(createGanttData(initialRows));
+    mockRefreshDeliverables.mockResolvedValue();
+    mockUpdateDeliverable.mockImplementation(async (id, updates) => ({ id, ...updates }));
     localStorage.setItem('TB_TOKEN', 'test-token');
     window.fetch = vi.fn(async (url, options = {}) => {
       if (String(url).endsWith('/gantt/settings') && options.method === 'PUT') {
@@ -285,6 +326,19 @@ describe('GanttPage milestone editor', () => {
         })
       );
       expect(mockRefreshGantt).toHaveBeenCalled();
+    });
+  });
+
+  it('navigates from a Gantt deliverable row to the canonical deliverable editor route', async () => {
+    const user = userEvent.setup();
+    renderGanttPage();
+
+    await user.click(screen.getByRole('button', { name: 'Open First Deliverable' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('current-location')).toHaveTextContent(
+        '/projects/ZAZZ/deliverables/101'
+      );
     });
   });
 });

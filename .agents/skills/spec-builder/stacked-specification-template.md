@@ -122,7 +122,7 @@ Owner sign-off before continuing.
 - **AC1** — {{ testable criterion }}. Verified by: {{ test/command/evidence }}.
 - **AC2** — {{ testable criterion }}. Verified by: {{ test/command/evidence }}.
 
-### Test Plan
+### Test Strategy
 
 Test value rule: every automated test must prove an AC, invariant, public contract,
 realistic edge case, regression, or named risk. Prefer compact matrices that cover
@@ -166,7 +166,7 @@ pass. Material changes require Owner sign-off and specification revision.
   and `git diff origin/{{ integration-branch }}...HEAD -- {{ lower owned paths }}` after
   the lower PR lands.
 
-### Test Plan
+### Test Strategy
 
 Test value rule: every automated test must prove an AC, invariant, public contract,
 realistic edge case, regression, or named risk. Prefer compact matrices that cover
@@ -252,5 +252,39 @@ author-side automated review, address feedback, then mark ready for formal revie
 Do not merge directly to the integration branch. Every PR in the stack requires human
 sign-off before merge.
 ```
+
+---
+
+## 9. Implementation Feedback Iterations
+
+<!--
+Optional append-only changelog section. Keep the greenlit specification body intact.
+Delete this section until accepted owner steering during implementation, human review,
+testing, QA/UAT, user, or PR-review feedback changes feature behavior, UX, API contract,
+branch contract, or bug-fix scope within this stacked deliverable's original context.
+
+Do not use this section for README cleanup, skill/process updates, PR-body edits,
+standards maintenance, pure refactors, test-only cleanup with no behavior-contract
+impact, or repository guidance changes unless that documentation is itself the
+deliverable's user-facing product capability.
+-->
+
+This append-only section records feature behavior, UX, API contract, branch-contract,
+and bug-fix changes made from owner steering during implementation or feedback during
+the human review and testing phase after the original specification was greenlit. The
+specification above remains the source of truth for the original implementation
+contract.
+
+### I-1 — {{ Short Behavior Name }}
+
+**Source.** {{ Owner steering, user feedback, PR review feedback, QA finding, implementation-discovered bug, date/context. }}
+
+**Context.** {{ What gap, bug, or refinement was discovered. }}
+
+**Improvement.** {{ What changed in product behavior, UX, API contract, branch contract, or bug handling. }}
+
+**Boundary.** {{ What did not change, especially where the original specification contract remains intact. }}
+
+**Verification.** {{ Automated tests, manual check, live API/schema check, or review evidence. }}
 
 *End of stacked deliverable specification.*

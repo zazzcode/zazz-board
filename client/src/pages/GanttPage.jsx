@@ -18,6 +18,7 @@ import {
   useMantineColorScheme,
 } from '@mantine/core';
 import { IconArrowDown, IconArrowUp, IconPlus, IconSettings, IconTrash } from '@tabler/icons-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation.js';
 import { useProjectEvents } from '../hooks/useProjectEvents.js';
 import { useProjectGantt } from '../hooks/useProjectGantt.js';
@@ -132,6 +133,8 @@ function getVisibleGanttData(ganttData, rows) {
 export function GanttPage({ selectedProject }) {
   const { t } = useTranslation();
   const { colorScheme } = useMantineColorScheme();
+  const navigate = useNavigate();
+  const location = useLocation();
   const isDarkTheme = colorScheme === 'dark';
   const toolbarBorderColor = isDarkTheme ? 'var(--mantine-color-dark-4)' : 'var(--mantine-color-gray-3)';
   const toolbarBackground = isDarkTheme ? 'var(--mantine-color-dark-8)' : 'var(--mantine-color-gray-0)';
@@ -234,6 +237,17 @@ export function GanttPage({ selectedProject }) {
     setMilestoneMutationError(null);
     setMilestoneModalOpened(true);
   }, [getMilestoneName, workingRows]);
+
+  const openEditDeliverable = useCallback((deliverableRow) => {
+    const sourceDeliverable = getSourceGanttRow(deliverableRow, workingRows);
+    const deliverableId = String(sourceDeliverable?.deliverableId || normalizeGanttEntityId(sourceDeliverable?.id).replace(/^deliverable:/, ''));
+    if (!deliverableId || !projectCode) return;
+
+    const returnTo = `${location.pathname}${location.search}`;
+    navigate(`/projects/${encodeURIComponent(projectCode)}/deliverables/${encodeURIComponent(deliverableId)}`, {
+      state: { returnTo },
+    });
+  }, [location.pathname, location.search, navigate, projectCode, workingRows]);
 
   const closeMilestoneModal = useCallback(() => {
     setMilestoneModalOpened(false);
@@ -542,6 +556,7 @@ export function GanttPage({ selectedProject }) {
         loadDeliverableTasks={loadDeliverableTasks}
         t={t}
         onEditMilestone={openEditMilestone}
+        onEditDeliverable={openEditDeliverable}
       />
 
       <Modal

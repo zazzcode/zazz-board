@@ -56,7 +56,7 @@ before drafting implementation guidance.
 
 - One specification file or external specification record for the deliverable.
 - A run-log path/location referenced by the specification when a run log is used.
-- No separate plan file.
+- No separate execution file.
 
 For milestone branches, repeat this workflow once per deliverable/specification while preserving
 one shared run log and one intended PR review artifact.

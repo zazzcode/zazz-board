@@ -1,20 +1,47 @@
-import { Modal, Stack, TextInput, Textarea, Select, Button, Group } from '@mantine/core';
+import { Modal, Stack, TextInput, Textarea, Select, Button, Group, Grid, Divider } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '../hooks/useTranslation.js';
+
+const emptyFormData = {
+  name: '',
+  type: 'FEATURE',
+  description: '',
+  specFilepath: '',
+  planFilepath: '',
+  gitWorktree: '',
+  gitBranch: '',
+  pullRequestUrl: '',
+  plannedStartAt: '',
+  plannedCompletionAt: '',
+  actualStartAt: '',
+  actualCompletionAt: ''
+};
+
+function toDateInputValue(value) {
+  if (!value) return '';
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function toDateTimePayload(value) {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return `${value}T00:00:00.000Z`;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
 
 export function DeliverableModal({ opened, onClose, onSubmit, deliverable }) {
   const { t, translateDeliverableType } = useTranslation();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'FEATURE',
-    description: '',
-    specFilepath: '',
-    planFilepath: '',
-    gitWorktree: '',
-    gitBranch: '',
-    pullRequestUrl: ''
-  });
+  const [formData, setFormData] = useState(emptyFormData);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,19 +55,14 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable }) {
         planFilepath: deliverable.planFilepath || '',
         gitWorktree: deliverable.gitWorktree || '',
         gitBranch: deliverable.gitBranch || '',
-        pullRequestUrl: deliverable.pullRequestUrl || ''
+        pullRequestUrl: deliverable.pullRequestUrl || '',
+        plannedStartAt: toDateInputValue(deliverable.plannedStartAt),
+        plannedCompletionAt: toDateInputValue(deliverable.plannedCompletionAt),
+        actualStartAt: toDateInputValue(deliverable.actualStartAt),
+        actualCompletionAt: toDateInputValue(deliverable.actualCompletionAt)
       });
     } else {
-      setFormData({
-        name: '',
-        type: 'FEATURE',
-        description: '',
-        specFilepath: '',
-        planFilepath: '',
-        gitWorktree: '',
-        gitBranch: '',
-        pullRequestUrl: ''
-      });
+      setFormData(emptyFormData);
     }
   }, [deliverable, opened]);
 
@@ -54,7 +76,12 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable }) {
 
     setIsSubmitting(true);
     try {
-      const savedDeliverable = await onSubmit(formData);
+      const { actualStartAt: _actualStartAt, actualCompletionAt: _actualCompletionAt, ...editableFormData } = formData;
+      const savedDeliverable = await onSubmit({
+        ...editableFormData,
+        plannedStartAt: toDateTimePayload(editableFormData.plannedStartAt),
+        plannedCompletionAt: toDateTimePayload(editableFormData.plannedCompletionAt)
+      });
       if (savedDeliverable) {
         onClose();
       } else {
@@ -142,6 +169,49 @@ export function DeliverableModal({ opened, onClose, onSubmit, deliverable }) {
             value={formData.pullRequestUrl}
             onChange={(e) => setFormData({ ...formData, pullRequestUrl: e.target.value })}
           />
+
+          <Divider label={t('deliverables.schedule')} labelPosition="left" />
+
+          <Grid gutter="md">
+            <Grid.Col span={{ base: 12, sm: 6 }}>
+              <DateInput
+                label={t('deliverables.plannedStartAt')}
+                placeholder="YYYY-MM-DD"
+                value={formData.plannedStartAt}
+                onChange={(value) => setFormData({ ...formData, plannedStartAt: toDateInputValue(value) })}
+                valueFormat="YYYY-MM-DD"
+                clearable
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 6 }}>
+              <DateInput
+                label={t('deliverables.plannedCompletionAt')}
+                placeholder="YYYY-MM-DD"
+                value={formData.plannedCompletionAt}
+                onChange={(value) => setFormData({ ...formData, plannedCompletionAt: toDateInputValue(value) })}
+                valueFormat="YYYY-MM-DD"
+                clearable
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 6 }}>
+              <DateInput
+                label={t('deliverables.actualStartAt')}
+                placeholder="YYYY-MM-DD"
+                value={formData.actualStartAt}
+                valueFormat="YYYY-MM-DD"
+                readOnly
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 6 }}>
+              <DateInput
+                label={t('deliverables.actualCompletionAt')}
+                placeholder="YYYY-MM-DD"
+                value={formData.actualCompletionAt}
+                valueFormat="YYYY-MM-DD"
+                readOnly
+              />
+            </Grid.Col>
+          </Grid>
 
           <Group justify="flex-end" mt="md">
             <Button variant="subtle" onClick={onClose}>

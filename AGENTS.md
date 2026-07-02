@@ -71,7 +71,7 @@ Placeholder stack standards (to be expanded): [http-layer.md](.zazz/standards/ht
 
 ### Dogfooding context
 
-This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. Framework agents (planner, coordinator, worker, qa) create deliverables and tasks via the API—tracking work on this repo. The recursion is intentional.
+This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. For implementation methodology, load the repo-local `worker` and `spec-driven-development` skills; `AGENTS.md` only points agents to the right operating surface. The recursion is intentional.
 
 ---
 
@@ -80,14 +80,11 @@ This repo **dogfoods** the Zazz Framework: Zazz Board is built with Zazz Board. 
 Repo-local agent skills live in `.agents/skills/`. Each skill declares its own `name` and `description` in `SKILL.md`;
 use that metadata as the source of truth for when the skill applies.
 
-Most skills are vendored from [zazz-skills](https://github.com/zazzcode/zazz-skills). They may be customized locally,
-and new local skills may be added when this repo needs project-specific behavior. Refresh vendored skills with
-`./scripts/sync-skills-from-zazz-skills.sh` (see [README §Updating skills](./README.md#updating-skills-from-zazz-skills)).
+Many skills started from [zazz-skills](https://github.com/zazzcode/zazz-skills), but this repo's checked-in skill files
+are curated locally and may diverge for project-specific behavior. Compare upstream files manually when useful; do not
+blindly refresh local skills from upstream. See [README §Curating skills](./README.md#curating-skills-from-zazz-skills).
 
-Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use PostgreSQL), `jira-api` (we use Zazz Board).
-See `IGNORE_SKILLS` in `scripts/sync-skills-from-zazz-skills.sh`.
-
-**Rules** (`.cursor/rules/`): Always-applied for Cursor (e.g. worktree workflow).
+Ignored upstream skills include `sqlcmd` (SQL Server; we use PostgreSQL) and `jira-api` (we use Zazz Board).
 
 ---
 
@@ -109,7 +106,6 @@ Example: `.zazz/ephemeral/gantt-ui-handoff-2026-07-02-132600.md`.
 ```
 ├── .agents/skills/     # Zazz agent skills
 ├── .zazz/              # project.md, standards/, deliverables/, docs/ (guides), execution/ (gitignored)
-├── .cursor/rules/      # Cursor always-apply (worktree)
 ├── api/                # Fastify, routes/, services/, lib/db/schema.js, __tests__/
 ├── client/             # React, Vite, Mantine
 ├── docker-compose.yml   # Postgres 5433

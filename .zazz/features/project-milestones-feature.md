@@ -79,6 +79,8 @@ The M1 work now adds or is adding:
 - lazy task expansion under deliverable rows
 - milestone-computed completion styling
 - database-backed Gantt status and dependency styling metadata
+- row and bar activation affordances that open milestone and deliverable edit/detail
+  modals from the Gantt view
 
 ## Source-Of-Truth Model
 
@@ -193,9 +195,10 @@ preferred reading and execution sequence.
 
 Deliverables carry the Gantt schedule values that place their bars on the timeline:
 `planned_start_at`, `planned_completion_at`, `actual_start_at`, and
-`actual_completion_at`. The API may expose those values through Gantt-facing
-`startDate`/`endDate` fields, but the database fields follow the existing datetime
-`*_at` naming convention.
+`actual_completion_at`. The shared deliverable editor exposes planned dates as editable
+typed date pickers and actual dates as read-only execution facts. The API may expose
+those values through Gantt-facing `startDate`/`endDate` fields, but the database fields
+follow the existing datetime `*_at` naming convention.
 
 Deliverables may also depend on other deliverables. Those dependencies are planning data
 for Gantt sequencing, separate from task-level execution relations.
@@ -220,6 +223,15 @@ project-planning view over milestones and deliverables. Task-focused detail rema
 task Kanban and task graph views unless a later feature deliberately adds task scheduling
 to the Gantt. The view uses SVAR React Gantt and keeps SVAR-specific row/link details
 behind a Zazz hook or adapter.
+
+Milestone and deliverable rows are inspection/edit entry points. A user can open the
+milestone editor from a milestone row action, by double-clicking the milestone name in
+the grid, or by double-clicking the milestone bar. A user can open the shared
+deliverable editor at `/projects/:code/deliverables/:deliverableId` from a deliverable
+row action, by double-clicking the deliverable name in the grid, or by double-clicking
+the deliverable bar. That same deliverable editor is used from deliverable list and
+deliverable Kanban views. These activation paths inspect or edit the underlying project
+records; they do not make the Gantt chart itself a direct drag/resize editing surface.
 
 ### Gantt Contract
 
@@ -491,6 +503,8 @@ has a proven JSON contract for persistent implementation.
   endpoint.
 - The Gantt opens focused near the current date and shows a faint grey dashed current
   date line while preserving manual horizontal scrolling.
+- Milestone and deliverable row actions and double-click interactions open the existing
+  milestone editor and the shared routed deliverable editor.
 - M1 D1 implements a real Fastify `GET /projects/:code/gantt` route backed by fixed
   mock data under an API mock-data directory.
 - M1 D1 documents the JSON the UI needs, including rows, links, status/completion fields,
