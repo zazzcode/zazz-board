@@ -95,6 +95,19 @@ Ignored upstream skills (not vendored here): `sqlcmd` (SQL Server; we use Postgr
 
 ---
 
+## Handoff Documents
+
+Handoff documents are platform-neutral working notes for any agent or developer, not Codex-specific artifacts.
+
+- Store temporary handoff documents under `.zazz/ephemeral/` unless the user explicitly asks for a tracked project document.
+- Name every handoff document with a timestamp down to seconds so ordering is obvious: `<topic>-handoff-YYYY-MM-DD-HHMMSS.md`.
+- Use local time for the timestamp unless the user requests another timezone.
+- Do not commit handoff documents from `.zazz/ephemeral/`; the directory is intentionally ignored except for its README.
+
+Example: `.zazz/ephemeral/gantt-ui-handoff-2026-07-02-132600.md`.
+
+---
+
 ## Repo layout
 
 ```
