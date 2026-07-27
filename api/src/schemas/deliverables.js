@@ -4,11 +4,17 @@
 
 import { taskResponseSchema, deliverableResponseSchema } from './common.js';
 
+const errorResponse = {
+  type: 'object',
+  properties: { error: { type: 'string' } },
+  additionalProperties: true,
+};
+
 export const deliverableSchemas = {
   getProjectDeliverables: {
     tags: ['deliverables'],
     summary: 'List deliverables',
-    description: 'Returns deliverables for a project. Filter by status (e.g. IN_PROGRESS) or type (e.g. FEATURE) via query params.',
+    description: 'Returns deliverables for a project. Filter by status (e.g. IN_PROGRESS) or type (e.g. FEATURE) via query params. Unknown project codes return 404 (not an empty list).',
     params: {
       type: 'object',
       required: ['projectCode'],
@@ -26,7 +32,8 @@ export const deliverableSchemas = {
         description: 'List of deliverables',
         type: 'array',
         items: deliverableResponseSchema
-      }
+      },
+      404: errorResponse
     }
   },
 
