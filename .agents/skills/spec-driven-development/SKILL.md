@@ -1,6 +1,13 @@
 ---
 name: spec-driven-development
-description: Apply or explain the end-to-end spec-driven development lifecycle: creating and greenlighting specs, implementing through an AC/TDD loop, owner steering during implementation, run logs, Implementation Feedback Iterations, automated review/QA, PR feedback, and final human sign-off. Use when the user asks about SDD methodology, how spec/run-log/changelog artifacts relate, when to update a greenlit spec, or how agents, subagents, owners, QA, and reviewers should coordinate around an approved specification.
+description: >-
+  Apply or explain the end-to-end spec-driven development lifecycle: creating and
+  greenlighting specs, implementing through an AC/TDD loop, owner steering during
+  implementation, run logs, Implementation Feedback Iterations, automated review/QA,
+  PR feedback, and final human sign-off. Use when the user asks about SDD methodology,
+  how spec/run-log/changelog artifacts relate, when to update a greenlit spec, or how
+  agents, subagents, owners, QA, and reviewers should coordinate around an approved
+  specification.
 ---
 
 # Spec-Driven Development
