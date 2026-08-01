@@ -32,6 +32,14 @@ describe('Deliverables API', () => {
     expect(response.every(d => d.projectId === 1)).toBe(true);
   });
 
+  it('should return 404 for a non-existent project code instead of an empty list', async () => {
+    await spec()
+      .get('/projects/NOPE/deliverables')
+      .withHeaders('TB_TOKEN', VALID_TOKEN)
+      .expectStatus(404)
+      .expectJsonLike({ error: 'Project not found' });
+  });
+
   it('should create a deliverable for a project', async () => {
     const response = await spec()
       .post('/projects/ZAZZ/deliverables')
