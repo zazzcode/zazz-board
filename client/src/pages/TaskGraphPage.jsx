@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { Container, Text, Loader, Center, Stack, Alert } from '@mantine/core';
+import { Container, Text, Loader, Center, Stack, Alert, useMantineColorScheme } from '@mantine/core';
 import {
   ReactFlow,
   Background,
@@ -29,6 +29,8 @@ const edgeTypes = {
 
 function TaskGraphContent({ selectedProject, selectedDeliverableId }) {
   const { t } = useTranslation();
+  const { colorScheme } = useMantineColorScheme();
+  const isDarkTheme = colorScheme === 'dark';
   const projectCode = selectedProject?.code;
 
   // Detail panels
@@ -36,6 +38,26 @@ function TaskGraphContent({ selectedProject, selectedDeliverableId }) {
 
   const { graphData, loading, error, refreshGraph } = useTaskGraph(projectCode, selectedDeliverableId);
   const refreshTimerRef = useRef(null);
+
+  const graphChrome = useMemo(() => (
+    isDarkTheme
+      ? {
+          canvasBackground: '#1a1b1e',
+          dotsColor: '#2c2e33',
+          controlsButton: { backgroundColor: '#25262b', color: '#c1c2c5', borderColor: '#3a3f47' },
+          minimapBackground: '#1a1b1e',
+          minimapBorder: '#3a3f47',
+          minimapMask: 'rgba(0, 0, 0, 0.7)',
+        }
+      : {
+          canvasBackground: 'var(--mantine-color-gray-0)',
+          dotsColor: 'var(--mantine-color-gray-3)',
+          controlsButton: { backgroundColor: '#ffffff', color: '#495057', borderColor: 'var(--mantine-color-gray-3)' },
+          minimapBackground: '#ffffff',
+          minimapBorder: 'var(--mantine-color-gray-3)',
+          minimapMask: 'rgba(0, 0, 0, 0.08)',
+        }
+  ), [isDarkTheme]);
 
   const scheduleGraphRefresh = useCallback(() => {
     if (refreshTimerRef.current) return;
@@ -193,7 +215,7 @@ function TaskGraphContent({ selectedProject, selectedDeliverableId }) {
           </Stack>
         </Center>
       ) : (
-        <div style={{ width: '100%', height: 'calc(100vh - 80px)', background: '#1a1b1e' }}>
+        <div style={{ width: '100%', height: 'calc(100vh - 80px)', background: graphChrome.canvasBackground }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -206,17 +228,29 @@ function TaskGraphContent({ selectedProject, selectedDeliverableId }) {
             maxZoom={2}
             proOptions={{ hideAttribution: true }}
             defaultEdgeOptions={{ type: 'default', animated: true }}
+            colorMode={isDarkTheme ? 'dark' : 'light'}
           >
-            <Background color="#2c2e33" gap={20} size={1} variant="dots" />
-            <Controls style={{ button: { backgroundColor: '#25262b', color: '#c1c2c5' } }} />
+            <Background color={graphChrome.dotsColor} gap={20} size={1} variant="dots" />
+            <Controls
+              style={{
+                button: {
+                  backgroundColor: graphChrome.controlsButton.backgroundColor,
+                  color: graphChrome.controlsButton.color,
+                  borderBottom: `1px solid ${graphChrome.controlsButton.borderColor}`,
+                },
+              }}
+            />
             <MiniMap
               nodeColor={(node) => {
                 if (node.type === 'syncPointNode') return '#868e96';
                 if (node.data?.isBlocked) return '#fab005';
                 return '#228be6';
               }}
-              maskColor="rgba(0, 0, 0, 0.7)"
-              style={{ backgroundColor: '#1a1b1e', border: '1px solid #3a3f47' }}
+              maskColor={graphChrome.minimapMask}
+              style={{
+                backgroundColor: graphChrome.minimapBackground,
+                border: `1px solid ${graphChrome.minimapBorder}`,
+              }}
             />
           </ReactFlow>
         </div>
