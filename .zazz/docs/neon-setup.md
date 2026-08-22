@@ -4,8 +4,10 @@ Purpose: initial setup for running zazz-board on Neon — serverless
 Postgres plus S3-compatible Object Storage for attachments — written for
 two audiences at once: a human following the steps, and an agent
 executing them on a user's behalf. Facts and behavior live in
-`neon-db-reference.md`; day-to-day operational commands will live in the
-`neon` agent skill.
+`neon-db-reference.md`; day-to-day operational commands live in the
+repo-curated `neon-zazz` agent skill (`.agents/skills/neon-zazz/`), with
+Neon's official `neon` / `neon-postgres` skills vendored alongside as
+platform reference.
 
 Status: the account-side configuration in this guide is complete and
 valid. The application code that reads `STORAGE_BACKEND`,

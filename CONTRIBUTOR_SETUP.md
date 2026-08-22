@@ -139,7 +139,7 @@ The app can run on [Neon](https://neon.tech) (serverless Postgres + S3-compatibl
 If you want to develop against Neon or work on the Neon integration:
 
 - Full setup walkthrough (project, database, bucket, credentials, `api/.env` template): [`.zazz/docs/neon-setup.md`](./.zazz/docs/neon-setup.md). Neon facts and traps live in [`.zazz/docs/neon-db-reference.md`](./.zazz/docs/neon-db-reference.md).
-- Agents (or humans driving the Neon CLI): the repo-local **`neon`** skill at `.agents/skills/neon/` covers CLI patterns, safe defaults, and endpoint selection (pooled vs direct).
+- Agents (or humans driving the Neon CLI): the repo-curated **`neon-zazz`** skill at `.agents/skills/neon-zazz/` covers this repo's CLI patterns, safe defaults, and endpoint selection (pooled vs direct). Neon's official **`neon`** and **`neon-postgres`** skills are vendored alongside (`.agents/skills/`) as platform reference.
 - Contributors using AI assistants may also wire the optional Neon MCP server — see the "For contributors: Neon MCP server (optional)" section of the setup guide.
 - Guardrails to know: `db:push` automatically targets the direct (`DATABASE_URL_UNPOOLED`) endpoint when set; seeding a remote database requires `ALLOW_REMOTE_SEED=true`; `db:reset` refuses non-local database hosts outright.
 - Automated tests always run against the local Docker test DB (`zazz_board_test`) — the api test scripts pin `STORAGE_BACKEND=local` so the suite stays hermetic regardless of your active env block.
