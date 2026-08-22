@@ -53,19 +53,14 @@ N/A — first specification in this effort.
 
 ### 1.d Standards
 
-Per `.zazz/standards/index.yaml`, the following standards apply:
-
-| Standard | What it governs here |
-| --- | --- |
-| `.zazz/standards/system-architecture.md` | Layering; §"Optional cloud deployment" pre-authorizes `STORAGE_BACKEND` routing to object storage |
-| `.zazz/standards/data-architecture.md` | Schema-first, pre-v1 push workflow (no migration files) |
-| `.zazz/standards/data-layer.md` | All DB access through `databaseService`; routes never import the Drizzle `db` |
-| `.zazz/standards/service-layer.md` | New services in `api/src/services/`; camelCase marshalling |
-| `.zazz/standards/testing.md` | Real `zazz_board_test` DB for DB tests; S3/image retrieval mocking is pre-authorized |
-
-**Verification step before writing code:** rerun the standards lookup against
-the §3 file list. If an applicable standard is missing from this table, stop
-and surface it to the Owner.
+This specification deliberately does not prescribe a standards list.
+Before writing code, read `.zazz/standards/index.yaml` and load only the
+standards whose `applies_to` matches the §3 file set — the index is the
+methodology's selection mechanism and the implementer owns the lookup.
+Every sub-agent dispatched during this effort (including the verifier)
+repeats the same lookup before acting. If a selected standard conflicts
+with anything in this specification, halt and surface it to the Owner
+instead of choosing a side.
 
 ### 1.e Existing Code References
 
@@ -350,7 +345,9 @@ deviations, manual evidence paths, verifier report.
 2. Same automated test fails 3 iterations in a row.
 3. Lint/format failure not fixed by the obvious fix in 2 iterations.
 4. `git diff main --stat` shows a file outside §3.
-5. A standard not in §1.d matches the file list via the index lookup.
+5. A standard selected via the `.zazz/standards/index.yaml` lookup
+   conflicts with this specification or cannot be followed — surface it
+   to the Owner rather than choosing a side.
 6. A needed deviation changes scope, public contract, ACs, or an invariant.
 7. Any command would run destructive SQL or `db:reset` against a non-local
    database — stop; this is never sanctioned remotely.
@@ -414,6 +411,9 @@ Reference data sources:
 
 - The 1x1 PNG base64 fixture in `__tests__/routes/image-scoping.test.mjs`
   — reused for dispatch tests; no new fixtures.
+- The canonical seed snapshot contains zero `image_metadata` and
+  `image_data` rows — attachment coverage comes from tests and the
+  Phase 4 live upload, never from seeding.
 - A mocked S3 client at the `objectStorageService` boundary — testing.md
   pre-authorizes mocking this path; nothing below that boundary is mocked.
 - Dispatch tests isolate `STORAGE_BACKEND` (save/restore around neon
@@ -587,29 +587,41 @@ resolve open questions before writing code.
 You are starting fresh in the worktree at
 /Users/michael/Dev/zazzcode/zazz-board/mw-neon-db-integration.
 Your task is to implement Neon backend support (Neon Postgres + Neon
-Object Storage).
+Object Storage), unattended, through completion including tests.
 
 Specification: .zazz/specifications/neon-db-integration.md
 Shared run log: .zazz/execution/neon-db-integration-run-log.md
 
-Read the specification end to end before doing anything else. Then read the
-run log in full, and the required reading in spec §1 (especially
-.zazz/docs/neon-db-reference.md and .zazz/docs/neon-setup.md — the Neon
-account is already configured; env files in this worktree are live).
+Read the specification end to end before doing anything else. Then read
+the run log in full and the required reading in spec §1 (especially
+.zazz/docs/neon-db-reference.md and .zazz/docs/neon-setup.md).
+
+ENVIRONMENT PREP (before coding)
+- This is an unattended run: do not pause between phases for Owner
+  input. A §5 halt condition is the only reason to stop.
+- §10 has no blocking Open Questions; do not wait on the Owner for them.
+- The worktree env files are already configured and live (Neon active in
+  this worktree; local Docker remains the default on main). Never print
+  or commit their values.
+- Local Docker Postgres is required for the test suite:
+  npm run docker:up:db — and ensure the zazz_board_test database exists
+  (create it once via psql if missing; see README "Running tests").
+- The canonical seed contains no image rows; attachment coverage comes
+  from the tests you write and the Phase 4 live upload.
 
 NON-NEGOTIABLE RULES
 1. Follow the specification's Agent Implementation Rules (§5), including
    every halt condition.
-2. Resolve or confirm §10 Open Questions before writing code; log answers.
-3. Verify standards via .zazz/standards/index.yaml against the §3 file
-   list before writing code.
-4. Tests and verification are not optional; every AC needs evidence.
-5. Never run destructive SQL or db:reset against a non-local database.
-6. Never print or commit secret values (DATABASE_URL passwords,
+2. Select standards yourself via .zazz/standards/index.yaml against the
+   §3 file list before writing code; every sub-agent you dispatch
+   repeats the same lookup before acting.
+3. Tests and verification are not optional; every AC needs evidence.
+4. Never run destructive SQL or db:reset against a non-local database.
+5. Never print or commit secret values (DATABASE_URL passwords,
    NEON_API_KEY, AWS_* keys).
 
 ORDER OF WORK
-1. Read specification, run log, docs, standards, and code references.
+1. Read specification, run log, docs, and code references.
 2. Start with the TDD entry point in §8; follow the phase order —
    connection layer, guards, storage seam, live smoke, docs+skill last.
 3. After your own DoD checklist is green, dispatch a verifier sub-agent:
@@ -617,11 +629,12 @@ ORDER OF WORK
    "You are verifying Neon backend support in
    /Users/michael/Dev/zazzcode/zazz-board/mw-neon-db-integration. Read
    .zazz/specifications/neon-db-integration.md and the run log at
-   .zazz/execution/neon-db-integration-run-log.md. For each AC,
-   independently verify it by running the cited test or command.
-   Cross-check logged deviations against the code. Verify the branch diff
-   matches §3. Do not modify code or the run log. Return PASS/FAIL per AC
-   with evidence."
+   .zazz/execution/neon-db-integration-run-log.md. Select standards via
+   .zazz/standards/index.yaml against the spec §3 file list before
+   acting. For each AC, independently verify it by running the cited
+   test or command. Cross-check logged deviations against the code.
+   Verify the branch diff matches §3. Do not modify code or the run
+   log. Return PASS/FAIL per AC with evidence."
 
 4. Only declare done after the verifier reports all-pass. Do not merge to
    main; integration happens through human PR review.
