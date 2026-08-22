@@ -183,6 +183,9 @@ to the Owner.
 - Any `client/` change (upload UI, presigned direct upload/download)
 - GCS or any second provider beyond the reserved flag value
 - Backfill/migration of existing `IMAGE_DATA` rows to Object Storage
+- Relaxing the image-only attachment validation (`^image/` content
+  types) — attaching general documents to tickets is a separate future
+  deliverable
 - `docker-compose*.yml` changes (local deployment stays as-is)
 - Neon branching automation or preview environments
 - CI changes (tests remain local Docker Postgres)
@@ -390,10 +393,17 @@ deviations, manual evidence paths, verifier report.
   `ALLOW_REMOTE_SEED=true` and admits them with it;
   `reset-and-seed.js` refuses non-local hosts unconditionally. Verified
   by: `__tests__/scripts/guards.test.mjs`.
-- **AC9 — Live smoke (manual evidence).** Against real Neon: `db:push`
-  via `DATABASE_URL_UNPOOLED`, seed with opt-in, one upload and one
-  download through the API, and `neon buckets object list` showing the
-  object key. Evidence paths recorded in the run log.
+- **AC9 — Live smoke against real Neon.** Push schema via
+  `DATABASE_URL_UNPOOLED`, seed with the opt-in guard, then through the
+  running API: create a deliverable titled "Neon storage backend
+  support", attach a real image file to it (a repo SVG asset works —
+  `image/svg+xml` passes validation; content types are image-only by
+  contract), and verify end to end: the `IMAGE_METADATA` row records
+  `storage_type='neon'` with the object key in `url`,
+  `neon buckets object list` lists the key with matching size, and the
+  binary download is byte-identical to the source file (`cmp`). Leave
+  the deliverable and attachment in place as living evidence. Evidence
+  paths recorded in the run log.
 - **AC10 — Docs and skill current.** README documents both run modes for
   application users and links `.zazz/docs/neon-setup.md`;
   `CONTRIBUTOR_SETUP.md` points contributors at the Neon docs, skill, and
@@ -485,10 +495,21 @@ delete) + `@aws-sdk/client-s3` dependency + fail-fast config.
 
 **Phase 4 — Live smoke + verify-items**
 
-4.1. `db:push` via `DATABASE_URL_UNPOOLED`; seed with `ALLOW_REMOTE_SEED`;
-upload/download through the running API; `neon buckets object list`.
-Capture evidence. Record `channel_binding`/pooled-prepare behavior in the
-run log (halt condition 8 applies).
+4.1. Service lifecycle: if `http://localhost:3030/health` already
+responds, reuse that running instance (the Owner may have started it and
+must not have it stopped). Otherwise start the API yourself in the
+background (`npm run dev:api`), poll the health endpoint until OK, and
+stop only the process you started when the smoke completes. Record the
+log path in the run log.
+4.2. `db:push` via `DATABASE_URL_UNPOOLED`; seed with
+`ALLOW_REMOTE_SEED=true`.
+4.3. Through the API: create the "Neon storage backend support"
+deliverable, attach a real image file (a repo SVG asset or generated
+PNG — content types are image-only), then verify per AC9: metadata row
+(`storage_type='neon'`, key in `url`), `neon buckets object list` entry
+with matching size, byte-identical download (`cmp`). Capture evidence.
+4.4. Record `channel_binding`/pooled-prepare behavior in the run log
+(halt condition 8 applies).
 
 **Phase 5 — Docs and skill (final phase)**
 
