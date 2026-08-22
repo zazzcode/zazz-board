@@ -8,10 +8,12 @@ executing them on a user's behalf. Facts and behavior live in
 `neon` agent skill.
 
 Status: the account-side configuration in this guide is complete and
-valid now. The application code that reads `STORAGE_BACKEND`,
-`DATABASE_URL_UNPOOLED`, and the `AWS_*` storage variables is delivered
-by the `mw-neon-db-integration` branch; until it lands, only local
-Docker Postgres mode runs.
+valid. The application code that reads `STORAGE_BACKEND`,
+`DATABASE_URL_UNPOOLED`, and the `AWS_*` storage variables is implemented
+on the `mw-neon-db-integration` branch (verified end to end against this
+account on 2026-08-22: schema push, seed, upload, listing, byte-identical
+download); until that branch merges, `main` runs only local Docker
+Postgres mode.
 
 ## What you are configuring
 
@@ -71,11 +73,13 @@ issues the Postgres connection strings and the scoped storage keys.
 6. **Root `.env`** holds `NEON_API_KEY` only (step under Prerequisites).
 
 7. **Push schema and seed** (requires this branch's code):
-   `cd api && set -a && source .env && set +a` then
-   `DATABASE_URL=$DATABASE_URL_UNPOOLED npm run db:push` — DDL goes
-   through the direct endpoint, never the pooled one. Seeding a remote
-   database additionally requires the explicit opt-in guard this branch
-   adds.
+   `cd api && set -a && source .env && set +a` then `npm run db:push` —
+   `drizzle.config.js` automatically prefers `DATABASE_URL_UNPOOLED` when
+   it is set, so DDL goes through the direct endpoint without any URL
+   overrides. Seeding a remote database additionally requires the explicit
+   opt-in the branch's guard adds: `ALLOW_REMOTE_SEED=true npm run
+   db:seed`. (`npm run db:reset` refuses non-local database hosts outright
+   — there is no remote override for a destructive reset.)
 
 8. **Run and verify.** `npm run dev:api`, then hit an API route. Expect
    ~0.5 s of first-query latency after 5+ minutes idle (compute
@@ -154,8 +158,12 @@ credentials (`rm -rf ~/.mcp-auth`) and retry.
 - Client rejects `channel_binding=require` (present in pulled URLs) —
   drop that parameter and keep `sslmode=require`; confirm behavior with
   postgres.js during implementation.
-- drizzle-kit push or seeds fail through the pooled URL — run them
-  against `DATABASE_URL_UNPOOLED`.
+- drizzle-kit push or seeds fail through the pooled URL — `npm run
+  db:push` already targets `DATABASE_URL_UNPOOLED` when set; for one-off
+  drizzle-kit commands, run them against `DATABASE_URL_UNPOOLED`.
+- `neon buckets object list <bucket>` shows only folder names — listing
+  object keys requires a trailing-slash prefix: `neon buckets object list
+  <bucket>/<prefix>/` (for example `zazz-board-attachments/attachments/`).
 - Branch or compute shows `archived`/`idle` after long inactivity —
   connecting wakes it automatically.
 - "organization API keys" error from `neon me` — harmless; org keys

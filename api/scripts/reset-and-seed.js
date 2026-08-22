@@ -2,11 +2,44 @@ import { db } from '../lib/db/index.js';
 import { sql } from 'drizzle-orm';
 import { existsSync } from 'fs';
 import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { seedDatabaseSnapshot } from './seeders/seedDatabaseSnapshot.js';
+import { getDatabaseHost, isLocalDatabaseHost, resolveDatabaseUrl } from '../lib/db/connectionOptions.js';
+
+/**
+ * reset-and-seed drops and recreates every table. It refuses any non-local
+ * database host outright — a destructive remote reset has no override.
+ * @param {Record<string, string | undefined>} env
+ * @returns {{ allowed: boolean, reason?: string }}
+ */
+export function evaluateResetGuard(env = process.env) {
+  const dbUrl = resolveDatabaseUrl(env);
+  if (!dbUrl) {
+    return {
+      allowed: false,
+      reason: 'Cannot reset: no database URL resolved for this environment',
+    };
+  }
+  if (!isLocalDatabaseHost(dbUrl)) {
+    return {
+      allowed: false,
+      reason:
+        `Refusing to reset non-local database host: ${getDatabaseHost(dbUrl) ?? dbUrl}\n` +
+        '   Reset is destructive and has no remote override',
+    };
+  }
+  return { allowed: true };
+}
 
 async function resetAndSeed() {
   try {
+    // Safety check: destructive reset only ever targets a local database
+    const decision = evaluateResetGuard();
+    if (!decision.allowed) {
+      console.error('\x1b[31m%s\x1b[0m', `\n❌ SAFETY CHECK FAILED: ${decision.reason}\n`);
+      process.exit(1);
+    }
+
     console.log('🗑️  Resetting database...');
     console.log('');
 
@@ -62,4 +95,8 @@ async function resetAndSeed() {
   }
 }
 
-resetAndSeed();
+const isMainScript = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMainScript) {
+  resetAndSeed();
+}

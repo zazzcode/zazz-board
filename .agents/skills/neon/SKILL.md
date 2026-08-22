@@ -65,7 +65,8 @@ npx --yes neon@latest projects list
 npx --yes neon@latest branches list --project-id cool-mud-16591433
 npx --yes neon@latest api /projects/cool-mud-16591433/endpoints   # hosts: read_write_host + read_write_pooled_host
 npx --yes neon@latest buckets list --project-id cool-mud-16591433
-npx --yes neon@latest buckets object list <bucket> --project-id cool-mud-16591433
+npx --yes neon@latest buckets object list <bucket> --project-id cool-mud-16591433          # folders only
+npx --yes neon@latest buckets object list <bucket>/<prefix>/ --project-id cool-mud-16591433  # lists keys (trailing slash required)
 npx --yes neon@latest connection-string --project-id cool-mud-16591433   # direct host, includes channel_binding=require
 ```
 
@@ -90,6 +91,19 @@ Prefer repo recipes (`npm run db:push`, tests, seed scripts) when they
 already cover the task; use psql only for diagnostics. Reuse the `psql`
 skill's safety flags (`-X`, `-v ON_ERROR_STOP=1`, short
 `statement_timeout`, wrapped write-diagnostics in `begin; ... rollback`).
+
+Repo recipe behavior (implemented on `mw-neon-db-integration`):
+
+- `npm run db:push` automatically targets `DATABASE_URL_UNPOOLED` when it
+  is set (`api/drizzle.config.js` prefers the direct endpoint for DDL);
+  under `NODE_ENV=test` it always resolves `DATABASE_URL_TEST` so test
+  schema pushes can never reach Neon.
+- `npm run db:seed` refuses any non-local host unless
+  `ALLOW_REMOTE_SEED=true` is set; `npm run db:reset` refuses non-local
+  hosts outright with no override.
+- The app runtime connects with postgres.js options built from the URL:
+  neon hosts get TLS (`ssl: 'require'`), `prepare: false` (PgBouncer
+  transaction mode), and a bounded pool — `api/lib/db/connectionOptions.js`.
 
 Endpoint selection matters:
 
@@ -130,6 +144,12 @@ is the fallback.
   attachment storage.
 - Data-plane hostnames use `neon.tech` even though docs live at
   `neon.com`. Both are correct; do not rewrite one to the other.
+- `neon buckets object list <bucket>` without a prefix shows only folder
+  names ("No objects found" even when keys exist). List keys with a
+  trailing-slash prefix: `<bucket>/<prefix>/`, e.g.
+  `zazz-board-attachments/attachments/`. The AWS CLI
+  (`aws s3api list-objects-v2 --endpoint-url $AWS_ENDPOINT_URL_S3`) does
+  not have this quirk and is a good cross-check.
 
 ## Output
 

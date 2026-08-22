@@ -2,7 +2,7 @@
 
 **Zazz Board** is a Kanban-style orchestration app for coordinating **AI agents** and **owners** — the people who define what to build, approve PLANs, and review results. Work is organized by **project**; each project contains **deliverables** (features, bug fixes, refactors) that group **tasks**. Owners manage SPECs and deliverable flow; agents execute implementation work and board updates. Only deliverables are PR'd — never individual tasks.
 
-**Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
+**Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (local Docker, or [Neon](#running-on-neon-optional)) · Drizzle ORM · Docker Compose
 
 **Framework:** Zazz Board enables teams to practice the [Zazz Framework](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners and agents collaborate.
 
@@ -15,6 +15,7 @@
 - [Explore the app](#explore-the-app)
 - [Quick start (Docker)](#quick-start-docker)
 - [Contributor setup](#contributor-setup)
+- [Running on Neon (optional)](#running-on-neon-optional)
 - [Common issues](#common-issues)
 - [Reference](#reference)
 - [Running tests](#running-tests)
@@ -198,6 +199,25 @@ Local URLs (native dev):
 
 ---
 
+## Running on Neon (optional)
+
+Zazz Board runs unchanged on either database backend, selected purely by environment configuration:
+
+| Backend | Relational data | Attachments | Default |
+| ------- | --------------- | ----------- | ------- |
+| **Local Docker Postgres** | `zazz_board_db` on `localhost:5433` | Stored in the `IMAGE_DATA` table | ✅ Yes |
+| **Neon** | Neon serverless Postgres (same schema) | Neon Object Storage (S3-compatible, private bucket); each object's key is recorded in `IMAGE_METADATA` | No |
+
+Notes for application users:
+
+- Switching backends is a matter of swapping the active block in `api/.env` — no code or schema changes. The full setup walkthrough (Neon project, database, bucket, credentials) is in [`.zazz/docs/neon-setup.md`](./.zazz/docs/neon-setup.md).
+- The upload/download API contract is identical in both modes; downloads always flow through the API, which checks access.
+- `STORAGE_BACKEND=neon` fails fast at startup if the storage configuration is incomplete — there is no silent fallback to database blob storage.
+- Expect ~0.5 s of first-query latency after 5+ minutes idle: Neon suspends idle compute and wakes it on connection.
+- Automated tests always run against the local Docker test database (`zazz_board_test`), never against Neon.
+
+---
+
 ## Common issues
 
 - **Sample data missing or setup failed:** Run this as a second step from terminal (with containers running):
@@ -229,7 +249,7 @@ Local URLs (native dev):
 | Reset + reseed Docker DB (containers running) | `npm run docker:reset:seed`                                     |
 | Run tests (from `api/`)                       | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
 
-Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/__tests__/README.md](./api/__tests__/README.md).
+Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Neon mode adds `DATABASE_URL_UNPOOLED`, `STORAGE_BACKEND`, and the storage vars — see [Running on Neon](#running-on-neon-optional) and [`.zazz/docs/neon-setup.md`](./.zazz/docs/neon-setup.md). Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/__tests__/README.md](./api/__tests__/README.md).
 
 ---
 
@@ -368,7 +388,7 @@ If the client needs to reach the API at a different host (e.g. a public URL), se
 | Database    | **RDS** PostgreSQL 15                                                            |
 | API         | **ECS Fargate** (container from `api/Dockerfile`)                                |
 | Client      | **S3** + **CloudFront** (static build)                                           |
-| Task images | **S3** (in work — see [Cloud deployment notes](#cloud-deployment-notes-in-work)) |
+| Task images | **S3** (not yet implemented — see [Cloud deployment notes](#cloud-deployment-notes)) |
 
 **Flow:** Create RDS instance → build and push API image to ECR → deploy ECS task with `DATABASE_URL` pointing at RDS → build client with `VITE_API_URL` set to your API URL → upload to S3, configure CloudFront. Use **Application Load Balancer** in front of ECS for the API.
 
@@ -381,7 +401,7 @@ If the client needs to reach the API at a different host (e.g. a public URL), se
 | Database    | **Cloud SQL** (PostgreSQL 15)                                                               |
 | API         | **Cloud Run** (container from `api/Dockerfile`)                                             |
 | Client      | **Cloud Storage** + **Cloud CDN** (or Firebase Hosting)                                     |
-| Task images | **Cloud Storage** (in work — see [Cloud deployment notes](#cloud-deployment-notes-in-work)) |
+| Task images | **Cloud Storage** (not yet implemented — see [Cloud deployment notes](#cloud-deployment-notes)) |
 
 **Step 1 — Cloud SQL**
 
@@ -421,14 +441,15 @@ Run the seed script once against Cloud SQL (e.g. from Cloud Shell or a one-off C
 
 ---
 
-### Cloud deployment notes (in work)
+### Cloud deployment notes
 
-**Image storage:** For cloud deployments, task images should be stored in object storage rather than the database:
+**Image storage:** For cloud deployments, task images can be stored in object storage instead of the database:
 
-- **AWS:** **S3** — upload images to a bucket; store metadata and object keys in the DB.
-- **GCP:** **Cloud Storage** — same pattern; store metadata and `gs://` URLs or object names in the DB.
+- **Neon:** Implemented — `STORAGE_BACKEND=neon` uploads attachments to Neon Object Storage (private bucket) and records each object key in the database. See [Running on Neon (optional)](#running-on-neon-optional).
+- **AWS:** **S3** — upload images to a bucket; store metadata and object keys in the DB (not yet implemented; the `s3` backend value is reserved).
+- **GCP:** **Cloud Storage** — same pattern; store metadata and `gs://` URLs or object names in the DB (not yet implemented; the `gcs` backend value is reserved).
 
-**Configuration:** The API will need environment or config to distinguish cloud vs local (e.g. `STORAGE_BACKEND=s3` or `STORAGE_BACKEND=gcs` vs database). This allows the image service to route uploads and serves to the correct backend. *This functionality is in work.*
+**Configuration:** `STORAGE_BACKEND` routes the image service to the correct backend: `local` (default — database storage) or `neon` (Neon Object Storage). `s3`/`gcs` are reserved for future AWS/GCP equivalents.
 
 ---
 

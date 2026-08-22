@@ -132,6 +132,18 @@ npm run db:reset
 
 Re-run step 4 if you need the test database again.
 
+## Neon backend (optional)
+
+The app can run on [Neon](https://neon.tech) (serverless Postgres + S3-compatible Object Storage for attachments) instead of local Docker Postgres — selected purely by `api/.env` configuration. Local Docker remains the default, and this guide's flow is all you need for regular contributor work.
+
+If you want to develop against Neon or work on the Neon integration:
+
+- Full setup walkthrough (project, database, bucket, credentials, `api/.env` template): [`.zazz/docs/neon-setup.md`](./.zazz/docs/neon-setup.md). Neon facts and traps live in [`.zazz/docs/neon-db-reference.md`](./.zazz/docs/neon-db-reference.md).
+- Agents (or humans driving the Neon CLI): the repo-local **`neon`** skill at `.agents/skills/neon/` covers CLI patterns, safe defaults, and endpoint selection (pooled vs direct).
+- Contributors using AI assistants may also wire the optional Neon MCP server — see the "For contributors: Neon MCP server (optional)" section of the setup guide.
+- Guardrails to know: `db:push` automatically targets the direct (`DATABASE_URL_UNPOOLED`) endpoint when set; seeding a remote database requires `ALLOW_REMOTE_SEED=true`; `db:reset` refuses non-local database hosts outright.
+- Automated tests always run against the local Docker test DB (`zazz_board_test`) — the api test scripts pin `STORAGE_BACKEND=local` so the suite stays hermetic regardless of your active env block.
+
 ## Worktree workflow (mandatory)
 
 This repo uses **worktrees** for feature work. See [AGENTS.md](./AGENTS.md) and `.cursor/rules/worktree-workflow.mdc`:
