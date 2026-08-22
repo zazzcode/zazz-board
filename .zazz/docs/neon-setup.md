@@ -118,6 +118,33 @@ AWS_REGION=us-east-2
   new storage namespace and new keys — re-run `neon env pull` after
   branching.
 
+## For contributors: Neon MCP server (optional)
+
+The Neon MCP server (`https://mcp.neon.tech/mcp`) lets an AI assistant
+manage Neon — projects, branches, databases, and SQL — through natural
+language. It is developer tooling only: Neon scopes it to "development
+and testing", and running zazz-board needs none of it (the app consumes
+only the env vars above). Production operators can skip this section.
+
+- Full wiring (creates an API key if needed, configures MCP with API-key
+  auth, installs Neon agent skills): `npx neonctl@latest init`
+- MCP config only: `npx add-mcp https://mcp.neon.tech/mcp` — add
+  `--header "Authorization: Bearer $NEON_API_KEY"` for key auth instead
+  of OAuth, and `-g` to configure at user level
+- Manual config for clients not on add-mcp's list (ZCode included) —
+  local stdio server:
+
+```json
+"neon": {
+  "command": "npx",
+  "args": ["-y", "@neondatabase/mcp-server-neon", "start", "<NEON_API_KEY>"]
+}
+```
+
+Keep the API key in user-level client config, never in tracked files.
+If remote OAuth fails with `invalid redirect uri`, clear the cached
+credentials (`rm -rf ~/.mcp-auth`) and retry.
+
 ## Troubleshooting
 
 - `Could not resolve host: api.neon.tech` — outdated hostname. The

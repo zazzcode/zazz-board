@@ -42,6 +42,10 @@ service and, per the decision below, Object Storage.
   AWS SDK v3 variables `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
   `AWS_ENDPOINT_URL_S3`, `AWS_REGION`. Each pull issues fresh branch
   credentials; storage keys appear only after bucket creation.
+- MCP server for AI assistants: `https://mcp.neon.tech/mcp`
+  (`@neondatabase/mcp-server-neon` for local stdio). Neon scopes it to
+  development and testing only; management plane, never needed at
+  runtime. See `.zazz/docs/neon-setup.md` §"For contributors".
 
 ## Object Storage (beta)
 

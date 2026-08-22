@@ -168,6 +168,7 @@ and `.zazz/docs/`. Anything else: stop and surface to the Owner.
 | `api/drizzle.config.js` | Modified | Prefer `DATABASE_URL_UNPOOLED` for DDL |
 | `api/src/services/objectStorageService.js` | New | S3-compatible client (AWS SDK v3): put/get/delete + config validation |
 | `api/src/services/databaseService.js` | Modified | Image store/read/delete dispatch through the storage seam |
+| `api/src/routes/images.js` | Modified | Binary download endpoint consumes normalized bytes from the service seam (HTTP contract unchanged) |
 | `api/package.json` | Modified | Add `@aws-sdk/client-s3` |
 | `api/.env.example` | Modified | Neon template (already drafted on this branch; verify final state) |
 | `api/scripts/seed-all.js` | Modified | Remote-seed opt-in guard (D-9) |
@@ -411,6 +412,9 @@ Reference data sources:
   — reused for dispatch tests; no new fixtures.
 - A mocked S3 client at the `objectStorageService` boundary — testing.md
   pre-authorizes mocking this path; nothing below that boundary is mocked.
+- Dispatch tests isolate `STORAGE_BACKEND` (save/restore around neon
+  cases) and mock the storage seam through module import (`vi.mock` of
+  `objectStorageService`).
 
 Automated tests:
 
@@ -515,7 +519,9 @@ export function createObjectStorageService(env = process.env) {
 // In storeXImage: if storage backend is 'neon' -> objectStorage.putObject(
 //   `attachments/${metadata.id}`, buffer, contentType)
 //   insert IMAGE_METADATA { storage_type: 'neon', url: key }, skip IMAGE_DATA.
-// In getImageWithData/deleteImage: switch on row.storage_type per INVARIANT 4.
+// In getImageWithData/deleteImage: switch on row.storage_type per INVARIANT 4;
+// getImageWithData returns normalized bytes (local base64 decoded internally)
+// so the binary route sends them without branching.
 ```
 
 ---

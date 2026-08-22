@@ -78,6 +78,12 @@ npx --yes neon@latest databases create --name zazz_board_db --project-id <id>
 
 Use `-o json` for machine-readable output when scripting.
 
+The Neon MCP server (`https://mcp.neon.tech/mcp`) offers these management
+operations to AI assistants as an alternative to the CLI — development
+and testing only per Neon. When available it can replace CLI calls; the
+safety defaults above apply unchanged. See
+`.zazz/docs/neon-setup.md` §"For contributors" for connection.
+
 ## Querying Postgres on Neon
 
 Prefer repo recipes (`npm run db:push`, tests, seed scripts) when they
