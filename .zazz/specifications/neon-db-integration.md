@@ -180,7 +180,7 @@ to the Owner.
 | `api/__tests__/scripts/guards.test.mjs` | New | Seed/reset guard behavior |
 | `.agents/skills/neon/SKILL.md` | Modified | Refresh if implementation changes any documented command |
 | `.zazz/docs/neon-setup.md` | Modified | Final-state corrections after implementation |
-| `README.md` | Modified | Document both modes split by README's two audiences — users (run setup / running in the cloud) vs contributors — linking the setup guide (final phase) |
+| `README.md` | Modified | Document both run modes for users and link the setup guide (final phase) |
 | `CONTRIBUTOR_SETUP.md` | Modified | Point contributors at the Neon docs, `neon` skill, and the MCP section |
 
 ### Out Of Scope
@@ -397,12 +397,11 @@ deviations, manual evidence paths, verifier report.
   via `DATABASE_URL_UNPOOLED`, seed with opt-in, one upload and one
   download through the API, and `neon buckets object list` showing the
   object key. Evidence paths recorded in the run log.
-- **AC10 — Docs and skill current.** README documents both modes split by
-  its two audiences — application users (run setup, "Running in the
-  cloud") and contributors ("Contributor setup") — linking
-  `.zazz/docs/neon-setup.md`; `CONTRIBUTOR_SETUP.md` points contributors
-  at the Neon docs, skill, and MCP section; skill and setup doc match
-  implemented behavior. Verified by: Owner review + markdownlint clean.
+- **AC10 — Docs and skill current.** README documents both run modes for
+  application users and links `.zazz/docs/neon-setup.md`;
+  `CONTRIBUTOR_SETUP.md` points contributors at the Neon docs, skill, and
+  MCP section; skill and setup doc match implemented behavior. Verified
+  by: Owner review + markdownlint clean.
 - **AC11 — Verification clean.** Full API suite, `npm run lint`, and
   markdownlint on changed markdown all pass; `git diff main --stat`
   matches §3. Verified by: cited command outputs in the run log.
@@ -493,11 +492,11 @@ run log (halt condition 8 applies).
 
 **Phase 5 — Docs and skill (final phase)**
 
-5.1. README both-modes documentation split by audience — user path
-linking `.zazz/docs/neon-setup.md` near the run/deploy sections,
-contributor pointers under "Contributor setup"; add the Neon section to
+5.1. README documents both run modes for users, linking
+`.zazz/docs/neon-setup.md`; add a Neon pointer section to
 `CONTRIBUTOR_SETUP.md`; setup/reference/skill corrections to match
-implemented behavior.
+implemented behavior. Audience placement within the docs is editorial
+judgment — follow the README's existing user/contributor structure.
 5.2. `npx markdownlint-cli2` on changed markdown; full lint; full suite;
 scope verification; DoD; verifier sub-agent; PR draft.
 
