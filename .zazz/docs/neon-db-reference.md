@@ -72,6 +72,9 @@ project on 2026-08-22.
   and metadata in Postgres, serve it back through a presigned URL.
 - Design impact: attachments stay entirely within Neon under a single
   provider credential, so `STORAGE_BACKEND=neon` is an honest flag value.
+- Verified 2026-08-22 with the AWS CLI (read-only): ListBuckets and
+  ListObjectsV2 succeed against `AWS_ENDPOINT_URL_S3` using the
+  `neon env pull`-issued credentials.
 
 ## Connection strings
 
@@ -93,6 +96,10 @@ Shape:
 postgresql://<user>:<password>@ep-xxx-pooler.<region>.aws.neon.tech/<db>?sslmode=require
 postgresql://<user>:<password>@ep-xxx.<region>.aws.neon.tech/<db>?sslmode=require
 ```
+
+Verified 2026-08-22 with the repo's own stack (postgres.js 3.4.7, Node
+24.18.0): both endpoints connect with `channel_binding=require` present
+— pooled in ~0.9 s (including compute wake), direct in ~0.3 s.
 
 ## Pooling behavior (PgBouncer, transaction mode)
 
