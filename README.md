@@ -14,8 +14,8 @@
 
 - [Explore the app](#explore-the-app)
 - [Quick start (Docker)](#quick-start-docker)
-- [Contributor setup](#contributor-setup)
 - [Running on Neon (optional)](#running-on-neon-optional)
+- [Contributor setup](#contributor-setup)
 - [Common issues](#common-issues)
 - [Reference](#reference)
 - [Running tests](#running-tests)
@@ -24,9 +24,10 @@
 - [Running in the cloud](#running-in-the-cloud)
 - [About this repository](#about-this-repository)
 - [Documentation](#documentation)
-- [Updating skills from zazz-skills](#updating-skills-from-zazz-skills)
+- [Updating vendored skills and standards](#updating-vendored-skills-and-standards)
 
 **Try the app locally** — [Quick start (Docker)](#quick-start-docker)
+**Run it on Neon instead** — [Running on Neon (optional)](#running-on-neon-optional)
 **Develop or contribute** — [Contributor setup](#contributor-setup)
 **Deploy for my team** — [Running in the cloud](#running-in-the-cloud)
 
@@ -186,22 +187,9 @@ ZAZZ_API_TOKEN=550e8400-e29b-41d4-a716-446655440000
 
 ---
 
-## Contributor setup
-
-Contributor/committer instructions are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_SETUP.md).
-
-That path runs **only Postgres in Docker**; the API and client run natively for hot reload and visible logs. Use the [Quick start (Docker)](#quick-start-docker) section above if you only want to try the app.
-
-Local URLs (native dev):
-
-- API: [http://localhost:3030](http://localhost:3030)
-- Client: [http://localhost:3001](http://localhost:3001)
-
----
-
 ## Running on Neon (optional)
 
-Zazz Board runs unchanged on either database backend, selected purely by environment configuration:
+Instead of local Docker Postgres, Zazz Board runs unchanged on Neon — selected purely by environment configuration:
 
 | Backend | Relational data | Attachments | Default |
 | ------- | --------------- | ----------- | ------- |
@@ -215,6 +203,19 @@ Notes for application users:
 - `STORAGE_BACKEND=neon` fails fast at startup if the storage configuration is incomplete — there is no silent fallback to database blob storage.
 - Expect ~0.5 s of first-query latency after 5+ minutes idle: Neon suspends idle compute and wakes it on connection.
 - Automated tests always run against the local Docker test database (`zazz_board_test`), never against Neon.
+
+---
+
+## Contributor setup
+
+Contributor/committer instructions are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_SETUP.md).
+
+That path runs **only Postgres in Docker**; the API and client run natively for hot reload and visible logs. Use the [Quick start (Docker)](#quick-start-docker) section above if you only want to try the app.
+
+Local URLs (native dev):
+
+- API: [http://localhost:3030](http://localhost:3030)
+- Client: [http://localhost:3001](http://localhost:3001)
 
 ---
 
@@ -232,7 +233,7 @@ Notes for application users:
   ```
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test server).
 - **drizzle-kit** "please install drizzle-orm": From repo root, run `npm install` and `npm install --workspace=api`. Do not create manual `node_modules` symlinks in worktrees.
-- **`npm: command not found` when using nvm**: initialize `nvm` explicitly in non-interactive shells; see [Using nvm in non-interactive shells](#using-nvm-in-non-interactive-shells).
+- **`npm: command not found` when using nvm**: initialize `nvm` explicitly in non-interactive shells; see [Using nvm in non-interactive shells](./CONTRIBUTOR_SETUP.md#using-nvm-in-non-interactive-shells).
 - **Tests**: Always source `api/.env` and set `NODE_ENV=test`; see [AGENTS.md](./AGENTS.md) and [api/__tests__/README.md](./api/__tests__/README.md).
 
 ---
@@ -244,6 +245,7 @@ Notes for application users:
 | Run API + client                              | `npm run dev`                                                   |
 | Run API only                                  | `npm run dev:api`                                               |
 | Run client only                               | `npm run dev:client`                                            |
+| Push schema changes (from `api/`)             | `npm run db:push`                                               |
 | Reset dev DB (from `api/`)                    | `npm run db:reset`                                              |
 | Seed only (from `api/`)                       | `npm run db:seed`                                               |
 | Reset + reseed Docker DB (containers running) | `npm run docker:reset:seed`                                     |
@@ -255,45 +257,13 @@ Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433
 
 ## Running tests
 
-Tests use a separate database (`zazz_board_test`). One-time setup (from project root):
+Tests use a separate database (`zazz_board_test`) and always run against local Docker Postgres. The step-by-step setup (one-time test-DB creation), the run commands, and the nvm notes for non-interactive shells are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_SETUP.md); the test-writing guide is in [api/__tests__/README.md](./api/__tests__/README.md).
 
-```bash
-set -a && source .env && set +a
-docker compose exec postgres psql -U postgres -c "CREATE DATABASE zazz_board_test;" 2>/dev/null || true
-cd api && DATABASE_URL=postgres://postgres:$POSTGRES_PASSWORD@localhost:5433/zazz_board_test npm run db:reset
-```
-
-Then run tests (from `api/`):
+Quick reference (from `api/`):
 
 ```bash
 set -a && source .env && set +a && NODE_ENV=test npm run test
 ```
-
-### Using nvm in non-interactive shells
-
-Developers who use `nvm` usually get `node` and `npm` automatically in interactive terminals because their shell startup files load `nvm`. Non-interactive shells, editor tasks, agent shells, and some CI steps may not load that setup, which can make `npm` appear to be missing even though it works in a normal terminal.
-
-The repo includes `.nvmrc` pinned to Node.js `v24.18.0`, so `nvm use` selects the project runtime. With the current project runtime, npm reports `11.16.0`.
-
-If a non-interactive command reports `npm: command not found`, initialize `nvm` explicitly before running repo commands:
-
-```bash
-export NVM_DIR="$HOME/.nvm"
-source "$NVM_DIR/nvm.sh"
-nvm use
-```
-
-For example:
-
-```bash
-export NVM_DIR="$HOME/.nvm"
-source "$NVM_DIR/nvm.sh"
-nvm use
-cd api
-set -a && source .env && set +a && NODE_ENV=test npm run test
-```
-
-See [api/__tests__/README.md](./api/__tests__/README.md) for details.
 
 ---
 
@@ -469,7 +439,11 @@ This repository is developed using the Zazz framework (dogfooding). Zazz Board i
 - **`.agents/skills/`** — Agent skills; the single skills home for every agent tool. ZCode, Codex, and Cursor read `.agents/skills/` natively; Claude Code reads it through the committed `.claude/skills` symlink. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the vendored copy plus local-only skills (`worker`, `database-baseline-refresh`).
 - **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
 
-## Updating skills from zazz-skills
+## Updating vendored skills and standards
+
+Skills and standards that originate from [zazz-skills](https://github.com/zazzcode/zazz-skills) are refreshed with different discipline — skills are mirrored by script, standards are tiered and repo-owned first.
+
+### Updating skills from zazz-skills
 
 `zazz-skills` is the canonical source for framework skill names and markdown content. This repo treats its `.agents/skills/` copy as a downstream mirror of that source, except for local-only skills.
 
@@ -488,6 +462,6 @@ Notes:
 - The script removes previously-synced skills that upstream no longer ships and that are not local-only, so obsolete skills do not linger (e.g. `qa`/`qa-backend`/`qa-frontend`, which upstream consolidated into `qa-testing`).
 - A rename-heavy update still needs a manual documentation sweep after the file sync.
 
-## Updating standards from zazz-skills
+### Updating standards from zazz-skills
 
 The repo-specific standards under `.zazz/standards/` (`system-architecture.md`, `data-architecture.md`, `testing.md`, `coding-styles.md`) are owned by this repo and take precedence; they must not be clobbered by an upstream sync. The generic methodology standards (`code-structure.md`, `docs-hygiene.md`, `docs-hygiene-reference-structure.md`, `spec-hygiene.md`, `pr-process.md`) are vendored from upstream `zazz-skills` and should be refreshed periodically by copying them back over. The placeholder stack standards (`http-layer.md`, `data-layer.md`, `frontend.md`) and `contextual-split.md` are repo-owned and intended to be expanded into real baselines via the `standard-builder` skill. See `.zazz/standards/contextual-split.md` for the full sync discipline.

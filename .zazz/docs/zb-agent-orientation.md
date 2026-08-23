@@ -446,7 +446,7 @@ the current task. Do not pull every document into context by default.
 | Agent execution discipline | `.zazz/docs/agent-execution-discipline.md` |
 | Project rules (stack, layers, DB, testing, coding) | `.zazz/standards/` via `.zazz/standards/index.yaml` |
 | Full API route list, DB setup, troubleshooting | `AGENTS.md` |
-| Curating skills from upstream | README §Curating skills |
+| Curating skills from upstream | README §Updating vendored skills and standards |
 
 ## Pre-commit and Local Verification
 

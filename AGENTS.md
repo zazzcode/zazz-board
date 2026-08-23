@@ -82,7 +82,7 @@ use that metadata as the source of truth for when the skill applies.
 
 Many skills started from [zazz-skills](https://github.com/zazzcode/zazz-skills), but this repo's checked-in skill files
 are curated locally and may diverge for project-specific behavior. Compare upstream files manually when useful; do not
-blindly refresh local skills from upstream. See [README §Curating skills](./README.md#curating-skills-from-zazz-skills).
+blindly refresh local skills from upstream. See [README §Updating vendored skills and standards](./README.md#updating-vendored-skills-and-standards).
 
 Ignored upstream skills include `sqlcmd` (SQL Server; we use PostgreSQL) and `jira-api` (we use Zazz Board).
 
