@@ -18,6 +18,9 @@ api/.env.local
 # Keep example file tracked
 !api/.env.example
 
+# Neon CLI workspace state (neon link / checkout) — machine-local project/branch ids
+.neon
+
 # Local owner/agent scratch files; keep the tracked README visible.
 .zazz/ephemeral/**
 !.zazz/ephemeral/
