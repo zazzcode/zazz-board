@@ -407,7 +407,7 @@ If the client needs to reach the API at a different host (e.g. a public URL), se
 
 **Step 4 — Seed the database**
 
-Run the seed script once against Cloud SQL (e.g. from Cloud Shell or a one-off Cloud Run job with `npm run db:reset`), or use a local connection through the Cloud SQL Auth Proxy.
+Run the schema push and seed once against Cloud SQL (e.g. from Cloud Shell or a one-off Cloud Run job, or through the Cloud SQL Auth Proxy): `npm run db:push`, then `ALLOW_REMOTE_SEED=true npm run db:seed`. Note that `npm run db:reset` refuses non-local database hosts outright — remote databases are never destructively reset.
 
 ---
 

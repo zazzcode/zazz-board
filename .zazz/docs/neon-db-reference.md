@@ -6,7 +6,10 @@ from the Neon docs during the `mw-neon-db-integration` research phase
 Neon docs evolve — re-verify a detail against the linked page before relying
 on it for implementation decisions.
 
-Status: research notes. Nothing here is implemented yet.
+Status: verified research notes. The integration described here is
+implemented on the `mw-neon-db-integration` branch (verified end to end
+against this account on 2026-08-22); facts below remain the reference
+for behavior and traps.
 
 ## What Neon is
 
@@ -171,7 +174,8 @@ Verified 2026-08-22 with the repo's own stack (postgres.js 3.4.7, Node
   ('local'|'s3') already exists but the service hardcodes 'local'
   (`databaseService.js:2117,2160`). `system-architecture.md:24-31`
   pre-authorizes a `STORAGE_BACKEND` env routing to object storage.
-- Storage flag decision (2026-08-22, pending spec confirmation):
+- Storage flag decision (2026-08-22, confirmed in the specification and
+  implemented):
   `STORAGE_BACKEND` with values `local` (default — current DB storage)
   and `neon` (Neon Object Storage via its S3-compatible API); `gcs`
   reserved for a future GCP equivalent. `IMAGE_METADATA.storage_type`
