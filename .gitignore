@@ -39,6 +39,21 @@ api/.env.local
 # everything else Claude writes here (settings.local.json, todos, etc.) is local
 .claude/*
 !.claude/skills
+
+# Other AI agent tool directories — machine-local state individual tools write;
+# contributors' tool files never land in the repo. .agents/ is the shared home.
+# To deliberately share something from one of these later, add a negation
+# pattern (see the .codex/* and .claude/* blocks above for the shape).
+.cursor/
+.cursorrules
+.zcode/
+.warp/
+.windsurf/
+.continue/
+.gemini/
+.aider*
+.specstory/
+.history/
 project-page-screenshot.png
 *.suo
 *.ntvs*
