@@ -120,7 +120,7 @@ Approach A: position Zazz Board as the **open spec-driven agentic software facto
 
 - **P1 — Automations primitive**: durable `AUTOMATION` entities (trigger: cron schedule, GitHub webhook event, manual) bound to a deliverable/task or a stage template; each run recorded as `AGENT_RUN` (status, logs location, spawned harness, outcome), replacing today's ephemeral run-log convention where appropriate. Borrow Warp's factory-as-code insight: automations should be expressible (and reviewable) as in-repo artifacts, not just dashboard rows — the database records state, the artifact is the source of truth. Keystone — everything composes on it.
 - **P2 — Stage orchestration**: Validate as enforced gates (pr-review/qa/security skills invoked as checks on PR open/update; promotion blocked on pass), Triage intake (issue/webhook → proposal draft), Document refresh (scheduled doc-check + builders).
-- **P3 — Quality-signal ingestion + Test Ops observability**: runner-agnostic ingestion of test/verifier runs (normalized run → suite → case → outcome + evidence link) from CI and from Zazz's own verifier/QA agent runs; PiWi-inspired UX — persistent history beyond CI artifact expiry, pass-rate/duration/stability trends, failure clustering ("error fingerprints"), flakiness scoring with root-cause class — but at the factory level and tied to deliverables/acceptance criteria, since the board controls the whole pipeline rather than one framework; stage dashboards (throughput, pass rate, cycle time from existing status history), automation run history.
+- **P3 — Quality-signal ingestion + Test Ops observability**: runner-agnostic ingestion of test/verifier runs (normalized run → suite → case → outcome + evidence link) from CI and from Zazz's own verifier/QA agent runs; **Playwright adapter first** (per Owner sequencing — e2e is where test-ops pain concentrates and where the PiWi baseline points), Vitest/PactumJS and other runners next on the same contract; PiWi-inspired UX — persistent history beyond CI artifact expiry, pass-rate/duration/stability trends, failure clustering ("error fingerprints"), flakiness scoring with root-cause class — at the factory level and tied to deliverables/acceptance criteria, since the board controls the whole pipeline rather than one framework; stage dashboards (throughput, pass rate, cycle time from existing status history), automation run history.
 - **P4 — Execution adapters**: ZCode (GLM 5.3+) session spawning via service accounts first; Cursor (per the origin discussion) and others behind the same adapter interface.
 - **P5 (candidate) — Self-improvement loop**: observer agents score runs and open factory-improvement PRs (Warp's eval loop; Factory's Monitor feedback). Decide after P3 data exists.
 
@@ -128,7 +128,7 @@ Approach A: position Zazz Board as the **open spec-driven agentic software facto
 
 - Endorse the orchestrator positioning (spec-driven control plane over pluggable execution) vs clone or integration-only?
 - First increment = P1 automations primitive (recommended), or observability first (dashboard on existing status data)?
-- Test Ops scope confirmation: runner-agnostic factory-level ingestion (recommended, per Owner guidance that Zazz controls the whole pipeline), with Playwright merely one adapter when e2e tests exist — correct?
+- Test Ops scope confirmation: runner-agnostic factory-level ingestion contract with **Playwright supported first, then Vitest and other runners** (Owner sequencing, 2026-08-23) — correct?
 - Intake scope for P2 triage: GitHub issues only, or Slack as well?
 - Hosted/self-hosted stance: remain self-hosted-first (recommended) with cloud later?
 
@@ -136,7 +136,7 @@ Approach A: position Zazz Board as the **open spec-driven agentic software facto
 
 - Should `AGENT_RUNS` replace or wrap today's gitignored run logs (`.zazz/execution/`)? (Run history with log links in the DB is a factory feature; log content may remain local.)
 - Automations as DB entities, in-repo artifacts, or both (DB records state; artifact is source of truth — Warp's factory-as-code argues artifact-first)? Decide during P1 spec authoring.
-- Quality-signal contract shape: minimum viable normalized schema for run/suite/case/outcome/evidence, and which runners to support first (Vitest/PactumJS results are the dogfood case).
+- Quality-signal contract shape: minimum viable normalized schema for run/suite/case/outcome/evidence. Runner sequencing settled (Playwright first, Vitest and others after); the open part is the contract itself and the Playwright report ingestion path (native reporter vs CI artifact parsing).
 - Harness spawning contract: does the ZCode harness expose a programmatic session API sufficient for adapters, or does P1 stay cron/manual until it does? Needs verification against current ZCode docs. Same question for Cursor automation surfaces.
 - Is a "Zazz Factory MCP" (any external agent pushing/pulling board work, mirroring Warp's Factory MCP) part of the end state, given `zazzctl` + REST API already cover CLI-first access?
 - Licensing/positioning implications of an open-source factory offering (docs, site) — separate follow-up.
@@ -144,7 +144,7 @@ Approach A: position Zazz Board as the **open spec-driven agentic software facto
 ## Discussion log / notable arguments
 
 - **2026-08-22, [zazz-board discussion #26](https://github.com/zazzcode/zazz-board/discussions/26)** (Owner, sole participant, no replies yet): origin of the pivot — board as agentic-software-factory UI for spec ingestion and deliverable tracking; quality-maintaining as the central challenge; gated on Neon DB; Test Ops named with PiWi as baseline; harness targets ZCode (GLM 5.3+) and Cursor (grok 4.6+).
-- **2026-08-23, drafting session**: Owner refined Test Ops scope — PiWi operates at a different level (Playwright-specific test dashboards); Zazz should not worry about building Playwright coverage per se and should aim **beyond any single framework**, since the board controls the whole pipeline. Recorded as the runner-agnostic, factory-level Test Ops direction in P3 and the non-goals. Owner also requested exhaustive URL references (see Sources) for later re-reading.
+- **2026-08-23, drafting session**: Owner refined Test Ops scope — PiWi operates at a different level (Playwright-specific test dashboards); Zazz should not worry about building Playwright coverage per se and should aim **beyond any single framework**, since the board controls the whole pipeline. Recorded as the runner-agnostic, factory-level Test Ops direction in P3 and the non-goals. Owner also requested exhaustive URL references (see Sources) for later re-reading. Sequencing follow-up the same day: **start with Playwright support, then expand to Vitest and other testing runners** — adapter order recorded in P3 and the decision checklist; the ingestion contract stays runner-agnostic from day one.
 
 ## Sign-off outcome and next-phase handoff
 
