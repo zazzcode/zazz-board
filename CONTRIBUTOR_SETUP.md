@@ -146,7 +146,7 @@ If you want to develop against Neon or work on the Neon integration:
 
 ## Worktree workflow (mandatory)
 
-This repo uses **worktrees** for feature work. See [AGENTS.md](./AGENTS.md) and `.cursor/rules/worktree-workflow.mdc`:
+This repo uses **worktrees** for feature work. See [AGENTS.md](./AGENTS.md), [`.zazz/docs/worktree-setup.md`](./.zazz/docs/worktree-setup.md), and the `worktree` skill (`.agents/skills/worktree/`):
 
 - Main worktree is read-only.
 - Create a worktree per branch: `git worktree add -b <branch> ../<worktree-name> main`

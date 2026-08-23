@@ -35,6 +35,10 @@ api/.env.local
 !.codex/config.toml
 !.codex/roles/
 !.codex/roles/*.toml
+# Claude Code: only the skills bridge symlink is tracked (-> ../.agents/skills);
+# everything else Claude writes here (settings.local.json, todos, etc.) is local
+.claude/*
+!.claude/skills
 project-page-screenshot.png
 *.suo
 *.ntvs*
