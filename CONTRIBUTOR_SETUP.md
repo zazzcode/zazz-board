@@ -144,6 +144,15 @@ If you want to develop against Neon or work on the Neon integration:
 - Guardrails to know: `db:push` automatically targets the direct (`DATABASE_URL_UNPOOLED`) endpoint when set; seeding a remote database requires `ALLOW_REMOTE_SEED=true`; `db:reset` refuses non-local database hosts outright.
 - Automated tests always run against the local Docker test DB (`zazz_board_test`) — the api test scripts pin `STORAGE_BACKEND=local` so the suite stays hermetic regardless of your active env block.
 
+## AI tool files and the shared skills home
+
+This repo standardizes where agent tooling lives so contributors' personal AI-tool state never lands in PRs:
+
+- **`.agents/skills/` is the single skills home.** ZCode, Codex, and Cursor read it natively; Claude Code reads it through the committed `.claude/skills` symlink. Add or edit skills there — never inside a tool-specific directory.
+- **`AGENTS.md` is the single instructions file** all four tools read. (`WARP.md` remains for Warp.)
+- **AI vendor directories are ignored by default** (`.cursor/`, `.zcode/`, `.warp/`, `.windsurf/`, `.continue/`, `.gemini/`, `.aider*`, and everything under `.claude/` except the skills symlink). What your tools write there — local settings, histories, session state — is machine-local, like `.env`: it belongs to your checkout, not the repository.
+- **To deliberately share something from an ignored directory** (e.g. project-wide Cursor rules or a Claude Code hook), add a negation pattern to `.gitignore` next to the existing ones — `.claude/skills` and `.codex/config.toml` + `.codex/roles/` are the worked examples of that shape.
+
 ## Worktree workflow (mandatory)
 
 This repo uses **worktrees** for feature work. See [AGENTS.md](./AGENTS.md), [`.zazz/docs/worktree-setup.md`](./.zazz/docs/worktree-setup.md), and the `worktree` skill (`.agents/skills/worktree/`):
