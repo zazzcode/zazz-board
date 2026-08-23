@@ -42,6 +42,18 @@ The prior deliverable explicitly deferred this: `.zazz/specifications/neon-db-in
 **C — Relax validation only, keep IMAGE naming.** Change `^image/` to an allowlist; rename nothing.
 *Tradeoffs*: smallest diff, but the naming debt (the stated motivation) persists and every future reader re-learns that "images" means "attachments".
 
+## Data model shape (within Approach A)
+
+Owner question (2026-08-23): one metadata table for images and documents, or separate tables per kind — and what replaces `IMAGE_DATA`?
+
+**Recommendation: one unified `ATTACHMENT_METADATA` for all kinds, `ATTACHMENT_DATA` for local-backend bytes, no `kind` column.**
+
+- `ATTACHMENT_METADATA` is the attachment *entity* (not a join table): single-owner CHECK (task XOR deliverable) carries over unchanged; every current column is kind-agnostic.
+- `content_type` is the discriminator: `^image/` prefix determines display class (inline image vs document link vs CSV preview). Display differences are client concerns, not schema concerns — no `kind` column, no per-kind tables.
+- Per-kind tables (IMAGE + DOCUMENT side by side) duplicate the service seam, routes, tests, and make "all attachments for deliverable X" a UNION — real cost, no query benefit, since no kind-specific columns exist today.
+- `ATTACHMENT_DATA` (replacing `IMAGE_DATA`) holds **local-backend bytes only** — neon rows have no byte row (object lives in the bucket, key in `url`). Name it `ATTACHMENT_DATA` for that reason; `ATTACHMENT_OBJECTS` would imply a registry of all stored objects, which it is not.
+- Image-specific metadata (dimensions, thumbnails) is speculative today — `thumbnail_data` is nullable and null since day one. **Drop it in the rename**; if image previews become real, add a 1:0..1 extension table (`ATTACHMENT_IMAGE_INFO`, supertype/subtype) at that time — the extension pattern keeps the base table clean without pre-paying for it.
+
 ## Tradeoff analysis
 
 The decisive costs are timing and duplication. The project is pre-v1 with no client upload surface: a breaking rename is as cheap now as it will ever be. Approach A pays once; B pays continuously and defers the same break to a worse moment; C pays nothing but fails the goal. Migration risk in A is low: `ALTER TABLE ... RENAME` + column comment updates are non-destructive, the seed snapshot contains zero attachment rows, and the only production row is the single Neon smoke attachment (which the rename preserves in place).
@@ -73,10 +85,11 @@ Approach A: rename to `ATTACHMENT_*` + generalize service/routes + allowlist val
 
 ## Decision checklist / approval questions
 
-- Content-type allowlist set (proposal: `image/*`, `text/markdown`, `text/plain`, `application/pdf` to start)?
+- Data model shape: unified `ATTACHMENT_METADATA` + `ATTACHMENT_DATA` with `content_type` as discriminator, per the recommendation above — or per-kind tables despite the duplication?
+- Content-type allowlist set (proposal: `image/*`, `text/markdown`, `text/plain`, `text/csv`, `application/pdf` to start)?
 - Maximum attachment size (proposal: 10 MB)?
 - Legacy `/images*` routes: 404 immediately, or temporary alias?
-- `thumbnail_data` column: drop, or keep for future image previews?
+- Drop `thumbnail_data` in the rename (recommended; extension table later if previews become real)?
 - Tasks keep general attachments alongside deliverables (current task-image routes generalize too)?
 
 ## Open questions
