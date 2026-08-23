@@ -18,6 +18,9 @@ api/.env.local
 # Keep example file tracked
 !api/.env.example
 
+# Neon CLI workspace state (neon link / checkout) — machine-local project/branch ids
+.neon
+
 # Local owner/agent scratch files; keep the tracked README visible.
 .zazz/ephemeral/**
 !.zazz/ephemeral/
@@ -32,6 +35,25 @@ api/.env.local
 !.codex/config.toml
 !.codex/roles/
 !.codex/roles/*.toml
+# Claude Code: only the skills bridge symlink is tracked (-> ../.agents/skills);
+# everything else Claude writes here (settings.local.json, todos, etc.) is local
+.claude/*
+!.claude/skills
+
+# Other AI agent tool directories — machine-local state individual tools write;
+# contributors' tool files never land in the repo. .agents/ is the shared home.
+# To deliberately share something from one of these later, add a negation
+# pattern (see the .codex/* and .claude/* blocks above for the shape).
+.cursor/
+.cursorrules
+.zcode/
+.warp/
+.windsurf/
+.continue/
+.gemini/
+.aider*
+.specstory/
+.history/
 project-page-screenshot.png
 *.suo
 *.ntvs*

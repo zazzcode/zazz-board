@@ -21,6 +21,31 @@ import {
 } from '../../lib/db/schema.js';
 import { getRandomTagColor } from '../utils/tagColors.js';
 import { randomUUID } from 'crypto';
+import { createObjectStorageService, validateStorageConfig } from './objectStorageService.js';
+
+// Fail fast at boot: a neon storage backend must be fully configured before
+// the server accepts uploads. No silent fallback to DB blob storage.
+if (process.env.STORAGE_BACKEND === 'neon') {
+  validateStorageConfig(process.env);
+}
+
+function isNeonStorageBackend() {
+  return process.env.STORAGE_BACKEND === 'neon';
+}
+
+function mapImageMetadataRow(/** @type {any} */ metadata) {
+  return {
+    id: metadata.id,
+    taskId: metadata.task_id,
+    deliverableId: metadata.deliverable_id,
+    originalName: metadata.original_name,
+    contentType: metadata.content_type,
+    fileSize: metadata.file_size,
+    url: metadata.url,
+    storageType: metadata.storage_type,
+    createdAt: metadata.created_at
+  };
+}
 
 /**
  * @typedef {import('../types.js').User} User
@@ -96,7 +121,30 @@ function getProgress(/** @type {number} */ completedCount, /** @type {number} */
  * Uses Drizzle ORM aliasing for snake_case to camelCase field mapping.
  */
 class DatabaseService {
-  
+  /**
+   * @param {{ objectStorage?: {
+   *   putObject: (key: string, body: Buffer, contentType: string) => Promise<void>,
+   *   getObject: (key: string) => Promise<Buffer>,
+   *   deleteObject: (key: string) => Promise<void>,
+   * } }} [options] - Test seam: an object storage service substituted at the
+   * objectStorageService boundary. Production instances lazily create the
+   * real one from the environment.
+   */
+  constructor({ objectStorage } = {}) {
+    this.injectedObjectStorage = objectStorage ?? null;
+    this.activeObjectStorage = null;
+  }
+
+  /**
+   * The active object storage service for neon-backed attachments.
+   */
+  getObjectStorage() {
+    if (!this.activeObjectStorage) {
+      this.activeObjectStorage = this.injectedObjectStorage ?? createObjectStorageService();
+    }
+    return this.activeObjectStorage;
+  }
+
 // ==================== USER OPERATIONS ====================
   
   /**
@@ -2105,11 +2153,34 @@ class DatabaseService {
    * @returns {Promise<ImageMetadata>} Stored image metadata.
    */
   async storeTaskImage(/** @type {number} */ taskId, /** @type {{ originalName: string, contentType: string, fileSize: number, base64Data?: string, data?: string, thumbnailData?: string|null }} */ imageData, /** @type {string} */ imageUrlBase = '/images') {
-    // Insert image metadata
+    return this.storeOwnedImage({ task_id: taskId, deliverable_id: null }, imageData, imageUrlBase);
+  }
+
+  /**
+   * Store deliverable-owned image with metadata and binary data
+   */
+  async storeDeliverableImage(/** @type {any} */ deliverableId, /** @type {any} */ imageData, /** @type {any} */ imageUrlBase = '/images') {
+    return this.storeOwnedImage({ task_id: null, deliverable_id: deliverableId }, imageData, imageUrlBase);
+  }
+
+  /**
+   * Store an image row through the active storage backend. The local backend
+   * keeps the historical behavior (base64 in IMAGE_DATA, API URL in
+   * IMAGE_METADATA.url); the neon backend uploads the bytes to Object
+   * Storage and records storage_type='neon' with the object key in url.
+   * @param {{ task_id: number|null, deliverable_id: number|null }} owner - Owning row scope.
+   * @param {{ originalName: string, contentType: string, fileSize: number, base64Data?: string }} imageData - Image payload.
+   * @param {string} imageUrlBase - Base URL for local-mode image URLs.
+   * @returns {Promise<ImageMetadata>} Stored image metadata.
+   */
+  async storeOwnedImage(/** @type {{ task_id: number|null, deliverable_id: number|null }} */ owner, /** @type {{ originalName: string, contentType: string, fileSize: number, base64Data?: string }} */ imageData, /** @type {string} */ imageUrlBase) {
+    if (isNeonStorageBackend()) {
+      return this.storeImageInObjectStorage(owner, imageData);
+    }
+
     const [metadata] = await db.insert(IMAGE_METADATA)
       .values({
-        task_id: taskId,
-        deliverable_id: null,
+        ...owner,
         original_name: imageData.originalName,
         content_type: imageData.contentType,
         file_size: imageData.fileSize,
@@ -2123,7 +2194,7 @@ class DatabaseService {
     await db.update(IMAGE_METADATA)
       .set({ url: finalUrl })
       .where(eq(IMAGE_METADATA.id, metadata.id));
-    
+
     // Insert binary data
     await db.insert(IMAGE_DATA)
       .values({
@@ -2131,63 +2202,52 @@ class DatabaseService {
         data: imageData.base64Data,
         thumbnail_data: null // Could add thumbnail generation later
       });
-    
-    return {
-      id: metadata.id,
-      taskId: metadata.task_id,
-      deliverableId: metadata.deliverable_id,
-      originalName: metadata.original_name,
-      contentType: metadata.content_type,
-      fileSize: metadata.file_size,
-      url: finalUrl,
-      storageType: metadata.storage_type,
-      createdAt: metadata.created_at
-    };
+
+    return mapImageMetadataRow({ ...metadata, url: finalUrl });
   }
 
   /**
-   * Store deliverable-owned image with metadata and binary data
+   * Store image bytes in Object Storage and record only the metadata row:
+   * url holds the deterministic object key (attachments/<image id>), and no
+   * IMAGE_DATA row is written. If the upload fails, the placeholder
+   * metadata row is removed so no unreachable record survives.
    */
-  async storeDeliverableImage(/** @type {any} */ deliverableId, /** @type {any} */ imageData, /** @type {any} */ imageUrlBase = '/images') {
+  async storeImageInObjectStorage(/** @type {{ task_id: number|null, deliverable_id: number|null }} */ owner, /** @type {{ originalName: string, contentType: string, fileSize: number, base64Data?: string }} */ imageData) {
     const [metadata] = await db.insert(IMAGE_METADATA)
       .values({
-        task_id: null,
-        deliverable_id: deliverableId,
+        ...owner,
         original_name: imageData.originalName,
         content_type: imageData.contentType,
         file_size: imageData.fileSize,
-        url: `${imageUrlBase}/0`,
-        storage_type: 'local'
+        url: 'attachments/0', // Temporary, will update with actual ID
+        storage_type: 'neon'
       })
       .returning();
 
-    const finalUrl = `${imageUrlBase}/${metadata.id}`;
+    const objectKey = `attachments/${metadata.id}`;
+    try {
+      await this.getObjectStorage().putObject(
+        objectKey,
+        Buffer.from(imageData.base64Data, 'base64'),
+        imageData.contentType
+      );
+    } catch (error) {
+      await db.delete(IMAGE_METADATA).where(eq(IMAGE_METADATA.id, metadata.id));
+      throw error;
+    }
+
     await db.update(IMAGE_METADATA)
-      .set({ url: finalUrl })
+      .set({ url: objectKey })
       .where(eq(IMAGE_METADATA.id, metadata.id));
 
-    await db.insert(IMAGE_DATA)
-      .values({
-        id: metadata.id,
-        data: imageData.base64Data,
-        thumbnail_data: null
-      });
-
-    return {
-      id: metadata.id,
-      taskId: metadata.task_id,
-      deliverableId: metadata.deliverable_id,
-      originalName: metadata.original_name,
-      contentType: metadata.content_type,
-      fileSize: metadata.file_size,
-      url: finalUrl,
-      storageType: metadata.storage_type,
-      createdAt: metadata.created_at
-    };
+    return mapImageMetadataRow({ ...metadata, url: objectKey });
   }
 
   /**
-   * Get image with binary data for serving
+   * Get image with binary data for serving. Returns normalized bytes: local
+   * rows decode their IMAGE_DATA base64, neon rows fetch from Object
+   * Storage — either way `data` is a Buffer the route can send as-is.
+   * @returns {Promise<object|null>} Image row with Buffer data, or null.
    */
   async getImageWithData(/** @type {any} */ imageId) {
     const [result] = await db
@@ -2207,8 +2267,15 @@ class DatabaseService {
       .leftJoin(IMAGE_DATA, eq(IMAGE_METADATA.id, IMAGE_DATA.id))
       .where(eq(IMAGE_METADATA.id, imageId))
       .limit(1);
-    
-    return result || null;
+
+    if (!result) return null;
+    if (result.storageType === 'neon') {
+      return { ...result, data: await this.getObjectStorage().getObject(result.url) };
+    }
+    return {
+      ...result,
+      data: result.data === null ? null : Buffer.from(result.data, 'base64')
+    };
   }
 
   /**
@@ -2234,18 +2301,31 @@ class DatabaseService {
   }
 
   /**
-   * Delete image and its binary data
+   * Delete image and its binary data. Neon-stored images have their object
+   * removed from Object Storage before the rows go; local images keep the
+   * historical row deletion.
    */
   async deleteImage(/** @type {any} */ imageId) {
+    const [metadata] = await db.select()
+      .from(IMAGE_METADATA)
+      .where(eq(IMAGE_METADATA.id, imageId))
+      .limit(1);
+
+    if (!metadata) return null;
+
+    if (metadata.storage_type === 'neon') {
+      await this.getObjectStorage().deleteObject(metadata.url);
+    }
+
     // Delete binary data first (cascade will handle this, but being explicit)
     await db.delete(IMAGE_DATA)
       .where(eq(IMAGE_DATA.id, imageId));
-    
+
     // Delete metadata
     const [deletedImage] = await db.delete(IMAGE_METADATA)
       .where(eq(IMAGE_METADATA.id, imageId))
       .returning();
-    
+
     return deletedImage ? {
       id: deletedImage.id,
       taskId: deletedImage.task_id,

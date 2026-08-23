@@ -82,7 +82,7 @@ use that metadata as the source of truth for when the skill applies.
 
 Many skills started from [zazz-skills](https://github.com/zazzcode/zazz-skills), but this repo's checked-in skill files
 are curated locally and may diverge for project-specific behavior. Compare upstream files manually when useful; do not
-blindly refresh local skills from upstream. See [README §Curating skills](./README.md#curating-skills-from-zazz-skills).
+blindly refresh local skills from upstream. See [README §Updating vendored skills and standards](./README.md#updating-vendored-skills-and-standards).
 
 Ignored upstream skills include `sqlcmd` (SQL Server; we use PostgreSQL) and `jira-api` (we use Zazz Board).
 
@@ -138,7 +138,15 @@ Example: `.zazz/ephemeral/gantt-ui-handoff-2026-07-02-132600.md`.
 
 **Schema**: `api/lib/db/schema.js`. Pre-v1: push directly (`db:reset` / `db:push`). See [data-architecture.md](.zazz/standards/data-architecture.md).
 
-**Reset dev**: `npm run db:reset` (from root or api/).
+**Reset dev**: `npm run db:reset` (from root or api/). Refuses non-local
+database hosts outright; seeding a remote host requires
+`ALLOW_REMOTE_SEED=true`.
+
+**Neon (optional)**: the app runs unchanged on Neon (Postgres + Object
+Storage) selected by `api/.env`. Setup:
+[.zazz/docs/neon-setup.md](.zazz/docs/neon-setup.md); agent operations:
+the `neon-zazz` skill (`.agents/skills/neon-zazz/`). Tests always run on
+local Docker Postgres.
 
 **Test DB**: `zazz_board_test`. Create: `docker exec zazz_board_postgres psql -U postgres -c "CREATE DATABASE zazz_board_test;" 2>/dev/null || true` then `cd api && DATABASE_URL=postgres://postgres:password@localhost:5433/zazz_board_test npm run db:reset`.
 
@@ -159,6 +167,8 @@ Vitest + PactumJS. See [testing.md](.zazz/standards/testing.md) and [api/**tests
 - **SAFETY CHECK FAILED**: Ensure `zazz_board_test` exists; recreate test DB
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test)
 - **Postgres not running**: `npm run docker:up:db`
+- **Neon: first query slow after idle**: autosuspend wake (~0.5 s) plus
+  cold buffers — expected, not a fault; run the query again
 
 ---
 

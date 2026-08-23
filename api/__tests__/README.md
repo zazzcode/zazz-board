@@ -2,7 +2,7 @@
 
 This directory contains API integration tests for Zazz Board using **Vitest** and **PactumJS**.
 
-**To install and run the app first**, see the [Quick start](../../README.md#quick-start) in the project README (`README.md` at the worktree root). Then set up the test database (see [Environment Setup](#environment-setup) below) and run the commands in this file.
+**To install and run the app first**, see the [Quick start (Docker)](../../README.md#quick-start-docker) in the project README (`README.md` at the worktree root). Then set up the test database (see [Environment Setup](#environment-setup) below) and run the commands in this file.
 
 ---
 
@@ -11,8 +11,10 @@ This directory contains API integration tests for Zazz Board using **Vitest** an
 ### Prerequisites
 - Node.js 24 LTS (`v24.18.0`) and npm 11+
 - Docker Desktop running (PostgreSQL 15 on port 5433)
-- Test database created and seeded (see [Environment Setup](#environment-setup))
+- Test database created and seeded (see [Environment Setup](#environment-setup) below)
 - `api/.env` with `DATABASE_URL_TEST` set (see [AGENTS.md](../../AGENTS.md))
+
+Tests always run against the local Docker test database (`zazz_board_test`) — never against Neon. The npm test scripts pin `STORAGE_BACKEND=local` so the suite stays hermetic regardless of your active env block; tests that exercise the neon storage path inject a fake object-storage service and set `STORAGE_BACKEND` per case (see `__tests__/services/imageStorageDispatch.test.mjs`).
 
 ### Run tests
 

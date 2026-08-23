@@ -2,7 +2,7 @@
 
 **Zazz Board** is a Kanban-style orchestration app for coordinating **AI agents** and **owners** — the people who define what to build, approve PLANs, and review results. Work is organized by **project**; each project contains **deliverables** (features, bug fixes, refactors) that group **tasks**. Owners manage SPECs and deliverable flow; agents execute implementation work and board updates. Only deliverables are PR'd — never individual tasks.
 
-**Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (Docker) · Drizzle ORM · Docker Compose
+**Stack**: Fastify API (JavaScript, ESM) · React client (Vite) · PostgreSQL 15 (local Docker, or [Neon](#running-on-neon-optional)) · Drizzle ORM · Docker Compose
 
 **Framework:** Zazz Board enables teams to practice the [Zazz Framework](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) — a spec-driven methodology for multi-agent software development. The framework doc defines terminology (SPEC, PLAN, deliverables, tasks), workflow stages, agent roles, and how owners and agents collaborate.
 
@@ -14,6 +14,7 @@
 
 - [Explore the app](#explore-the-app)
 - [Quick start (Docker)](#quick-start-docker)
+- [Running on Neon (optional)](#running-on-neon-optional)
 - [Contributor setup](#contributor-setup)
 - [Common issues](#common-issues)
 - [Reference](#reference)
@@ -23,9 +24,10 @@
 - [Running in the cloud](#running-in-the-cloud)
 - [About this repository](#about-this-repository)
 - [Documentation](#documentation)
-- [Updating skills from zazz-skills](#updating-skills-from-zazz-skills)
+- [Updating vendored skills and standards](#updating-vendored-skills-and-standards)
 
 **Try the app locally** — [Quick start (Docker)](#quick-start-docker)
+**Run it on Neon instead** — [Running on Neon (optional)](#running-on-neon-optional)
 **Develop or contribute** — [Contributor setup](#contributor-setup)
 **Deploy for my team** — [Running in the cloud](#running-in-the-cloud)
 
@@ -185,6 +187,25 @@ ZAZZ_API_TOKEN=550e8400-e29b-41d4-a716-446655440000
 
 ---
 
+## Running on Neon (optional)
+
+Instead of local Docker Postgres, Zazz Board runs unchanged on Neon — selected purely by environment configuration:
+
+| Backend | Relational data | Attachments | Default |
+| ------- | --------------- | ----------- | ------- |
+| **Local Docker Postgres** | `zazz_board_db` on `localhost:5433` | Stored in the `IMAGE_DATA` table | ✅ Yes |
+| **Neon** | Neon serverless Postgres (same schema) | Neon Object Storage (S3-compatible, private bucket); each object's key is recorded in `IMAGE_METADATA` | No |
+
+Notes for application users:
+
+- Switching backends is a matter of swapping the active block in `api/.env` — no code or schema changes. The full setup walkthrough (Neon project, database, bucket, credentials) is in [`.zazz/docs/neon-setup.md`](./.zazz/docs/neon-setup.md).
+- The upload/download API contract is identical in both modes; downloads always flow through the API, which checks access.
+- `STORAGE_BACKEND=neon` fails fast at startup if the storage configuration is incomplete — there is no silent fallback to database blob storage.
+- Expect ~0.5 s of first-query latency after 5+ minutes idle: Neon suspends idle compute and wakes it on connection.
+- Automated tests always run against the local Docker test database (`zazz_board_test`), never against Neon.
+
+---
+
 ## Contributor setup
 
 Contributor/committer instructions are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_SETUP.md).
@@ -212,7 +233,7 @@ Local URLs (native dev):
   ```
 - **Port in use**: `lsof -ti:3030 | xargs kill -9` (API), `lsof -ti:3001 | xargs kill -9` (client), `lsof -ti:3031 | xargs kill -9` (test server).
 - **drizzle-kit** "please install drizzle-orm": From repo root, run `npm install` and `npm install --workspace=api`. Do not create manual `node_modules` symlinks in worktrees.
-- **`npm: command not found` when using nvm**: initialize `nvm` explicitly in non-interactive shells; see [Using nvm in non-interactive shells](#using-nvm-in-non-interactive-shells).
+- **`npm: command not found` when using nvm**: initialize `nvm` explicitly in non-interactive shells; see [Using nvm in non-interactive shells](./CONTRIBUTOR_SETUP.md#using-nvm-in-non-interactive-shells).
 - **Tests**: Always source `api/.env` and set `NODE_ENV=test`; see [AGENTS.md](./AGENTS.md) and [api/__tests__/README.md](./api/__tests__/README.md).
 
 ---
@@ -224,56 +245,25 @@ Local URLs (native dev):
 | Run API + client                              | `npm run dev`                                                   |
 | Run API only                                  | `npm run dev:api`                                               |
 | Run client only                               | `npm run dev:client`                                            |
+| Push schema changes (from `api/`)             | `npm run db:push`                                               |
 | Reset dev DB (from `api/`)                    | `npm run db:reset`                                              |
 | Seed only (from `api/`)                       | `npm run db:seed`                                               |
 | Reset + reseed Docker DB (containers running) | `npm run docker:reset:seed`                                     |
 | Run tests (from `api/`)                       | `set -a && source .env && set +a && NODE_ENV=test npm run test` |
 
-Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/__tests__/README.md](./api/__tests__/README.md).
+Env: `api/.env` — `DATABASE_URL` (dev), `DATABASE_URL_TEST` (tests). Port 5433. Neon mode adds `DATABASE_URL_UNPOOLED`, `STORAGE_BACKEND`, and the storage vars — see [Running on Neon](#running-on-neon-optional) and [`.zazz/docs/neon-setup.md`](./.zazz/docs/neon-setup.md). Test DB setup: [AGENTS.md](./AGENTS.md). Test guide: [api/__tests__/README.md](./api/__tests__/README.md).
 
 ---
 
 ## Running tests
 
-Tests use a separate database (`zazz_board_test`). One-time setup (from project root):
+Tests use a separate database (`zazz_board_test`) and always run against local Docker Postgres. The step-by-step setup (one-time test-DB creation), the run commands, and the nvm notes for non-interactive shells are in [CONTRIBUTOR_SETUP.md](./CONTRIBUTOR_SETUP.md); the test-writing guide is in [api/__tests__/README.md](./api/__tests__/README.md).
 
-```bash
-set -a && source .env && set +a
-docker compose exec postgres psql -U postgres -c "CREATE DATABASE zazz_board_test;" 2>/dev/null || true
-cd api && DATABASE_URL=postgres://postgres:$POSTGRES_PASSWORD@localhost:5433/zazz_board_test npm run db:reset
-```
-
-Then run tests (from `api/`):
+Quick reference (from `api/`):
 
 ```bash
 set -a && source .env && set +a && NODE_ENV=test npm run test
 ```
-
-### Using nvm in non-interactive shells
-
-Developers who use `nvm` usually get `node` and `npm` automatically in interactive terminals because their shell startup files load `nvm`. Non-interactive shells, editor tasks, agent shells, and some CI steps may not load that setup, which can make `npm` appear to be missing even though it works in a normal terminal.
-
-The repo includes `.nvmrc` pinned to Node.js `v24.18.0`, so `nvm use` selects the project runtime. With the current project runtime, npm reports `11.16.0`.
-
-If a non-interactive command reports `npm: command not found`, initialize `nvm` explicitly before running repo commands:
-
-```bash
-export NVM_DIR="$HOME/.nvm"
-source "$NVM_DIR/nvm.sh"
-nvm use
-```
-
-For example:
-
-```bash
-export NVM_DIR="$HOME/.nvm"
-source "$NVM_DIR/nvm.sh"
-nvm use
-cd api
-set -a && source .env && set +a && NODE_ENV=test npm run test
-```
-
-See [api/__tests__/README.md](./api/__tests__/README.md) for details.
 
 ---
 
@@ -368,7 +358,7 @@ If the client needs to reach the API at a different host (e.g. a public URL), se
 | Database    | **RDS** PostgreSQL 15                                                            |
 | API         | **ECS Fargate** (container from `api/Dockerfile`)                                |
 | Client      | **S3** + **CloudFront** (static build)                                           |
-| Task images | **S3** (in work — see [Cloud deployment notes](#cloud-deployment-notes-in-work)) |
+| Task images | **S3** (not yet implemented — see [Cloud deployment notes](#cloud-deployment-notes)) |
 
 **Flow:** Create RDS instance → build and push API image to ECR → deploy ECS task with `DATABASE_URL` pointing at RDS → build client with `VITE_API_URL` set to your API URL → upload to S3, configure CloudFront. Use **Application Load Balancer** in front of ECS for the API.
 
@@ -381,7 +371,7 @@ If the client needs to reach the API at a different host (e.g. a public URL), se
 | Database    | **Cloud SQL** (PostgreSQL 15)                                                               |
 | API         | **Cloud Run** (container from `api/Dockerfile`)                                             |
 | Client      | **Cloud Storage** + **Cloud CDN** (or Firebase Hosting)                                     |
-| Task images | **Cloud Storage** (in work — see [Cloud deployment notes](#cloud-deployment-notes-in-work)) |
+| Task images | **Cloud Storage** (not yet implemented — see [Cloud deployment notes](#cloud-deployment-notes)) |
 
 **Step 1 — Cloud SQL**
 
@@ -417,18 +407,19 @@ If the client needs to reach the API at a different host (e.g. a public URL), se
 
 **Step 4 — Seed the database**
 
-Run the seed script once against Cloud SQL (e.g. from Cloud Shell or a one-off Cloud Run job with `npm run db:reset`), or use a local connection through the Cloud SQL Auth Proxy.
+Run the schema push and seed once against Cloud SQL (e.g. from Cloud Shell or a one-off Cloud Run job, or through the Cloud SQL Auth Proxy): `npm run db:push`, then `ALLOW_REMOTE_SEED=true npm run db:seed`. Note that `npm run db:reset` refuses non-local database hosts outright — remote databases are never destructively reset.
 
 ---
 
-### Cloud deployment notes (in work)
+### Cloud deployment notes
 
-**Image storage:** For cloud deployments, task images should be stored in object storage rather than the database:
+**Image storage:** For cloud deployments, task images can be stored in object storage instead of the database:
 
-- **AWS:** **S3** — upload images to a bucket; store metadata and object keys in the DB.
-- **GCP:** **Cloud Storage** — same pattern; store metadata and `gs://` URLs or object names in the DB.
+- **Neon:** Implemented — `STORAGE_BACKEND=neon` uploads attachments to Neon Object Storage (private bucket) and records each object key in the database. See [Running on Neon (optional)](#running-on-neon-optional).
+- **AWS:** **S3** — upload images to a bucket; store metadata and object keys in the DB (not yet implemented; the `s3` backend value is reserved).
+- **GCP:** **Cloud Storage** — same pattern; store metadata and `gs://` URLs or object names in the DB (not yet implemented; the `gcs` backend value is reserved).
 
-**Configuration:** The API will need environment or config to distinguish cloud vs local (e.g. `STORAGE_BACKEND=s3` or `STORAGE_BACKEND=gcs` vs database). This allows the image service to route uploads and serves to the correct backend. *This functionality is in work.*
+**Configuration:** `STORAGE_BACKEND` routes the image service to the correct backend: `local` (default — database storage) or `neon` (Neon Object Storage). `s3`/`gcs` are reserved for future AWS/GCP equivalents.
 
 ---
 
@@ -445,10 +436,14 @@ This repository is developed using the Zazz framework (dogfooding). Zazz Board i
 - **API docs (Swagger UI)**: **[http://localhost:3030/docs](http://localhost:3030/docs)** — OpenAPI 3.1, token-protected. See [API docs (Swagger)](#api-docs-swagger) and [How to access the docs with your access token](#how-to-access-the-docs-with-your-access-token).
 - **[api/__tests__/README.md](./api/__tests__/README.md)** — Writing and running API tests (PactumJS, helpers, safety guards).
 - **`.zazz/`** — Zazz Framework structure (this repo's DOCS_ROOT is `.zazz/`): `project.md`, `standards/` (atomic project standards), `deliverables/` (SPECs and PLANs), `features/`, `proposals/`, `specifications/`, `architecture/`, `docs/` (vendored methodology guides), and `execution/` (gitignored runtime records). See [zazz-framework.md](https://github.com/zazzcode/zazz-skills/blob/main/zazz-framework.md) for repository structure guidance and `.zazz/standards/index.yaml` for the standards index.
-- **`.agents/skills/`** — Agent skills. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the vendored copy plus local-only skills (`worker`, `database-baseline-refresh`).
+- **`.agents/skills/`** — Agent skills; the single skills home for every agent tool. ZCode, Codex, and Cursor read `.agents/skills/` natively; Claude Code reads it through the committed `.claude/skills` symlink. Framework skills are sourced from [zazz-skills](https://github.com/zazzcode/zazz-skills); this repo keeps the vendored copy plus local-only skills (`worker`, `database-baseline-refresh`).
 - **`.zazz/deliverables/deliverables-feature-SPEC.md`** — Full Deliverable Specification for the deliverables feature. Also in [docs/deliverables_feature_SPEC.md](docs/deliverables_feature_SPEC.md) (legacy path).
 
-## Updating skills from zazz-skills
+## Updating vendored skills and standards
+
+Skills and standards that originate from [zazz-skills](https://github.com/zazzcode/zazz-skills) are refreshed with different discipline — skills are mirrored by script, standards are tiered and repo-owned first.
+
+### Updating skills from zazz-skills
 
 `zazz-skills` is the canonical source for framework skill names and markdown content. This repo treats its `.agents/skills/` copy as a downstream mirror of that source, except for local-only skills.
 
@@ -467,6 +462,6 @@ Notes:
 - The script removes previously-synced skills that upstream no longer ships and that are not local-only, so obsolete skills do not linger (e.g. `qa`/`qa-backend`/`qa-frontend`, which upstream consolidated into `qa-testing`).
 - A rename-heavy update still needs a manual documentation sweep after the file sync.
 
-## Updating standards from zazz-skills
+### Updating standards from zazz-skills
 
 The repo-specific standards under `.zazz/standards/` (`system-architecture.md`, `data-architecture.md`, `testing.md`, `coding-styles.md`) are owned by this repo and take precedence; they must not be clobbered by an upstream sync. The generic methodology standards (`code-structure.md`, `docs-hygiene.md`, `docs-hygiene-reference-structure.md`, `spec-hygiene.md`, `pr-process.md`) are vendored from upstream `zazz-skills` and should be refreshed periodically by copying them back over. The placeholder stack standards (`http-layer.md`, `data-layer.md`, `frontend.md`) and `contextual-split.md` are repo-owned and intended to be expanded into real baselines via the `standard-builder` skill. See `.zazz/standards/contextual-split.md` for the full sync discipline.

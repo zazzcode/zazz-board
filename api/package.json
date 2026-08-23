@@ -20,9 +20,9 @@
     "db:reset": "node scripts/reset-and-seed.js",
     "db:export-snapshot": "node scripts/export-database-snapshot.js",
     "db:seed-agent-tokens": "node scripts/seeders/seedAgentTokens.js",
-    "test": "NODE_ENV=test vitest run",
-    "test:watch": "NODE_ENV=test vitest",
-    "test:coverage": "NODE_ENV=test vitest run --coverage"
+    "test": "NODE_ENV=test STORAGE_BACKEND=local vitest run",
+    "test:watch": "NODE_ENV=test STORAGE_BACKEND=local vitest",
+    "test:coverage": "NODE_ENV=test STORAGE_BACKEND=local vitest run --coverage"
   },
   "repository": {
     "type": "git",
@@ -43,6 +43,7 @@
   },
   "homepage": "https://github.com/zazzcode/zazz-board#readme",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1116.0",
     "@fastify/cors": "^11.1.0",
     "@fastify/multipart": "^9.0.3",
     "@fastify/swagger": "^9.5.1",

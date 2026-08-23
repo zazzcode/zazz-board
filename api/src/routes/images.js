@@ -294,7 +294,9 @@ export default async function imageRoutes(fastify, options) {
           return reply.code(404).send({ error: 'Image not found' });
         }
 
-        const binaryData = Buffer.from(imageWithData.data, 'base64');
+        // data is already normalized to bytes by the service (local base64
+        // decoded, neon rows fetched from Object Storage)
+        const binaryData = imageWithData.data;
         reply
           .header('Content-Type', imageWithData.contentType)
           .header('Content-Length', binaryData.length)
